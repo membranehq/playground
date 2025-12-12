@@ -1,0 +1,368 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useCustomer } from '@/components/providers/customer-provider';
+import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
+import { getAgentHeaders, getStreamUrl } from '@/lib/agent-api';
+import { Loader } from '@/components/ai-elements/loader';
+import { Button } from '@/components/ui/button';
+import { Square, ArrowRight } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { AgentSessionsDropdown } from '@/components/agent-sessions-dropdown';
+import { PageHeaderActions } from '@/components/page-header-context';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  parts?: any[];
+}
+
+export default function SessionPage() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = params?.sessionId as string;
+  const initialMessage = searchParams?.get('message');
+
+  const { customerId, customerName } = useCustomer();
+  const { workspace } = useCurrentWorkspace();
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [input, setInput] = useState('');
+
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const initialMessageSentRef = useRef(false);
+  const messagesMapRef = useRef(new Map<string, { info: any; parts: Map<string, any> }>());
+
+  // Scroll to bottom of messages container when messages change
+  useEffect(() => {
+    if (messages.length > 0 && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Convert messages map to array
+  const updateMessagesFromMap = () => {
+    const messagesList: Message[] = [];
+    messagesMapRef.current.forEach((msg) => {
+      const textParts = Array.from(msg.parts.values()).filter((part: any) => part.type === 'text');
+      const content = textParts.map((part: any) => part.text).join('');
+      const parts = Array.from(msg.parts.values());
+
+      messagesList.push({
+        id: msg.info.id,
+        role: msg.info.role,
+        content,
+        parts,
+      });
+    });
+
+    messagesList.sort((a, b) => a.id.localeCompare(b.id));
+    setMessages(messagesList);
+  };
+
+  // Handle SSE events
+  const handleEvent = (event: any) => {
+    if (!event || !event.type) return;
+
+    if (event.type === 'message.updated') {
+      const info = event.properties.info;
+
+      if (!messagesMapRef.current.has(info.id)) {
+        messagesMapRef.current.set(info.id, {
+          info,
+          parts: new Map(),
+        });
+      } else {
+        const existing = messagesMapRef.current.get(info.id)!;
+        existing.info = info;
+      }
+
+      updateMessagesFromMap();
+    }
+
+    if (event.type === 'message.part.updated') {
+      const { part } = event.properties;
+
+      if (!messagesMapRef.current.has(part.messageID)) {
+        messagesMapRef.current.set(part.messageID, {
+          info: { id: part.messageID, role: 'assistant' },
+          parts: new Map(),
+        });
+      }
+
+      const message = messagesMapRef.current.get(part.messageID)!;
+      message.parts.set(part.id, part);
+
+      updateMessagesFromMap();
+    }
+
+    if (event.type === 'session.idle') {
+      setIsLoading(false);
+    }
+  };
+
+  // Connect to SSE stream
+  useEffect(() => {
+    if (!customerId || !workspace?.key || !workspace?.secret) return;
+
+    const streamUrl = getStreamUrl(sessionId, customerId, workspace.key, workspace.secret);
+    const eventSource = new EventSource(streamUrl);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'event') {
+          handleEvent(data.event);
+        } else if (data.type === 'idle') {
+          setIsLoading(false);
+        } else if (data.type === 'error') {
+          setError(data.error?.message || 'Stream error');
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('Error parsing SSE message:', err);
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      eventSourceRef.current = null;
+    };
+
+    return () => {
+      eventSource.close();
+      eventSourceRef.current = null;
+    };
+  }, [sessionId, customerId, workspace]);
+
+  // Load historical messages
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!customerId || !workspace) return;
+
+      setIsLoadingSession(true);
+      try {
+        const response = await fetch(`/api/sessions/${sessionId}/messages`, {
+          headers: getAgentHeaders(customerId, customerName),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          messagesMapRef.current.clear();
+          (data.messages || []).forEach((msg: any) => {
+            const partsMap = new Map();
+            (msg.parts || []).forEach((part: any) => {
+              partsMap.set(part.id, part);
+            });
+
+            messagesMapRef.current.set(msg.id, {
+              info: { id: msg.id, role: msg.role },
+              parts: partsMap,
+            });
+          });
+
+          updateMessagesFromMap();
+        }
+      } catch (err) {
+        console.error('Error loading messages:', err);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+
+    loadMessages();
+  }, [sessionId, customerId, customerName, workspace]);
+
+  // Send message
+  const sendMessage = async (content: string) => {
+    if (!content.trim() || !customerId || !workspace) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: getAgentHeaders(customerId, customerName),
+        body: JSON.stringify({ message: content, sessionId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send message');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send message');
+      setIsLoading(false);
+    }
+  };
+
+  // Send initial message if provided
+  useEffect(() => {
+    if (initialMessage && !initialMessageSentRef.current && !isLoadingSession) {
+      initialMessageSentRef.current = true;
+      router.replace(`/agent/sessions/${sessionId}`, { scroll: false });
+      sendMessage(initialMessage);
+    }
+  }, [initialMessage, isLoadingSession, sessionId, router]);
+
+  // Handle form submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.trim()) {
+      const message = input;
+      setInput('');
+      await sendMessage(message);
+    }
+  };
+
+  // Interrupt session
+  const handleInterrupt = async () => {
+    if (!customerId || !workspace) return;
+
+    try {
+      await fetch(`/api/sessions/${sessionId}/interrupt`, {
+        method: 'POST',
+        headers: getAgentHeaders(customerId, customerName),
+      });
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error interrupting session:', err);
+    }
+  };
+
+  if (!customerId || !workspace) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Please log in to use the agent.</p>
+      </div>
+    );
+  }
+
+  const createNewSession = async () => {
+    try {
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: getAgentHeaders(customerId, customerName),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        router.push(`/agent/sessions/${data.sessionId}`);
+      }
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <PageHeaderActions>
+        <AgentSessionsDropdown
+          onNewChat={createNewSession}
+          isCreating={false}
+        />
+      </PageHeaderActions>
+
+      {/* Messages Area */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto -mx-4 px-4">
+        <div className="max-w-3xl mx-auto space-y-4 py-4">
+          {isLoadingSession ? (
+            <div className="flex justify-center py-8">
+              <Loader size={32} />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Send a message to start the conversation
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  {message.role === 'user' ? (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  ) : (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg px-4 py-3">
+                <Loader size={20} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="max-w-3xl mx-auto px-4 py-2">
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+            <p className="text-sm text-destructive">Error: {error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="p-4">
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          <div className="flex gap-3 items-center">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your message..."
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+            />
+            {isLoading ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleInterrupt}
+                className="h-12 w-12 rounded-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Square className="w-4 h-4 fill-current" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={!input.trim()}
+                size="icon"
+                className="h-12 w-12 rounded-full"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

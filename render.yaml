@@ -1,0 +1,55 @@
+# Render deployment configuration for Integration.app Playground
+# Deploys two services:
+# 1. opencode-server: Multi-tenant OpenCode proxy (private service)
+# 2. playground: Next.js web application (public)
+
+services:
+  # OpenCode Proxy Server - handles AI agent sessions per customer
+  # NOTE: Workspace credentials (MEMBRANE_WORKSPACE_KEY/SECRET) are passed dynamically
+  # via request headers from the frontend, NOT as environment variables
+  - type: pserv
+    name: opencode-server
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build:server
+    startCommand: npm run start:server
+    disk:
+      name: opencode-data
+      mountPath: /var/data/opencode
+      sizeGB: 1
+    envVars:
+      - key: OPENCODE_BASE_PATH
+        value: /var/data/opencode
+      - key: OPENCODE_PROXY_PORT
+        value: "1337"
+      - key: OPENCODE_PROXY_HOST
+        value: "0.0.0.0"
+      - key: OPENROUTER_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: MEMBRANE_API_URI
+        value: https://api.integration.app
+
+  # Next.js Web Application
+  - type: web
+    name: playground
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_INTEGRATION_APP_API_URL
+        value: https://api.integration.app
+      - key: NEXT_PUBLIC_INTEGRATION_APP_UI_URL
+        value: https://ui.integration.app
+      - key: MEMBRANE_API_URI
+        value: https://api.integration.app
+      # Connect to the private OpenCode server
+      - key: OPENCODE_SERVER_HOST
+        fromService:
+          name: opencode-server
+          type: pserv
+          property: host
+      - key: OPENCODE_SERVER_PORT
+        value: "1337"

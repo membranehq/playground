@@ -1,0 +1,147 @@
+/**
+ * Membrane Agent API Helper
+ *
+ * Provides functions to fetch Membrane Agent session data.
+ * Uses long polling on session status endpoint to detect state changes.
+ */
+
+export interface MembraneAgentMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  parts?: any[];
+}
+
+export interface MembraneAgentSessionStatus {
+  status: 'idle' | 'busy';
+}
+
+export interface MembraneAgentMessagesResponse {
+  messages: MembraneAgentMessage[];
+}
+
+interface LongPollOptions {
+  wait?: number;
+  timeout?: number;
+}
+
+// Cache the token to avoid fetching it on every poll
+let cachedToken: { token: string; apiUri: string; expiresAt: number } | null = null;
+
+async function getMembraneConfig(): Promise<{ token: string; apiUri: string }> {
+  // Return cached token if still valid (with 5 minute buffer)
+  if (cachedToken && cachedToken.expiresAt > Date.now() + 5 * 60 * 1000) {
+    return { token: cachedToken.token, apiUri: cachedToken.apiUri };
+  }
+
+  const response = await fetch('/api/membrane-config');
+  if (!response.ok) {
+    throw new Error(`Failed to get Membrane config: ${response.status}`);
+  }
+
+  const config = await response.json();
+
+  // Cache for 23 hours (token is valid for 24 hours)
+  cachedToken = {
+    token: config.token,
+    apiUri: config.apiUri,
+    expiresAt: Date.now() + 23 * 60 * 60 * 1000,
+  };
+
+  return { token: config.token, apiUri: config.apiUri };
+}
+
+/**
+ * Fetch session status with optional long polling.
+ * Use wait/timeout params to wait for status changes.
+ *
+ * @param sessionId - The Membrane Agent session ID
+ * @param options - Optional long polling parameters (wait=1, timeout=50 recommended)
+ * @returns Promise with session status (idle or busy)
+ */
+export async function fetchMembraneAgentStatus(
+  sessionId: string,
+  options?: LongPollOptions
+): Promise<MembraneAgentSessionStatus> {
+  const { token, apiUri } = await getMembraneConfig();
+
+  // Build URL with long polling params for status endpoint
+  const url = new URL(`${apiUri}/agent/sessions/${sessionId}`);
+  if (options?.wait !== undefined) {
+    url.searchParams.set('wait', String(options.wait));
+  }
+  if (options?.timeout !== undefined) {
+    url.searchParams.set('timeout', String(options.timeout));
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Membrane Agent status: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  return {
+    status: data.state === 'idle' ? 'idle' : 'busy',
+  };
+}
+
+/**
+ * Fetch messages from a Membrane Agent session.
+ * This does NOT use long polling - call it when you need to refresh messages.
+ *
+ * @param sessionId - The Membrane Agent session ID
+ * @returns Promise with messages array
+ */
+export async function fetchMembraneAgentMessages(
+  sessionId: string
+): Promise<MembraneAgentMessagesResponse> {
+  const { token, apiUri } = await getMembraneConfig();
+
+  const url = new URL(`${apiUri}/agent/sessions/${sessionId}/messages`);
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Membrane Agent messages: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  // API returns array directly, not { items: [...] }
+  const items = Array.isArray(data) ? data : (data.items || []);
+
+  // Transform messages to our expected format
+  const messages: MembraneAgentMessage[] = items.map((msg: any) => {
+    // Extract text content from parts
+    const textParts = msg.parts?.filter((p: any) => p.type === 'text') || [];
+    const content = textParts.map((p: any) => p.text).join('');
+
+    return {
+      id: msg.info?.id || msg.id,
+      role: msg.info?.role || msg.role,
+      content,
+      parts: msg.parts,
+    };
+  });
+
+  return { messages };
+}
+
+/**
+ * Clear the cached token (useful for logout or error recovery)
+ */
+export function clearMembraneTokenCache(): void {
+  cachedToken = null;
+}

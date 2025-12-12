@@ -1,0 +1,64 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "share": "disabled",
+  "mcp": {
+    "membrane": {
+      "type": "local",
+      "command": [
+        "membrane",
+        "mcp"
+      ],
+      "enabled": true,
+      "environment": {
+        "MEMBRANE_WORKSPACE_KEY": "${MEMBRANE_WORKSPACE_KEY}",
+        "MEMBRANE_WORKSPACE_SECRET": "${MEMBRANE_WORKSPACE_SECRET}",
+        "MEMBRANE_API_URI": "${MEMBRANE_API_URI}"
+      }
+    }
+  },
+  "agent": {
+    "plan": {
+      "disable": true
+    },
+    "build": {
+      "disable": true
+    },
+    "self-integration": {
+      "description": "General-purpose AI agent",
+      "prompt": "{file:./AGENTS.md}",
+      "mode": "primary",
+      "tools": {
+        "membrane*": true,
+        "request-test-connection": true,
+        "todowrite": true,
+        "todoread": true,
+        "webfetch": true,
+        "write": false,
+        "edit": false,
+        "bash": false,
+        "read": false,
+        "grep": false,
+        "glob": false,
+        "list": false,
+        "patch": false
+      },
+      "permission": {
+        "webfetch": "allow",
+        "edit": "allow",
+        "bash": {
+          "*": "allow",
+          "git push": "ask"
+        }
+      },
+      "model": "openrouter/anthropic/claude-sonnet-4.5"
+    }
+  },
+  "provider": {
+    "openrouter": {
+      "options": {
+        "apiKey": "${OPENROUTER_API_KEY}"
+      }
+    }
+  }
+}
