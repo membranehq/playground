@@ -24,12 +24,11 @@ export function NavPages({
   const pathname = usePathname();
 
   return (
-    <SidebarGroup className='group-data-[collapsible=icon]:hidden'>
-      <SidebarGroupLabel>Examples</SidebarGroupLabel>
+    <SidebarGroup>
       <SidebarMenu>
         {pages.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild isActive={pathname === item.url}>
+            <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.name}>
               <Link href={item.url}>
                 <item.icon />
                 <span>{item.name}</span>

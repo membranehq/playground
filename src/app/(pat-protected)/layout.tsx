@@ -17,26 +17,28 @@ export default function PatProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div
+      className="h-screen w-screen overflow-hidden relative"
+      style={
+        {
+          '--frame-margin-around': FRAME_MARGIN_AROUND,
+          '--frame-margin-top': FRAME_MARGIN_TOP,
+          '--frame-window-header-height': FRAME_WINDOW_HEADER_HEIGHT,
+        } as React.CSSProperties
+      }
+    >
       <div
         className='absolute -z-10 inset-0 h-full w-full
     bg-[linear-gradient(to_right,#73737320_1px,transparent_1px),linear-gradient(to_bottom,#73737320_1px,transparent_1px)]
     bg-[size:20px_20px]'
       />
+      <AdminControls />
       <div
         className={cn(
-          'm-[calc(var(--frame-margin-around)/2)] mt-[calc(var(--frame-margin-top))] relative',
+          'm-[calc(var(--frame-margin-around)/2)] mt-[calc(var(--frame-margin-top))]',
           FRAME_HEIGHT,
         )}
-        style={
-          {
-            '--frame-margin-around': FRAME_MARGIN_AROUND,
-            '--frame-margin-top': FRAME_MARGIN_TOP,
-            '--frame-window-header-height': FRAME_WINDOW_HEADER_HEIGHT,
-          } as React.CSSProperties
-        }
       >
-        <AdminControls />
         <VirtualWindow>
           <PatProtectedRoute>
             <CustomerProvider>{children}</CustomerProvider>
@@ -44,6 +46,6 @@ export default function PatProtectedLayout({
           <Toaster />
         </VirtualWindow>
       </div>
-    </>
+    </div>
   );
 }

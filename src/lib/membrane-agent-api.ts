@@ -5,6 +5,9 @@
  * Uses long polling on session status endpoint to detect state changes.
  */
 
+import { getWorkspaceHeaders } from './workspace-storage';
+import { cyrb64Hash } from '@/helpers/hash';
+
 export interface MembraneAgentMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -25,6 +28,34 @@ interface LongPollOptions {
   timeout?: number;
 }
 
+// Get customer info from localStorage (same as customer-provider)
+function getCustomerHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+
+  const userEmail = localStorage.getItem('userEmail');
+  if (!userEmail) return {};
+
+  // Parse JSON string (useLocalStorage stores as JSON)
+  const email = JSON.parse(userEmail) as string | undefined;
+  if (!email) return {};
+
+  const customerId = cyrb64Hash(email);
+
+  return {
+    'x-auth-id': customerId,
+    'x-customer-name': email,
+  };
+}
+
+// Get all auth headers for API calls
+function getAuthHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    ...getCustomerHeaders(),
+    ...getWorkspaceHeaders(),
+  };
+}
+
 // Cache the token to avoid fetching it on every poll
 let cachedToken: { token: string; apiUri: string; expiresAt: number } | null = null;
 
@@ -34,7 +65,9 @@ async function getMembraneConfig(): Promise<{ token: string; apiUri: string }> {
     return { token: cachedToken.token, apiUri: cachedToken.apiUri };
   }
 
-  const response = await fetch('/api/membrane-config');
+  const response = await fetch('/api/membrane-config', {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`Failed to get Membrane config: ${response.status}`);
   }

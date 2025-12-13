@@ -74,10 +74,10 @@ export function ResizablePanelLayout({
           {/* Draggable divider */}
           <div
             className={`
-              w-1 flex-shrink-0 cursor-col-resize transition-colors
+              w-px flex-shrink-0 cursor-col-resize transition-colors
               ${isDragging
-                ? 'bg-blue-500'
-                : 'bg-border hover:bg-blue-500'
+                ? 'bg-neutral-600'
+                : 'bg-neutral-800 hover:bg-neutral-600'
               }
             `}
             onMouseDown={handleMouseDown}
@@ -86,7 +86,7 @@ export function ResizablePanelLayout({
           {/* Sidebar panel */}
           <div
             style={{ width: sidebarWidth }}
-            className="flex-shrink-0 overflow-hidden border-l border-border"
+            className="flex-shrink-0 overflow-hidden"
           >
             {sidebar}
           </div>

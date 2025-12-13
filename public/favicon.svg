@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+
+  <!-- Agent/Robot head -->
+  <rect x="30" y="25" width="40" height="45" rx="8" fill="url(#grad)"/>
+
+  <!-- Antenna with signal waves -->
+  <line x1="50" y1="25" x2="50" y2="15" stroke="url(#grad)" stroke-width="2.5"/>
+  <circle cx="50" cy="12" r="3" fill="url(#grad)"/>
+
+  <!-- Signal waves emanating from antenna -->
+  <circle cx="50" cy="12" r="8" fill="none" stroke="url(#glowGrad)" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="50" cy="12" r="13" fill="none" stroke="url(#glowGrad)" stroke-width="1" opacity="0.4"/>
+
+  <!-- Eyes (digital/AI look) -->
+  <rect x="38" y="35" width="8" height="8" rx="2" fill="#ffffff"/>
+  <rect x="54" y="35" width="8" height="8" rx="2" fill="#ffffff"/>
+
+  <!-- Eye pupils (animated/digital look) -->
+  <rect x="40" y="37" width="4" height="4" fill="url(#grad)"/>
+  <rect x="56" y="37" width="4" height="4" fill="url(#grad)"/>
+
+  <!-- Mouth/Interface line -->
+  <line x1="38" y1="55" x2="62" y2="55" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="42" y1="60" x2="58" y2="60" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Integration nodes (connections at bottom) -->
+  <circle cx="25" cy="80" r="5" fill="url(#grad)"/>
+  <circle cx="50" cy="85" r="5" fill="url(#grad)"/>
+  <circle cx="75" cy="80" r="5" fill="url(#grad)"/>
+
+  <!-- Connection lines from agent to nodes -->
+  <line x1="35" y1="70" x2="28" y2="77" stroke="url(#grad)" stroke-width="2" opacity="0.5"/>
+  <line x1="50" y1="70" x2="50" y2="80" stroke="url(#grad)" stroke-width="2" opacity="0.5"/>
+  <line x1="65" y1="70" x2="72" y2="77" stroke="url(#grad)" stroke-width="2" opacity="0.5"/>
+
+  <!-- Subtle glow around agent head -->
+  <rect x="28" y="23" width="44" height="49" rx="10" fill="url(#glowGrad)" opacity="0.2"/>
+</svg>

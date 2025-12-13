@@ -1,5 +1,5 @@
-export const FRAME_MARGIN_AROUND = '10rem';
-export const FRAME_MARGIN_TOP = '10rem';
+export const FRAME_MARGIN_AROUND = '4rem';
+export const FRAME_MARGIN_TOP = '5rem';
 export const FRAME_WINDOW_HEADER_HEIGHT = '32px';
 
 export const FRAME_HEIGHT =

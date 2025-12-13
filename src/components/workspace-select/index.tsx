@@ -27,7 +27,7 @@ const selectVariants = cva('w-full', {
   variants: {
     span: {
       full: 'max-w-full',
-      short: 'max-w-52',
+      short: 'max-w-80',
     },
   },
   defaultVariants: {

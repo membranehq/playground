@@ -1,6 +1,7 @@
 'use client';
 
 import { Wrench, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react';
+import { Streamdown } from 'streamdown';
 import type { MembraneAgentMessage as MessageType } from '@/lib/membrane-agent-api';
 
 interface MembraneAgentMessageProps {
@@ -31,17 +32,17 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
 
   return (
     <div
-      className={`p-3 rounded-lg text-sm ${
+      className={`p-3 rounded-xl text-sm ${
         isUser
-          ? 'bg-muted'
-          : 'bg-card border border-border'
+          ? 'bg-neutral-700'
+          : 'bg-neutral-800 border border-neutral-700'
       }`}
     >
       {/* Text content */}
       {message.content && (
-        <p className="text-foreground whitespace-pre-wrap">
+        <Streamdown className="streamdown text-neutral-200">
           {message.content}
-        </p>
+        </Streamdown>
       )}
 
       {/* Tool summaries */}
@@ -55,7 +56,7 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
 
       {/* If no content and no tools, show placeholder */}
       {!message.content && toolSummaries.length === 0 && (
-        <p className="text-muted-foreground italic">
+        <p className="text-neutral-600 italic">
           (Empty message)
         </p>
       )}
@@ -65,7 +66,7 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
 
 function ToolSummaryItem({ tool }: { tool: ToolSummary }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <div className="flex items-center gap-2 text-xs text-neutral-500">
       <Wrench className="w-3 h-3 flex-shrink-0" />
       <span className="truncate flex-1">{tool.title || formatToolName(tool.name)}</span>
       <StatusBadge status={tool.status} />
@@ -77,28 +78,28 @@ function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'completed':
       return (
-        <span className="flex items-center gap-1 text-green-400">
+        <span className="flex items-center gap-1 text-green-500">
           <CheckCircle2 className="w-3 h-3" />
           <span>Done</span>
         </span>
       );
     case 'running':
       return (
-        <span className="flex items-center gap-1 text-blue-400">
+        <span className="flex items-center gap-1 text-neutral-400">
           <Loader2 className="w-3 h-3 animate-spin" />
           <span>Running</span>
         </span>
       );
     case 'error':
       return (
-        <span className="flex items-center gap-1 text-red-400">
+        <span className="flex items-center gap-1 text-red-500">
           <AlertCircle className="w-3 h-3" />
           <span>Error</span>
         </span>
       );
     default:
       return (
-        <span className="flex items-center gap-1 text-muted-foreground">
+        <span className="flex items-center gap-1 text-neutral-600">
           <Clock className="w-3 h-3" />
           <span>Pending</span>
         </span>

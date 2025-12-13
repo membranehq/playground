@@ -8,15 +8,42 @@ import { getAgentHeaders, getStreamUrl } from '@/lib/agent-api';
 import { Loader } from '@/components/ai-elements/loader';
 import { Button } from '@/components/ui/button';
 import { Square, ArrowRight } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 import { AgentSessionsDropdown } from '@/components/agent-sessions-dropdown';
 import { PageHeaderActions } from '@/components/page-header-context';
+import { ChatMessage } from '@/components/chat-message';
+import { ResizablePanelLayout } from '@/components/resizable-panel-layout';
+import { MembraneAgentSidebar } from '@/components/membrane-agent-sidebar';
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   parts?: any[];
+}
+
+// Helper to extract error message from various error formats
+function getErrorMessage(error: unknown): string {
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>;
+    if (err.error && typeof err.error === 'object') {
+      const nestedErr = err.error as Record<string, unknown>;
+      if (nestedErr.data && typeof nestedErr.data === 'object') {
+        const data = nestedErr.data as Record<string, unknown>;
+        if (typeof data.message === 'string') return data.message;
+      }
+      if (typeof nestedErr.message === 'string') return nestedErr.message;
+    }
+    if (typeof err.message === 'string') return err.message;
+    if (typeof err.error === 'string') return err.error;
+  }
+  return 'An unknown error occurred';
 }
 
 export default function SessionPage() {
@@ -34,18 +61,11 @@ export default function SessionPage() {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState('');
+  const [membraneSessionId, setMembraneSessionId] = useState<string | null>(null);
 
   const eventSourceRef = useRef<EventSource | null>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const initialMessageSentRef = useRef(false);
   const messagesMapRef = useRef(new Map<string, { info: any; parts: Map<string, any> }>());
-
-  // Scroll to bottom of messages container when messages change
-  useEffect(() => {
-    if (messages.length > 0 && messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
 
   // Convert messages map to array
   const updateMessagesFromMap = () => {
@@ -125,7 +145,7 @@ export default function SessionPage() {
         } else if (data.type === 'idle') {
           setIsLoading(false);
         } else if (data.type === 'error') {
-          setError(data.error?.message || 'Stream error');
+          setError(getErrorMessage(data.error));
           setIsLoading(false);
         }
       } catch (err) {
@@ -241,15 +261,20 @@ export default function SessionPage() {
     }
   };
 
-  if (!customerId || !workspace) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Please log in to use the agent.</p>
-      </div>
-    );
-  }
+  // Handle connection completion
+  const handleConnectionComplete = async (integrationKey: string, connectionId: string) => {
+    const message = `Connection to ${integrationKey} created successfully with ID: ${connectionId}. You can now proceed with testing.`;
+    await sendMessage(message);
+  };
 
+  // Handle showing Membrane Agent details
+  const handleShowMembraneDetails = (membraneAgentSessionId: string) => {
+    setMembraneSessionId(membraneAgentSessionId);
+  };
+
+  // Create new session
   const createNewSession = async () => {
+    if (!customerId || !workspace) return;
     try {
       const response = await fetch('/api/sessions', {
         method: 'POST',
@@ -265,6 +290,14 @@ export default function SessionPage() {
     }
   };
 
+  if (!customerId || !workspace) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Please log in to use the agent.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       <PageHeaderActions>
@@ -274,95 +307,100 @@ export default function SessionPage() {
         />
       </PageHeaderActions>
 
-      {/* Messages Area */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto -mx-4 px-4">
-        <div className="max-w-3xl mx-auto space-y-4 py-4">
+      <ResizablePanelLayout
+        sidebar={membraneSessionId ? (
+          <MembraneAgentSidebar
+            sessionId={membraneSessionId}
+            onClose={() => setMembraneSessionId(null)}
+          />
+        ) : null}
+      >
+        <div className="flex flex-col h-full">
+          {/* Messages Area */}
           {isLoadingSession ? (
-            <div className="flex justify-center py-8">
-              <Loader size={32} />
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <Loader size={48} className="text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading session...</p>
+              </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Send a message to start the conversation
+            <div className="flex-1 flex items-center justify-center text-center">
+              <p className="text-muted-foreground">
+                Send a message to start the conversation
+              </p>
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  {message.role === 'user' ? (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                  ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+            <Conversation className="flex-1">
+              <ConversationContent className="max-w-3xl mx-auto px-4 py-6">
+                {messages.map((message) => (
+                  <ChatMessage
+                    key={message.id}
+                    role={message.role}
+                    content={message.content}
+                    parts={message.parts}
+                    onConnectionComplete={handleConnectionComplete}
+                    onShowMembraneDetails={handleShowMembraneDetails}
+                  />
+                ))}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-muted rounded-lg px-4 py-3">
+                      <Loader size={20} className="text-muted-foreground" />
                     </div>
-                  )}
-                </div>
-              </div>
-            ))
+                  </div>
+                )}
+              </ConversationContent>
+              <ConversationScrollButton />
+            </Conversation>
           )}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-lg px-4 py-3">
-                <Loader size={20} />
+
+          {/* Error Display */}
+          {error && (
+            <div className="max-w-3xl mx-auto px-4 py-2">
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                <p className="text-sm text-destructive">Error: {error}</p>
               </div>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-            <p className="text-sm text-destructive">Error: {error}</p>
+          {/* Input Area */}
+          <div className="p-4">
+            <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+              <div className="flex gap-3 items-center">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type your message..."
+                  disabled={isLoading}
+                  className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+                />
+                {isLoading ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleInterrupt}
+                    className="h-12 w-12 rounded-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <Square className="w-4 h-4 fill-current" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={!input.trim()}
+                    size="icon"
+                    className="h-12 w-12 rounded-full"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </Button>
+                )}
+              </div>
+            </form>
           </div>
         </div>
-      )}
-
-      {/* Input Area */}
-      <div className="p-4">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <div className="flex gap-3 items-center">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground disabled:opacity-50"
-            />
-            {isLoading ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleInterrupt}
-                className="h-12 w-12 rounded-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              >
-                <Square className="w-4 h-4 fill-current" />
-              </Button>
-            ) : (
-              <Button
-                type="submit"
-                disabled={!input.trim()}
-                size="icon"
-                className="h-12 w-12 rounded-full"
-              >
-                <ArrowRight className="w-5 h-5" />
-              </Button>
-            )}
-          </div>
-        </form>
-      </div>
+      </ResizablePanelLayout>
     </div>
   );
 }

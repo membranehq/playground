@@ -12,7 +12,6 @@ import { useSelectedLayoutSegments } from 'next/navigation';
 import { Fragment } from 'react';
 
 const mapping: Record<string, string> = {
-  '': 'Playground',
   integrations: 'Integrations',
   users: 'Users',
   connections: 'Connections',
@@ -21,17 +20,26 @@ const mapping: Record<string, string> = {
   'data-sources': 'Data Sources',
   'field-mappings': 'Field Mappings',
   agent: 'Agent',
-  sessions: 'Sessions',
 };
+
+// Segments to hide from breadcrumbs
+const hiddenSegments = ['', 'sessions'];
+
+// Build href for a segment based on original segments array
+function getHrefForSegment(segments: string[], targetSegment: string): string {
+  const targetIndex = segments.indexOf(targetSegment);
+  if (targetIndex === -1) return '/';
+  return '/' + segments.slice(0, targetIndex + 1).join('/');
+}
 
 export const Breadcrumbs = () => {
   const segments = useSelectedLayoutSegments();
-  const patched = ['', ...segments];
+  const visibleSegments = segments.filter(s => !hiddenSegments.includes(s));
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {patched.map((segment, index, source) => (
+        {visibleSegments.map((segment, index, source) => (
           <Fragment key={segment}>
             {index > 0 && <BreadcrumbSeparator className='hidden md:block' />}
 
@@ -42,11 +50,7 @@ export const Breadcrumbs = () => {
             ) : (
               <BreadcrumbLink asChild>
                 <Link
-                  href={
-                    patched
-                      .toSpliced(index + 1, source.length - index)
-                      .join('/') || '../'
-                  }
+                  href={getHrefForSegment(segments, segment)}
                   className='capitalize'
                 >
                   {mapping[segment] || segment}

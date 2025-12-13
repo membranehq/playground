@@ -23,7 +23,7 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [messagesError, setMessagesError] = useState<string | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const prevStateRef = useRef<string | null>(null);
 
   // Use shared hook for session status
@@ -31,7 +31,9 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   // Fetch messages when session state changes or on mount
@@ -58,7 +60,7 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
     loadMessages();
   }, [sessionId, sessionState]);
 
-  // Also poll messages while busy
+  // Also poll messages while busy (with longer interval to avoid rate limiting)
   useEffect(() => {
     if (sessionState !== 'busy') return;
 
@@ -67,9 +69,12 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
         const response = await fetchMembraneAgentMessages(sessionId);
         setMessages(response.messages);
       } catch (err) {
-        console.error('[MembraneAgentSidebar] Error polling messages:', err);
+        // Silently handle rate limit errors - we'll retry on next interval
+        if (!(err instanceof Error && err.message.includes('429'))) {
+          console.error('[MembraneAgentSidebar] Error polling messages:', err);
+        }
       }
-    }, 2000); // Poll every 2 seconds while busy
+    }, 5000); // Poll every 5 seconds while busy to avoid rate limiting
 
     return () => clearInterval(interval);
   }, [sessionId, sessionState]);
@@ -78,28 +83,28 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
   const error = messagesError || statusError;
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-[#050505]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-[#0a0a0a]">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-foreground">
+          <h3 className="font-semibold text-white">
             Membrane Agent
           </h3>
           {/* Status badge in header */}
           {sessionState === 'busy' && (
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-900 text-blue-300">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Busy
+              Working
             </span>
           )}
           {sessionState === 'idle' && (
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-900 text-green-300">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-900/30 text-green-400 border border-green-800/50">
               <CheckCircle2 className="w-3 h-3" />
-              Idle
+              Done
             </span>
           )}
           {sessionState === 'error' && (
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-900 text-red-300">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-900/30 text-red-400 border border-red-800/50">
               <AlertCircle className="w-3 h-3" />
               Error
             </span>
@@ -107,29 +112,29 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded-md hover:bg-accent transition-colors"
+          className="p-1.5 rounded-lg hover:bg-neutral-800/50 transition-colors"
           title="Close sidebar"
         >
-          <X className="w-5 h-5 text-muted-foreground" />
+          <X className="w-5 h-5 text-neutral-400" />
         </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
         {isLoading && messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <Loader2 className="w-8 h-8 animate-spin mb-2" />
+          <div className="flex flex-col items-center justify-center h-full text-neutral-500">
+            <Loader2 className="w-6 h-6 animate-spin mb-2" />
             <p className="text-sm">Loading messages...</p>
           </div>
         ) : error && messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
-            <p className="text-sm text-center text-red-400">
+          <div className="flex flex-col items-center justify-center h-full">
+            <AlertCircle className="w-6 h-6 text-red-500 mb-2" />
+            <p className="text-sm text-center text-red-500">
               {error}
             </p>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <div className="flex flex-col items-center justify-center h-full text-neutral-500">
             <p className="text-sm">No messages yet</p>
           </div>
         ) : (
@@ -137,7 +142,6 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
             {messages.map((msg) => (
               <MembraneAgentMessage key={msg.id} message={msg} />
             ))}
-            <div ref={messagesEndRef} />
           </>
         )}
       </div>

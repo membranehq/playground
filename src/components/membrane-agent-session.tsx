@@ -31,30 +31,30 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
   const isError = !isLoading && sessionState === 'error';
 
   return (
-    <div className="border border-blue-200 rounded-lg p-4 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+    <div className="border border-neutral-700 rounded-xl p-4 bg-neutral-800/50">
       <div className="flex items-center gap-3">
-        <div className="flex-shrink-0">
-          <Blocks className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-neutral-700 flex items-center justify-center">
+          <Blocks className="w-5 h-5 text-neutral-200" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-blue-900 dark:text-blue-100">
-              Building integrations with Membrane
+            <span className="font-medium text-neutral-200">
+              Building integrations
             </span>
             {isBusy && (
-              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              <Loader2 className="w-4 h-4 text-neutral-400 animate-spin" />
             )}
             {isIdle && (
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
             )}
             {isError && (
-              <AlertCircle className="w-4 h-4 text-red-600" />
+              <AlertCircle className="w-4 h-4 text-red-500" />
             )}
           </div>
-          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-            {isBusy && 'Membrane Agent is building the integration...'}
-            {isIdle && 'Membrane Agent completed building the integration.'}
-            {isError && 'An error occurred while building the integration.'}
+          <p className="text-sm text-neutral-500 mt-0.5">
+            {isBusy && 'Membrane Agent is working...'}
+            {isIdle && 'Integration built successfully'}
+            {isError && 'An error occurred'}
           </p>
         </div>
       </div>
@@ -62,7 +62,7 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
       {sessionId && (
         <button
           onClick={handleShowDetails}
-          className="mt-3 flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 hover:underline transition-colors"
+          className="mt-3 flex items-center gap-1 text-sm text-neutral-400 hover:text-white transition-colors"
         >
           Show details
           <ChevronRight className="w-4 h-4" />
@@ -70,7 +70,7 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
       )}
 
       {!sessionId && (
-        <p className="mt-3 text-xs text-blue-500">
+        <p className="mt-3 text-xs text-neutral-600">
           Waiting for session to start...
         </p>
       )}
