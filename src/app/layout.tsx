@@ -12,6 +12,9 @@ export const metadata = {
     template: '%s | Playground',
   },
   description: 'Integration.app Playground',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
