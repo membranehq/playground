@@ -45,6 +45,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') })
 import { createOpencode, type Opencode } from "@opencode-ai/sdk"
 import express, { Request, Response, NextFunction } from "express"
 import * as fs from "fs"
+import { execSync, spawn } from "child_process"
 
 const PROXY_PORT = parseInt(process.env.OPENCODE_PROXY_PORT || "1337", 10)
 const PROXY_HOST = process.env.OPENCODE_PROXY_HOST || "0.0.0.0"
@@ -184,6 +185,20 @@ class OpencodeInstanceManager {
 
       console.log(`[InstanceManager] Started OpenCode for ${customerId} at ${opencodeInstance.server?.url}`)
 
+      // Log MCP server status if available
+      try {
+        const mcpServers = (opencodeInstance as any).mcp?.servers || (opencodeInstance as any).mcpServers
+        if (mcpServers) {
+          console.log(`[MCP Debug] MCP servers for ${customerId}:`)
+          for (const [name, server] of Object.entries(mcpServers)) {
+            const s = server as any
+            console.log(`[MCP Debug]   ${name}: status=${s.status || 'unknown'}, error=${s.error || 'none'}`)
+          }
+        }
+      } catch (mcpErr) {
+        console.log(`[MCP Debug] Could not inspect MCP servers: ${mcpErr}`)
+      }
+
       return {
         customerId,
         opencodeInstance,
@@ -194,6 +209,19 @@ class OpencodeInstanceManager {
       }
     } catch (error) {
       console.error(`[InstanceManager] Failed to create OpenCode instance for ${customerId}:`, error)
+
+      // Log additional MCP-specific error details
+      const err = error as any
+      if (err.cause) {
+        console.error(`[MCP Debug] Error cause:`, err.cause)
+      }
+      if (err.message?.includes('mcp') || err.message?.includes('MCP') || err.message?.includes('membrane')) {
+        console.error(`[MCP Debug] This appears to be an MCP-related error. Check that:`)
+        console.error(`[MCP Debug]   1. @membranehq/cli is installed globally (npm install -g @membranehq/cli)`)
+        console.error(`[MCP Debug]   2. The 'membrane' command is in PATH`)
+        console.error(`[MCP Debug]   3. Workspace credentials are valid`)
+      }
+
       throw error
     } finally {
       // Restore original working directory and XDG_DATA_HOME
@@ -372,7 +400,166 @@ function generateConfig(customerId: string, credentials: WorkspaceCredentials): 
     config.mcp.membrane.environment.MEMBRANE_TEST_CUSTOMER_ID = customerId
   }
 
+  // Log MCP configuration for debugging
+  logMcpConfig(customerId, config)
+
   return config
+}
+
+/**
+ * Log MCP configuration for debugging purposes.
+ */
+function logMcpConfig(customerId: string, config: any): void {
+  console.log(`[MCP Debug] Configuration for ${customerId}:`)
+
+  if (!config.mcp) {
+    console.log(`[MCP Debug]   No MCP configuration found in config`)
+    return
+  }
+
+  for (const [serverName, serverConfig] of Object.entries(config.mcp)) {
+    const cfg = serverConfig as any
+    console.log(`[MCP Debug]   Server: ${serverName}`)
+    console.log(`[MCP Debug]     Type: ${cfg.type || 'not specified'}`)
+    console.log(`[MCP Debug]     Command: ${JSON.stringify(cfg.command)}`)
+    console.log(`[MCP Debug]     Enabled: ${cfg.enabled}`)
+
+    if (cfg.environment) {
+      console.log(`[MCP Debug]     Environment variables:`)
+      for (const [key, value] of Object.entries(cfg.environment)) {
+        // Mask sensitive values
+        const maskedValue = key.toLowerCase().includes('secret') || key.toLowerCase().includes('key')
+          ? (value ? `[SET - ${String(value).length} chars]` : '[NOT SET]')
+          : value
+        console.log(`[MCP Debug]       ${key}: ${maskedValue}`)
+      }
+    }
+  }
+}
+
+/**
+ * Check if a command is available in PATH.
+ */
+function checkCommandAvailable(command: string): { available: boolean; path?: string; error?: string } {
+  try {
+    const result = execSync(`which ${command} 2>/dev/null || where ${command} 2>/dev/null`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+    }).trim()
+    return { available: true, path: result }
+  } catch (error) {
+    return { available: false, error: `Command '${command}' not found in PATH` }
+  }
+}
+
+/**
+ * Test MCP command by spawning it briefly and capturing any immediate errors.
+ */
+async function testMcpCommand(command: string[], env: Record<string, string>): Promise<{ success: boolean; output?: string; error?: string }> {
+  return new Promise((resolve) => {
+    const [cmd, ...args] = command
+    console.log(`[MCP Debug] Testing command: ${cmd} ${args.join(' ')}`)
+
+    const proc = spawn(cmd, args, {
+      env: { ...process.env, ...env },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+
+    let stdout = ''
+    let stderr = ''
+    let resolved = false
+
+    const cleanup = () => {
+      if (!resolved) {
+        resolved = true
+        proc.kill('SIGTERM')
+      }
+    }
+
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString()
+      console.log(`[MCP Debug] stdout: ${data.toString().trim()}`)
+    })
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString()
+      console.log(`[MCP Debug] stderr: ${data.toString().trim()}`)
+    })
+
+    proc.on('error', (err) => {
+      cleanup()
+      resolve({ success: false, error: `Failed to spawn: ${err.message}` })
+    })
+
+    proc.on('exit', (code, signal) => {
+      if (!resolved) {
+        resolved = true
+        if (code === 0 || signal === 'SIGTERM') {
+          resolve({ success: true, output: stdout })
+        } else {
+          resolve({ success: false, error: `Exited with code ${code}: ${stderr}` })
+        }
+      }
+    })
+
+    // Give it 3 seconds to start up and report any immediate errors
+    setTimeout(() => {
+      if (!resolved) {
+        cleanup()
+        // If it's still running after 3 seconds without error, consider it a success
+        resolve({ success: true, output: stdout || 'Process started successfully' })
+      }
+    }, 3000)
+  })
+}
+
+/**
+ * Verify MCP setup and log diagnostics.
+ */
+async function verifyMcpSetup(): Promise<void> {
+  console.log(`[MCP Debug] ========== MCP Diagnostics ==========`)
+
+  // Check if membrane CLI is available
+  const membraneCheck = checkCommandAvailable('membrane')
+  if (membraneCheck.available) {
+    console.log(`[MCP Debug] membrane CLI found at: ${membraneCheck.path}`)
+
+    // Try to get version
+    try {
+      const version = execSync('membrane --version 2>&1', { encoding: 'utf-8', timeout: 5000 }).trim()
+      console.log(`[MCP Debug] membrane version: ${version}`)
+    } catch (err) {
+      console.log(`[MCP Debug] Could not get membrane version: ${err}`)
+    }
+  } else {
+    console.error(`[MCP Debug] ERROR: ${membraneCheck.error}`)
+    console.error(`[MCP Debug] Make sure @membranehq/cli is installed globally: npm install -g @membranehq/cli`)
+  }
+
+  // Log PATH for debugging
+  console.log(`[MCP Debug] PATH: ${process.env.PATH}`)
+
+  // Log node/npm info
+  try {
+    const nodeVersion = execSync('node --version', { encoding: 'utf-8', timeout: 5000 }).trim()
+    const npmVersion = execSync('npm --version', { encoding: 'utf-8', timeout: 5000 }).trim()
+    console.log(`[MCP Debug] Node.js: ${nodeVersion}, npm: ${npmVersion}`)
+  } catch (err) {
+    console.log(`[MCP Debug] Could not get node/npm version`)
+  }
+
+  // List global npm packages
+  try {
+    const globalPackages = execSync('npm list -g --depth=0 2>&1 | grep -i membrane || echo "No membrane packages found"', {
+      encoding: 'utf-8',
+      timeout: 10000,
+    }).trim()
+    console.log(`[MCP Debug] Global membrane packages:\n${globalPackages}`)
+  } catch (err) {
+    console.log(`[MCP Debug] Could not list global packages`)
+  }
+
+  console.log(`[MCP Debug] ========================================`)
 }
 
 /**
@@ -688,6 +875,9 @@ async function main() {
   console.log("  OPENROUTER_API_KEY:", process.env.OPENROUTER_API_KEY ? "set" : "missing")
   console.log("  MEMBRANE_API_URI:", process.env.MEMBRANE_API_URI || "(using default)")
   console.log("[OpenCode Proxy] Note: MEMBRANE_WORKSPACE_KEY/SECRET are passed dynamically via request headers")
+
+  // Verify MCP setup at startup
+  await verifyMcpSetup()
 
   // Ensure base directories exist
   fs.mkdirSync(path.join(BASE_PATH, "workspaces"), { recursive: true })

@@ -22,17 +22,17 @@ export function FieldMappingsList({ connectionId }: { connectionId: string }) {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className='rounded-md border border-neutral-800'>
+      <div className='rounded-md border border-neutral-200'>
         <Table>
           <TableHeader>
-            <TableRow className='border-neutral-800'>
+            <TableRow className='border-neutral-200'>
               <TableHead>Name & Key</TableHead>
               <TableHead>Configure</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {fieldMappings.length === 0 && !loading && !error && (
-              <TableRow className='border-neutral-800'>
+              <TableRow className='border-neutral-200'>
                 <TableCell
                   colSpan={4}
                   className='text-center text-muted-foreground'
@@ -44,7 +44,7 @@ export function FieldMappingsList({ connectionId }: { connectionId: string }) {
 
             <>
               {fieldMappings.map((fieldMapping) => (
-                <TableRow key={fieldMapping.id} className='border-neutral-800'>
+                <TableRow key={fieldMapping.id} className='border-neutral-200'>
                   <TableCell className='font-medium'>
                     <div className='flex gap-1 items-center'>
                       {fieldMapping.name}
@@ -67,7 +67,7 @@ export function FieldMappingsList({ connectionId }: { connectionId: string }) {
 
             {loading &&
               Array.from({ length: 3 }).map((_, index) => (
-                <TableRow key={index} className='border-neutral-800'>
+                <TableRow key={index} className='border-neutral-200'>
                   <TableCell>
                     <Skeleton className='h-6 w-[200px]' />
                   </TableCell>
@@ -78,7 +78,7 @@ export function FieldMappingsList({ connectionId }: { connectionId: string }) {
               ))}
 
             {error && (
-              <TableRow className='border-neutral-800'>
+              <TableRow className='border-neutral-200'>
                 <TableCell colSpan={4} className='text-center text-red-500'>
                   Error loading field mappings
                 </TableCell>

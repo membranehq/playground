@@ -34,13 +34,13 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
     <div
       className={`p-3 rounded-xl text-sm ${
         isUser
-          ? 'bg-neutral-700'
-          : 'bg-neutral-800 border border-neutral-700'
+          ? 'bg-neutral-200'
+          : 'bg-white border border-neutral-200'
       }`}
     >
       {/* Text content */}
       {message.content && (
-        <Streamdown className="streamdown text-neutral-200">
+        <Streamdown className="streamdown text-neutral-800">
           {message.content}
         </Streamdown>
       )}
@@ -56,7 +56,7 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
 
       {/* If no content and no tools, show placeholder */}
       {!message.content && toolSummaries.length === 0 && (
-        <p className="text-neutral-600 italic">
+        <p className="text-neutral-400 italic">
           (Empty message)
         </p>
       )}
@@ -78,14 +78,14 @@ function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'completed':
       return (
-        <span className="flex items-center gap-1 text-green-500">
+        <span className="flex items-center gap-1 text-green-600">
           <CheckCircle2 className="w-3 h-3" />
           <span>Done</span>
         </span>
       );
     case 'running':
       return (
-        <span className="flex items-center gap-1 text-neutral-400">
+        <span className="flex items-center gap-1 text-neutral-500">
           <Loader2 className="w-3 h-3 animate-spin" />
           <span>Running</span>
         </span>
@@ -99,7 +99,7 @@ function StatusBadge({ status }: { status: string }) {
       );
     default:
       return (
-        <span className="flex items-center gap-1 text-neutral-600">
+        <span className="flex items-center gap-1 text-neutral-400">
           <Clock className="w-3 h-3" />
           <span>Pending</span>
         </span>

@@ -27,10 +27,10 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
   const { flows, loading, error } = useFlows({ connectionId });
 
   return (
-    <div className='rounded-md border border-neutral-800'>
+    <div className='rounded-md border border-neutral-200'>
       <Table>
         <TableHeader>
-          <TableRow className='border-neutral-800'>
+          <TableRow className='border-neutral-200'>
             <TableHead>Name & Key</TableHead>
             <TableHead>Configure</TableHead>
             <TableHead>Run</TableHead>
@@ -38,7 +38,7 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
         </TableHeader>
         <TableBody>
           {flows.length === 0 && !loading && !error && (
-            <TableRow className='border-neutral-800'>
+            <TableRow className='border-neutral-200'>
               <TableCell
                 colSpan={4}
                 className='text-center text-muted-foreground'
@@ -50,7 +50,7 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
 
           <>
             {flows.map((flow) => (
-              <TableRow key={flow.id} className='border-neutral-800'>
+              <TableRow key={flow.id} className='border-neutral-200'>
                 <TableCell className='font-medium'>
                   {flow.name} <Badge variant='secondary'>{flow.key}</Badge>
                 </TableCell>
@@ -58,7 +58,7 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
                   <Button
                     variant='outline'
                     disabled={!flow.key}
-                    className='border-neutral-700 hover:border-neutral-600'
+                    className='border-neutral-300 hover:border-neutral-400'
                     onClick={() => {
                       if (flow.key && connection?.id) {
                         client
@@ -74,7 +74,7 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
                   <Button
                     variant='outline'
                     disabled={!flow.key}
-                    className='border-neutral-700 hover:border-neutral-600'
+                    className='border-neutral-300 hover:border-neutral-400'
                     onClick={() => {
                       if (flow.key && connection?.id) {
                         client
@@ -87,7 +87,7 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
                     <Workflow className='h-4 w-4' /> Edit flow
                   </Button>
 
-                  <Button variant='outline' asChild className='border-neutral-700 hover:border-neutral-600'>
+                  <Button variant='outline' asChild className='border-neutral-300 hover:border-neutral-400'>
                     <Link
                       href={`/connections/${connectionId}/flows/${flow.key}/builder`}
                     >
@@ -104,7 +104,7 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
 
           {loading &&
             Array.from({ length: 3 }).map((_, index) => (
-              <TableRow key={index} className='border-neutral-800'>
+              <TableRow key={index} className='border-neutral-200'>
                 <TableCell>
                   <Skeleton className='h-6 w-[200px]' />
                 </TableCell>
@@ -115,7 +115,7 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
             ))}
 
           {error && (
-            <TableRow className='border-neutral-800'>
+            <TableRow className='border-neutral-200'>
               <TableCell colSpan={4} className='text-center text-red-500'>
                 Error loading flows
               </TableCell>

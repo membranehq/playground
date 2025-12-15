@@ -14,7 +14,7 @@ export function DataSourceConfigurationTrigger({
 }) {
   return (
     <ConfigureDataSourceModal id={dataSourceId} connectionId={connectionId}>
-      <Button variant='outline' className='border-neutral-700 hover:border-neutral-600'>
+      <Button variant='outline' className='border-neutral-300 hover:border-neutral-400'>
         <TextCursorInput className='h-4 w-4' /> Configure with custom UI
       </Button>
     </ConfigureDataSourceModal>

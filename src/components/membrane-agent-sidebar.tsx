@@ -83,28 +83,28 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
   const error = messagesError || statusError;
 
   return (
-    <div className="h-full flex flex-col bg-[#050505]">
+    <div className="h-full flex flex-col bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-[#0a0a0a]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-neutral-50">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-white">
+          <h3 className="font-semibold text-neutral-900">
             Membrane Agent
           </h3>
           {/* Status badge in header */}
           {sessionState === 'busy' && (
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-600 border border-neutral-300">
               <Loader2 className="w-3 h-3 animate-spin" />
               Working
             </span>
           )}
           {sessionState === 'idle' && (
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-900/30 text-green-400 border border-green-800/50">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
               <CheckCircle2 className="w-3 h-3" />
               Done
             </span>
           )}
           {sessionState === 'error' && (
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-900/30 text-red-400 border border-red-800/50">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
               <AlertCircle className="w-3 h-3" />
               Error
             </span>
@@ -112,10 +112,10 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-neutral-800/50 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-neutral-200 transition-colors"
           title="Close sidebar"
         >
-          <X className="w-5 h-5 text-neutral-400" />
+          <X className="w-5 h-5 text-neutral-500" />
         </button>
       </div>
 

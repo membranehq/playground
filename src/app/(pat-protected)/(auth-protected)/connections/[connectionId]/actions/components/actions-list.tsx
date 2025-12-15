@@ -18,17 +18,17 @@ export function ActionsList({ connectionId }: { connectionId: string }) {
   const { actions, loading, error } = useActions({ connectionId });
 
   return (
-    <div className='rounded-md border border-neutral-800'>
+    <div className='rounded-md border border-neutral-200'>
       <Table>
         <TableHeader>
-          <TableRow className='border-neutral-800'>
+          <TableRow className='border-neutral-200'>
             <TableHead>Name & Key</TableHead>
             <TableHead>Execute</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {actions.length === 0 && !loading && (
-            <TableRow className='border-neutral-800'>
+            <TableRow className='border-neutral-200'>
               <TableCell
                 colSpan={4}
                 className='text-center text-muted-foreground'
@@ -40,7 +40,7 @@ export function ActionsList({ connectionId }: { connectionId: string }) {
 
           <>
             {actions.map((action) => (
-              <TableRow key={action.id} className='border-neutral-800'>
+              <TableRow key={action.id} className='border-neutral-200'>
                 <TableCell className='font-medium'>
                   {action.name} <Badge variant='secondary'>{action.key}</Badge>
                 </TableCell>
@@ -53,7 +53,7 @@ export function ActionsList({ connectionId }: { connectionId: string }) {
 
           {loading &&
             Array.from({ length: 3 }).map((_, index) => (
-              <TableRow key={index} className='border-neutral-800'>
+              <TableRow key={index} className='border-neutral-200'>
                 <TableCell>
                   <Skeleton className='h-6 w-[200px]' />
                 </TableCell>
@@ -64,7 +64,7 @@ export function ActionsList({ connectionId }: { connectionId: string }) {
             ))}
 
           {error && (
-            <TableRow className='border-neutral-800'>
+            <TableRow className='border-neutral-200'>
               <TableCell colSpan={4} className='text-center text-red-500'>
                 Error loading actions
               </TableCell>

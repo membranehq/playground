@@ -14,12 +14,17 @@ import { Fragment } from 'react';
 const mapping: Record<string, string> = {
   integrations: 'Integrations',
   users: 'Users',
-  connections: 'Connections',
+  connections: 'Integrations', // Connections are accessed via Integrations page
   actions: 'Actions',
   flows: 'Flows',
   'data-sources': 'Data Sources',
   'field-mappings': 'Field Mappings',
   agent: 'Agent',
+};
+
+// Custom href overrides for specific segments
+const hrefOverrides: Record<string, string> = {
+  connections: '/integrations', // Connections breadcrumb links to Integrations page
 };
 
 // Segments to hide from breadcrumbs
@@ -50,7 +55,7 @@ export const Breadcrumbs = () => {
             ) : (
               <BreadcrumbLink asChild>
                 <Link
-                  href={getHrefForSegment(segments, segment)}
+                  href={hrefOverrides[segment] || getHrefForSegment(segments, segment)}
                   className='capitalize'
                 >
                   {mapping[segment] || segment}

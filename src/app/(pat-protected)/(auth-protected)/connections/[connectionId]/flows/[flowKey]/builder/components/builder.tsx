@@ -26,7 +26,7 @@ export const FlowBuilder = ({
 
   return (
     <div
-      className='h-full w-full border border-neutral-800 rounded overflow-hidden'
+      className='h-full w-full border border-neutral-200 rounded overflow-hidden'
       data-container-id={targetId}
       ref={targetRef}
     ></div>

@@ -106,12 +106,12 @@ export function IntegrationList() {
   return (
     <TooltipProvider delayDuration={0}>
       <div className='mt-6 relative'>
-        <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500' />
+        <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400' />
         <Input
           placeholder='Search connections and integrations...'
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className='pl-9 bg-neutral-900/50 border-neutral-800 focus:border-neutral-700 placeholder:text-neutral-600'
+          className='pl-9 bg-white border-neutral-300 focus:border-neutral-400 placeholder:text-neutral-400'
         />
       </div>
 
@@ -129,7 +129,7 @@ export function IntegrationList() {
             <section className='mt-6'>
               <div className='flex items-center gap-2 mb-4'>
                 <Cable className='h-4 w-4 text-neutral-500' />
-                <h2 className='text-lg font-medium text-neutral-200'>
+                <h2 className='text-lg font-medium text-neutral-800'>
                   Your Connections
                 </h2>
                 <span className='text-sm text-neutral-500'>
@@ -140,19 +140,19 @@ export function IntegrationList() {
                 {filteredConnections.map((connection) => (
                   <li
                     key={connection.id}
-                    className='group flex items-center gap-4 p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl transition-all hover:bg-neutral-800/50 hover:border-neutral-700'
+                    className='group flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-sm'
                   >
                     <div className='shrink-0'>
                       <Avatar
                         size='lg'
                         variant='square'
-                        className='ring-1 ring-neutral-700'
+                        className='ring-1 ring-neutral-200'
                       >
                         <AvatarImage src={connection.integration?.logoUri} />
                         <AvatarFallback
                           size='lg'
                           variant='square'
-                          className='bg-neutral-800 text-neutral-400'
+                          className='bg-neutral-100 text-neutral-600'
                         >
                           {connection.name?.[0] ||
                             connection.integration?.name?.[0] ||
@@ -162,7 +162,7 @@ export function IntegrationList() {
                     </div>
 
                     <div className='flex-1 min-w-0'>
-                      <h3 className='font-medium text-neutral-200 truncate'>
+                      <h3 className='font-medium text-neutral-800 truncate'>
                         {connection.name || connection.integration?.name}
                       </h3>
                       <p className='text-xs text-neutral-500 font-mono truncate'>
@@ -175,7 +175,7 @@ export function IntegrationList() {
                         variant='ghost'
                         size='sm'
                         asChild
-                        className='text-neutral-400 hover:text-neutral-200'
+                        className='text-neutral-600 hover:text-neutral-900'
                       >
                         <Link href={`/connections/${connection.id}`}>
                           Open
@@ -187,7 +187,7 @@ export function IntegrationList() {
                           <Button
                             variant='ghost'
                             size='icon-sm'
-                            className='text-neutral-500 hover:text-red-400 hover:bg-red-400/10'
+                            className='text-neutral-400 hover:text-red-500 hover:bg-red-50'
                             onClick={() => handleDisconnect(connection.id)}
                           >
                             <X className='h-4 w-4' />
@@ -207,7 +207,7 @@ export function IntegrationList() {
             <section className='mt-8'>
               <div className='flex items-center gap-2 mb-4'>
                 <Plug className='h-4 w-4 text-neutral-500' />
-                <h2 className='text-lg font-medium text-neutral-200'>
+                <h2 className='text-lg font-medium text-neutral-800'>
                   Available Integrations
                 </h2>
                 <span className='text-sm text-neutral-500'>
@@ -218,19 +218,19 @@ export function IntegrationList() {
                 {filteredAvailableIntegrations.map((integration) => (
                   <li
                     key={integration.key}
-                    className='group flex items-center gap-4 p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl transition-all hover:bg-neutral-800/50 hover:border-neutral-700'
+                    className='group flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-sm'
                   >
                     <div className='shrink-0'>
                       <Avatar
                         size='lg'
                         variant='square'
-                        className='ring-1 ring-neutral-700'
+                        className='ring-1 ring-neutral-200'
                       >
                         <AvatarImage src={integration.logoUri} />
                         <AvatarFallback
                           size='lg'
                           variant='square'
-                          className='bg-neutral-800 text-neutral-400'
+                          className='bg-neutral-100 text-neutral-600'
                         >
                           {integration.name[0]}
                         </AvatarFallback>
@@ -238,7 +238,7 @@ export function IntegrationList() {
                     </div>
 
                     <div className='flex-1 min-w-0'>
-                      <h3 className='font-medium text-neutral-200 truncate'>
+                      <h3 className='font-medium text-neutral-800 truncate'>
                         {integration.name}
                       </h3>
                       <p className='text-xs text-neutral-500 font-mono truncate'>
@@ -250,7 +250,7 @@ export function IntegrationList() {
                       <Button
                         variant='outline'
                         size='sm'
-                        className='border-neutral-700 hover:border-neutral-600 hover:bg-neutral-800'
+                        className='border-neutral-300 hover:border-neutral-400 hover:bg-neutral-100'
                         onClick={() => handleConnect(integration)}
                       >
                         <Plug className='h-3.5 w-3.5' />

@@ -56,15 +56,15 @@ export default function ConnectionPage() {
     <div className='px-6 py-6 flex flex-col gap-8'>
       <div className='flex flex-row justify-start gap-4 items-center'>
         <div className='shrink-0'>
-          <Avatar size='lg' variant='square' className='ring-1 ring-neutral-700'>
+          <Avatar size='lg' variant='square' className='ring-1 ring-neutral-200'>
             <AvatarImage src={integrationLogo} />
-            <AvatarFallback size='lg' variant='square' className='bg-neutral-800 text-neutral-400'>
+            <AvatarFallback size='lg' variant='square' className='bg-neutral-100 text-neutral-600'>
               {integrationName[0]}
             </AvatarFallback>
           </Avatar>
         </div>
         <div className='flex-1'>
-          <h1 className='text-2xl font-semibold text-neutral-100'>
+          <h1 className='text-2xl font-semibold text-neutral-900'>
             {connection.name || integrationName}
           </h1>
           {connection.name && connection.name !== integrationName && (
@@ -76,7 +76,7 @@ export default function ConnectionPage() {
           <Button
             variant='outline'
             onClick={handleConfigure}
-            className='border-neutral-700 hover:border-neutral-600 hover:bg-neutral-800'
+            className='border-neutral-300 hover:border-neutral-400 hover:bg-neutral-100'
           >
             <Cog className='h-4 w-4' />
             Configure
@@ -85,7 +85,7 @@ export default function ConnectionPage() {
         <Button
           variant='ghost'
           onClick={handleDisconnect}
-          className='text-neutral-500 hover:text-red-400 hover:bg-red-400/10'
+          className='text-neutral-500 hover:text-red-500 hover:bg-red-50'
         >
           <CircleX className='h-4 w-4' />
           Disconnect

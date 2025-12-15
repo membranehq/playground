@@ -26,17 +26,17 @@ export function DataSourcesList({ connectionId }: { connectionId: string }) {
   const { dataSources, loading, error } = useDataSources({ connectionId });
 
   return (
-    <div className='rounded-md border border-neutral-800'>
+    <div className='rounded-md border border-neutral-200'>
       <Table>
         <TableHeader>
-          <TableRow className='border-neutral-800'>
+          <TableRow className='border-neutral-200'>
             <TableHead>Name & Key</TableHead>
             <TableHead>Configure</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {dataSources.length === 0 && !loading && !error && (
-            <TableRow className='border-neutral-800'>
+            <TableRow className='border-neutral-200'>
               <TableCell
                 colSpan={4}
                 className='text-center text-muted-foreground'
@@ -48,14 +48,14 @@ export function DataSourcesList({ connectionId }: { connectionId: string }) {
 
           <>
             {dataSources.map((source) => (
-              <TableRow key={source.id} className='border-neutral-800'>
+              <TableRow key={source.id} className='border-neutral-200'>
                 <TableCell className='font-medium'>
                   {source.name} <Badge variant='secondary'>{source.key}</Badge>
                 </TableCell>
                 <TableCell className='flex gap-2'>
                   <Button
                     variant='outline'
-                    className='border-neutral-700 hover:border-neutral-600'
+                    className='border-neutral-300 hover:border-neutral-400'
                     onClick={() => {
                       if (source.key && connection?.id) {
                         client
@@ -79,7 +79,7 @@ export function DataSourcesList({ connectionId }: { connectionId: string }) {
 
           {loading &&
             Array.from({ length: 3 }).map((_, index) => (
-              <TableRow key={index} className='border-neutral-800'>
+              <TableRow key={index} className='border-neutral-200'>
                 <TableCell>
                   <Skeleton className='h-6 w-[200px]' />
                 </TableCell>
@@ -90,7 +90,7 @@ export function DataSourcesList({ connectionId }: { connectionId: string }) {
             ))}
 
           {error && (
-            <TableRow className='border-neutral-800'>
+            <TableRow className='border-neutral-200'>
               <TableCell colSpan={4} className='text-center text-red-500'>
                 Error loading data sources
               </TableCell>

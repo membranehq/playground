@@ -50,7 +50,7 @@ export const LinkCard = ({
 
   return (
     <Link href={href} className='no-underline'>
-      <Card className='relative group h-full bg-neutral-900/50 border-neutral-800 hover:bg-neutral-800/50 hover:border-neutral-700 transition-all'>
+      <Card className='relative group h-full bg-white border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 transition-all shadow-sm'>
         {content}
       </Card>
     </Link>
@@ -59,7 +59,7 @@ export const LinkCard = ({
 
 export const LoadingLinkCard = ({ description }: { description?: string }) => {
   return (
-    <Card className='relative group bg-neutral-900/50 border-neutral-800'>
+    <Card className='relative group bg-white border-neutral-200 shadow-sm'>
       <CardHeader>
         <CardDescription className='flex flex-row items-center gap-1'>
           <Skeleton className='h-4 w-20' />

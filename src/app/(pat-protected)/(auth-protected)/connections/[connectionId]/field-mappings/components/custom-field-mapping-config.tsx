@@ -24,7 +24,7 @@ export function CustomFieldMappingConfig({
         connectionId={connectionId}
       >
         <TooltipTrigger asChild>
-          <Button variant='outline' className='border-neutral-700 hover:border-neutral-600'>
+          <Button variant='outline' className='border-neutral-300 hover:border-neutral-400'>
             <TextCursorInput className='h-4 w-4' /> Custom UI
           </Button>
         </TooltipTrigger>

@@ -25,7 +25,7 @@ export const EmbeddedFieldMappingConfig = ({
       <TooltipTrigger asChild>
         <Button
           variant='outline'
-          className='border-neutral-700 hover:border-neutral-600'
+          className='border-neutral-300 hover:border-neutral-400'
           onClick={() => {
             client
               .connection(connectionId)

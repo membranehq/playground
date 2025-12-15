@@ -76,8 +76,8 @@ export function ResizablePanelLayout({
             className={`
               w-px flex-shrink-0 cursor-col-resize transition-colors
               ${isDragging
-                ? 'bg-neutral-600'
-                : 'bg-neutral-800 hover:bg-neutral-600'
+                ? 'bg-neutral-400'
+                : 'bg-neutral-200 hover:bg-neutral-400'
               }
             `}
             onMouseDown={handleMouseDown}

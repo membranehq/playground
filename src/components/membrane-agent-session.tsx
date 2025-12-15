@@ -31,21 +31,21 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
   const isError = !isLoading && sessionState === 'error';
 
   return (
-    <div className="border border-neutral-700 rounded-xl p-4 bg-neutral-800/50">
+    <div className="border border-neutral-200 rounded-xl p-4 bg-neutral-50">
       <div className="flex items-center gap-3">
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-neutral-700 flex items-center justify-center">
-          <Blocks className="w-5 h-5 text-neutral-200" />
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-neutral-200 flex items-center justify-center">
+          <Blocks className="w-5 h-5 text-neutral-700" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-neutral-200">
+            <span className="font-medium text-neutral-800">
               Building integrations
             </span>
             {isBusy && (
-              <Loader2 className="w-4 h-4 text-neutral-400 animate-spin" />
+              <Loader2 className="w-4 h-4 text-neutral-500 animate-spin" />
             )}
             {isIdle && (
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
             )}
             {isError && (
               <AlertCircle className="w-4 h-4 text-red-500" />
@@ -62,7 +62,7 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
       {sessionId && (
         <button
           onClick={handleShowDetails}
-          className="mt-3 flex items-center gap-1 text-sm text-neutral-400 hover:text-white transition-colors"
+          className="mt-3 flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
         >
           Show details
           <ChevronRight className="w-4 h-4" />
@@ -70,7 +70,7 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
       )}
 
       {!sessionId && (
-        <p className="mt-3 text-xs text-neutral-600">
+        <p className="mt-3 text-xs text-neutral-400">
           Waiting for session to start...
         </p>
       )}
