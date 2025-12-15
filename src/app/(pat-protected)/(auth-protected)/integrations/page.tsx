@@ -8,7 +8,7 @@ export default function Integrations() {
           Integrations
         </h1>
         <p className='text-sm text-neutral-500'>
-          Connect and manage your third-party integrations
+          Manage your connections and connect to new integrations
         </p>
       </div>
       <IntegrationList />

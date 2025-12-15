@@ -11,7 +11,7 @@ services:
     name: opencode-server
     runtime: node
     plan: starter
-    buildCommand: npm install && npm run build:server
+    buildCommand: npm install && npm install -g @membranehq/cli && npm run build:server
     startCommand: npm run start:server
     disk:
       name: opencode-data
