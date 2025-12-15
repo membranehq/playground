@@ -35,7 +35,7 @@ export const LinkCard = ({
       <CardHeader>
         <CardDescription className='flex flex-row items-center gap-1 text-lg'>
           {itemName}
-          <ArrowRight className='group-hover:opacity-100 opacity-10 transition-opacity size-4' />
+          <ArrowRight className='group-hover:opacity-100 opacity-40 transition-opacity size-4' />
         </CardDescription>
         <CardTitle>{itemsCount}</CardTitle>
       </CardHeader>

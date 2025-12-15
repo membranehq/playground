@@ -14,7 +14,7 @@ export default async function Flows({
 
   return (
     <div className='px-6 py-6 flex flex-col gap-4'>
-      <h1 className='text-2xl font-semibold text-neutral-100'>Flows</h1>
+      <h1 className='text-2xl font-semibold text-neutral-900'>Flows</h1>
       <FlowsList connectionId={connectionId} />
     </div>
   );

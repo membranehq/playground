@@ -163,6 +163,9 @@ class OpencodeInstanceManager {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
     console.log(`[InstanceManager] Generated config for ${customerId}`)
 
+    // Test membrane mcp command separately before creating OpenCode instance
+    await testMembraneMcpCommand(credentials, customerId)
+
     // Set XDG_DATA_HOME for this instance to use its own data directory
     const originalXdgDataHome = process.env.XDG_DATA_HOME
     process.env.XDG_DATA_HOME = dataDir
@@ -560,6 +563,96 @@ async function verifyMcpSetup(): Promise<void> {
   }
 
   console.log(`[MCP Debug] ========================================`)
+}
+
+/**
+ * Test membrane mcp command with actual credentials before creating OpenCode instance.
+ * This runs the command separately to capture any errors.
+ */
+async function testMembraneMcpCommand(credentials: WorkspaceCredentials, customerId: string): Promise<void> {
+  console.log(`[MCP Test] ========== Testing membrane mcp command ==========`)
+  console.log(`[MCP Test] Customer: ${customerId}`)
+
+  const env = {
+    ...process.env,
+    MEMBRANE_WORKSPACE_KEY: credentials.workspaceKey,
+    MEMBRANE_WORKSPACE_SECRET: credentials.workspaceSecret,
+    MEMBRANE_API_URI: process.env.MEMBRANE_API_URI || 'https://api.integration.app',
+    MEMBRANE_TEST_CUSTOMER_ID: customerId,
+  }
+
+  console.log(`[MCP Test] Environment variables set:`)
+  console.log(`[MCP Test]   MEMBRANE_WORKSPACE_KEY: ${credentials.workspaceKey ? `[SET - ${credentials.workspaceKey.length} chars]` : '[NOT SET]'}`)
+  console.log(`[MCP Test]   MEMBRANE_WORKSPACE_SECRET: ${credentials.workspaceSecret ? `[SET - ${credentials.workspaceSecret.length} chars]` : '[NOT SET]'}`)
+  console.log(`[MCP Test]   MEMBRANE_API_URI: ${env.MEMBRANE_API_URI}`)
+  console.log(`[MCP Test]   MEMBRANE_TEST_CUSTOMER_ID: ${customerId}`)
+
+  return new Promise((resolve) => {
+    console.log(`[MCP Test] Spawning: membrane mcp`)
+
+    const proc = spawn('membrane', ['mcp'], {
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+
+    let stdout = ''
+    let stderr = ''
+    let resolved = false
+
+    const cleanup = (reason: string) => {
+      if (!resolved) {
+        resolved = true
+        console.log(`[MCP Test] Cleanup triggered: ${reason}`)
+        proc.kill('SIGTERM')
+      }
+    }
+
+    proc.stdout.on('data', (data) => {
+      const chunk = data.toString()
+      stdout += chunk
+      console.log(`[MCP Test] stdout: ${chunk.trim()}`)
+    })
+
+    proc.stderr.on('data', (data) => {
+      const chunk = data.toString()
+      stderr += chunk
+      console.log(`[MCP Test] stderr: ${chunk.trim()}`)
+    })
+
+    proc.on('error', (err) => {
+      console.error(`[MCP Test] ERROR: Failed to spawn membrane mcp: ${err.message}`)
+      cleanup('spawn error')
+      resolve()
+    })
+
+    proc.on('exit', (code, signal) => {
+      if (!resolved) {
+        resolved = true
+        if (code !== null && code !== 0) {
+          console.error(`[MCP Test] ERROR: membrane mcp exited with code ${code}`)
+          console.error(`[MCP Test] stderr output: ${stderr}`)
+          console.error(`[MCP Test] stdout output: ${stdout}`)
+        } else if (signal) {
+          console.log(`[MCP Test] Process terminated by signal: ${signal}`)
+        } else {
+          console.log(`[MCP Test] Process exited normally`)
+        }
+        resolve()
+      }
+    })
+
+    // Give it 5 seconds to start up and report any immediate errors
+    // MCP servers typically stay running, so if it's still alive after 5s, it's working
+    setTimeout(() => {
+      if (!resolved) {
+        console.log(`[MCP Test] SUCCESS: membrane mcp process is running after 5 seconds`)
+        console.log(`[MCP Test] stdout so far: ${stdout || '(empty)'}`)
+        console.log(`[MCP Test] stderr so far: ${stderr || '(empty)'}`)
+        cleanup('timeout - process still running (success)')
+        resolve()
+      }
+    }, 5000)
+  })
 }
 
 /**

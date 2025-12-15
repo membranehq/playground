@@ -5,18 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   useIntegrationApp,
   useIntegrations,
   useConnections,
 } from '@membranehq/react';
 import type { Integration as IntegrationAppIntegration } from '@membranehq/sdk';
-import { ArrowRight, Loader2, Plug, X, Search, Cable } from 'lucide-react';
+import { ArrowRight, Loader2, Plug, Search, Cable } from 'lucide-react';
 import Link from 'next/link';
 
 export function IntegrationList() {
@@ -71,16 +65,6 @@ export function IntegrationList() {
     }
   };
 
-  const handleDisconnect = async (connectionId: string) => {
-    try {
-      await integrationApp.connection(connectionId).archive();
-      refreshIntegrations();
-      refreshConnections();
-    } catch (error) {
-      console.error('Failed to disconnect:', error);
-    }
-  };
-
   if (loading) {
     return (
       <div className='mt-8 flex items-center justify-center py-12'>
@@ -104,7 +88,7 @@ export function IntegrationList() {
     filteredConnections.length === 0 && filteredAvailableIntegrations.length === 0;
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <>
       <div className='mt-6 relative'>
         <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400' />
         <Input
@@ -138,64 +122,43 @@ export function IntegrationList() {
               </div>
               <ul className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3'>
                 {filteredConnections.map((connection) => (
-                  <li
-                    key={connection.id}
-                    className='group flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-sm'
-                  >
-                    <div className='shrink-0'>
-                      <Avatar
-                        size='lg'
-                        variant='square'
-                        className='ring-1 ring-neutral-200'
-                      >
-                        <AvatarImage src={connection.integration?.logoUri} />
-                        <AvatarFallback
+                  <li key={connection.id}>
+                    <Link
+                      href={`/connections/${connection.id}`}
+                      className='group flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-sm no-underline'
+                    >
+                      <div className='shrink-0'>
+                        <Avatar
                           size='lg'
                           variant='square'
-                          className='bg-neutral-100 text-neutral-600'
+                          className='ring-1 ring-neutral-200'
                         >
-                          {connection.name?.[0] ||
-                            connection.integration?.name?.[0] ||
-                            '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-
-                    <div className='flex-1 min-w-0'>
-                      <h3 className='font-medium text-neutral-800 truncate'>
-                        {connection.name || connection.integration?.name}
-                      </h3>
-                      <p className='text-xs text-neutral-500 font-mono truncate'>
-                        {connection.integration?.key}
-                      </p>
-                    </div>
-
-                    <div className='flex items-center gap-2 shrink-0'>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        asChild
-                        className='text-neutral-600 hover:text-neutral-900'
-                      >
-                        <Link href={`/connections/${connection.id}`}>
-                          Open
-                          <ArrowRight className='h-3.5 w-3.5' />
-                        </Link>
-                      </Button>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='icon-sm'
-                            className='text-neutral-400 hover:text-red-500 hover:bg-red-50'
-                            onClick={() => handleDisconnect(connection.id)}
+                          <AvatarImage src={connection.integration?.logoUri} />
+                          <AvatarFallback
+                            size='lg'
+                            variant='square'
+                            className='bg-neutral-100 text-neutral-600'
                           >
-                            <X className='h-4 w-4' />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Disconnect</TooltipContent>
-                      </Tooltip>
-                    </div>
+                            {connection.name?.[0] ||
+                              connection.integration?.name?.[0] ||
+                              '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+
+                      <div className='flex-1 min-w-0'>
+                        <h3 className='font-medium text-neutral-800 truncate'>
+                          {connection.name || connection.integration?.name}
+                        </h3>
+                        <p className='text-xs text-neutral-500 font-mono truncate'>
+                          {connection.integration?.key}
+                        </p>
+                      </div>
+
+                      <div className='flex items-center gap-2 shrink-0'>
+                        <ArrowRight className='h-4 w-4 text-neutral-400 group-hover:text-neutral-600 transition-colors' />
+                      </div>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -218,7 +181,7 @@ export function IntegrationList() {
                 {filteredAvailableIntegrations.map((integration) => (
                   <li
                     key={integration.key}
-                    className='group flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-sm'
+                    className='flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl shadow-sm'
                   >
                     <div className='shrink-0'>
                       <Avatar
@@ -264,6 +227,6 @@ export function IntegrationList() {
           )}
         </>
       )}
-    </TooltipProvider>
+    </>
   );
 }

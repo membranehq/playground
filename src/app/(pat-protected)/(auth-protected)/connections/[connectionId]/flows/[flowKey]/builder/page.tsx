@@ -14,7 +14,7 @@ export default async function FlowBuilderPage({
 
   return (
     <div className='px-6 py-6 flex flex-col gap-4 h-full w-full'>
-      <h1 className='text-2xl font-semibold text-neutral-100'>Flow builder</h1>
+      <h1 className='text-2xl font-semibold text-neutral-900'>Flow builder</h1>
       <FlowBuilder connectionId={connectionId} flowKey={flowKey} />
     </div>
   );
