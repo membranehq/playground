@@ -1,14 +1,23 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, MessageSquare } from 'lucide-react';
 import { AgentSessionsDropdown } from '@/components/agent-sessions-dropdown';
 import { PageHeaderActions } from '@/components/page-header-context';
+
+interface Session {
+  id: string;
+  title?: string;
+  time?: {
+    created: number;
+    updated: number;
+  };
+}
 
 export default function AgentPage() {
   const router = useRouter();
@@ -16,6 +25,46 @@ export default function AgentPage() {
   const { workspace } = useCurrentWorkspace();
   const [input, setInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  const loadSessions = useCallback(async () => {
+    if (!customerId || !workspace) return;
+
+    setIsLoadingSessions(true);
+    try {
+      const response = await fetch('/api/sessions', {
+        headers: getAgentHeaders(customerId, customerName),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSessions(data.sessions || []);
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, [customerId, customerName, workspace]);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
 
   const createSessionAndNavigate = async (initialMessage?: string) => {
     if (isCreating || !customerId || !workspace) return;
@@ -73,13 +122,13 @@ export default function AgentPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto -mx-4 px-4">
         <div className="max-w-3xl mx-auto px-6 py-12">
-          {/* Logo/Icon */}
+          {/* Logo/Icon - Membrane Agent */}
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-              <svg className="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47-2.47a2.25 2.25 0 00-1.59-.659H9.06a2.25 2.25 0 00-1.59.659L5 14.5m14 0v4.25a2.25 2.25 0 01-2.25 2.25H7.25A2.25 2.25 0 015 18.75V14.5" />
-              </svg>
-            </div>
+            <img
+              src="/membrane-icon.png"
+              alt="Membrane"
+              className="w-16 h-16"
+            />
           </div>
 
           {/* Welcome Text */}
@@ -92,8 +141,38 @@ export default function AgentPage() {
             </p>
           </div>
 
-          {/* Example Cards */}
-          <div className="grid grid-cols-2 gap-3 mb-10">
+          {/* Recent Sessions */}
+          {sessions.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-sm font-medium text-muted-foreground mb-3">Recent Conversations</h2>
+              <div className="space-y-2">
+                {sessions.slice(0, 5).map((session) => (
+                  <button
+                    key={session.id}
+                    onClick={() => router.push(`/agent/sessions/${session.id}`)}
+                    className="w-full flex items-center gap-3 p-3 text-left border border-border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {session.title || `Session ${session.id.slice(0, 8)}...`}
+                      </div>
+                    </div>
+                    {session.time?.updated && (
+                      <div className="text-xs text-muted-foreground shrink-0">
+                        {formatDate(session.time.updated)}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Example Cards - Hints */}
+          <div className="mb-8">
+            <h2 className="text-sm font-medium text-muted-foreground mb-3">Try asking</h2>
+            <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => handleExampleClick('Create a task in Linear for fixing the login bug')}
               disabled={isCreating}
@@ -142,6 +221,7 @@ export default function AgentPage() {
               </div>
               <div className="text-sm text-muted-foreground">Connect your apps together</div>
             </button>
+            </div>
           </div>
         </div>
       </div>

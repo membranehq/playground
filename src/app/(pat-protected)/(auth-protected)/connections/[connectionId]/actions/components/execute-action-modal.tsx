@@ -7,7 +7,6 @@ import {
   useIntegrationApp,
 } from '@membranehq/react';
 import JsonView from '@uiw/react-json-view';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -46,21 +45,13 @@ export function ExecuteActionModal({
   );
 
   const handleExecute = useCallback(async () => {
-    if (!action?.connectionId || !action?.key) {
-      toast.warning('Connection ID or action key is missing.');
-      return;
-    }
-
     try {
       setTab('result');
       setExecutionResult(undefined);
       setExecutionLoading(true);
       setExecutionError(undefined);
 
-      const result = await integrationApp
-        .connection(action.connectionId)
-        .action(action.key)
-        .run(input);
+      const result = await integrationApp.action(id).run(input);
 
       setExecutionResult(result);
     } catch (error) {
@@ -69,7 +60,7 @@ export function ExecuteActionModal({
     } finally {
       setExecutionLoading(false);
     }
-  }, [action, input, integrationApp]);
+  }, [id, input, integrationApp]);
 
   return (
     <Dialog

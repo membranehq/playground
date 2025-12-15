@@ -271,15 +271,28 @@
   }
 
   .streamdown ul {
-    @apply list-disc list-inside mb-2 space-y-1;
+    @apply list-disc pl-5 mb-2 space-y-1;
   }
 
   .streamdown ol {
-    @apply list-decimal list-inside mb-2 space-y-1;
+    @apply list-decimal pl-5 mb-2 space-y-1;
   }
 
   .streamdown li {
     @apply text-foreground;
+  }
+
+  .streamdown li > p {
+    @apply inline;
+  }
+
+  .streamdown li > p:first-child {
+    @apply inline;
+  }
+
+  .streamdown li > ul,
+  .streamdown li > ol {
+    @apply mt-1;
   }
 
   .streamdown code {
