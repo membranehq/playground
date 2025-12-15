@@ -38,7 +38,7 @@ export const useClearPat = () => {
 };
 
 export function NavUser() {
-  const { setCustomerName, customerName, customerId } = useCustomer();
+  const { setCustomerName, customerName } = useCustomer();
   const { isMobile } = useSidebar();
 
   return (
@@ -58,7 +58,7 @@ export function NavUser() {
               </Avatar>
               <div className='grid flex-1 text-left text-sm leading-tight'>
                 <span className='truncate font-medium'>{customerName}</span>
-                <span className='truncate text-xs'>{customerId}</span>
+                <span className='truncate text-xs text-muted-foreground'>Test Customer</span>
               </div>
               <ChevronsUpDown className='ml-auto size-4' />
             </SidebarMenuButton>
@@ -79,7 +79,7 @@ export function NavUser() {
                 </Avatar>
                 <div className='grid flex-1 text-left text-sm leading-tight'>
                   <span className='truncate font-medium'>{customerName}</span>
-                  <span className='truncate text-xs'>{customerId}</span>
+                  <span className='truncate text-xs text-muted-foreground'>Test Customer</span>
                 </div>
               </div>
             </DropdownMenuLabel>

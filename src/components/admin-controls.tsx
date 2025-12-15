@@ -9,7 +9,7 @@ import { LogOut, GithubIcon } from 'lucide-react';
 const OFFSET_STYLES =
   'w-auto left-[calc(var(--frame-margin-around)/2)] right-[calc(var(--frame-margin-around)/2)]';
 
-const GITHUB_REPO_URL = 'https://github.com/integration-app/playground';
+const GITHUB_REPO_URL = 'https://github.com/membranehq/playground';
 
 export function AdminControls() {
   const { clearPat } = useClearPat();

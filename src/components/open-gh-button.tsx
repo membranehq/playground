@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/tooltip';
 
 const REPO_BASE_URL =
-  'https://github.com/integration-app/playground/tree/main/src';
+  'https://github.com/membranehq/playground/tree/main/src';
 
 export const OpenGhButton = ({
   metaUrl,

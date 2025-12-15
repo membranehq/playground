@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { useConsoleAuth } from '@/components/providers/console-auth-provider';
 import { useConsoleEntry } from '@/hooks/use-console-entry';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
@@ -91,11 +91,22 @@ export default function PersonalTokenPage() {
           <Card className='w-full max-w-md mx-auto'>
             <CardHeader>
               <CardTitle className='text-2xl'>
-                Personal Access Token Required
+                Personal Access Token
               </CardTitle>
-              <CardDescription>
-                Please enter your personal access token to access this
-                application
+              <CardDescription className='space-y-2'>
+                <span className='block'>
+                  A Personal Access Token (PAT) authenticates you with the Membrane API.
+                  It gives this playground access to your workspaces and integrations.
+                </span>
+                <a
+                  href='https://console.getmembrane.com/w/0/manage-account/api-token'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='inline-flex items-center gap-1 text-blue-600 hover:text-blue-500 underline underline-offset-2'
+                >
+                  Get your token from the Membrane Console
+                  <ExternalLink className='h-3 w-3' />
+                </a>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -151,7 +162,10 @@ export default function PersonalTokenPage() {
           <Card className='w-full max-w-md mx-auto'>
             <CardHeader>
               <CardTitle className='text-2xl'>Select Workspace</CardTitle>
-              <CardDescription>Choose a workspace to continue</CardDescription>
+              <CardDescription>
+                The selected workspace will be used with this playground.
+                You can change it later from the sidebar.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {error && (

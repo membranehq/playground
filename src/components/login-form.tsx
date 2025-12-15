@@ -34,25 +34,29 @@ export function LoginForm({
         }}
       >
         <div className='flex flex-col gap-6'>
-          <div className='flex flex-col items-center gap-2'>
+          <div className='flex flex-col items-center gap-2 text-center'>
             <h1 className='text-xl font-bold'>
-              Welcome to Integration.app Playground
+              Set Test Customer
             </h1>
+            <p className='text-sm text-muted-foreground'>
+              Enter an email to simulate a customer in your workspace.
+              This is the customer identity that will be used for connections and integrations.
+            </p>
           </div>
           <div className='flex flex-col gap-6'>
             <div className='grid gap-3'>
-              <Label htmlFor='email'>Email</Label>
+              <Label htmlFor='email'>Customer Email</Label>
               <Input
                 id='email'
                 type='email'
-                placeholder='m@example.com'
+                placeholder='customer@example.com'
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <Button type='submit' className='w-full'>
-              Login
+              Continue
             </Button>
           </div>
         </div>

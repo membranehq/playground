@@ -3,8 +3,6 @@
 import { createContext, useContext } from 'react';
 import { useLocalStorage } from '@uidotdev/usehooks';
 
-import { cyrb64Hash } from '@/helpers/hash';
-
 export interface CurrentCustomer {
   customerId: string | undefined | null;
   customerName: string | undefined | null;
@@ -30,7 +28,8 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
     undefined,
   );
 
-  const userId = userEmail ? cyrb64Hash(userEmail) : undefined;
+  // Use email directly as customer ID for easier debugging in console
+  const userId = userEmail;
 
   return (
     <CustomerContext.Provider
