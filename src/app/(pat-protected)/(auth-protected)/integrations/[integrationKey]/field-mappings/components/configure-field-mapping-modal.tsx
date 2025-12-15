@@ -5,7 +5,7 @@ import {
   FieldList,
   FieldMappingDirection,
   useFieldMappingInstance,
-} from '@integration-app/react';
+} from '@membranehq/react';
 
 import {
   Dialog,

@@ -5,7 +5,7 @@ import {
   IntegrationElementProvider,
   useDataSourceInstance,
   useIntegration,
-} from '@integration-app/react';
+} from '@membranehq/react';
 
 import {
   Dialog,

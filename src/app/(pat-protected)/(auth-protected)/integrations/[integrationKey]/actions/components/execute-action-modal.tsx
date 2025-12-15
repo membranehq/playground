@@ -5,7 +5,7 @@ import {
   DataInput,
   useAction,
   useIntegrationApp,
-} from '@integration-app/react';
+} from '@membranehq/react';
 import JsonView from '@uiw/react-json-view';
 import { toast } from 'sonner';
 
@@ -47,8 +47,8 @@ export function ExecuteActionModal({
   );
 
   const handleExecute = useCallback(async () => {
-    if (!action?.integration?.key) {
-      toast.warning('Integration key is missing.');
+    if (!action?.integration?.key || !action?.key) {
+      toast.warning('Integration key or action key is missing.');
       return;
     }
 
@@ -129,14 +129,16 @@ export function ExecuteActionModal({
                       )}
                     </ScrollArea>
                   </div>
-                  <div className='flex-1 flex flex-col gap-2'>
-                    <h2 className='font-semibold'>Logs</h2>
-                    <ScrollArea className='max-h-80 overflow-scroll h-full flex-1 min-h-40 border rounded-md p-2'>
-                      {executionResult && (
-                        <JsonView value={executionResult?.logs || {}} />
-                      )}
-                    </ScrollArea>
-                  </div>
+                  {'logs' in (executionResult || {}) && (
+                    <div className='flex-1 flex flex-col gap-2'>
+                      <h2 className='font-semibold'>Logs</h2>
+                      <ScrollArea className='max-h-80 overflow-scroll h-full flex-1 min-h-40 border rounded-md p-2'>
+                        {executionResult && (
+                          <JsonView value={(executionResult as any)?.logs || {}} />
+                        )}
+                      </ScrollArea>
+                    </div>
+                  )}
                 </>
               )}
               {!!executionError && (

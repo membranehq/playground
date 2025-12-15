@@ -5,8 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useDataSource } from '@integration-app/react';
-import { DataSource } from '@integration-app/sdk';
+import { useDataSource } from '@membranehq/react';
+import { DataSource } from '@membranehq/sdk';
 import { FileText } from 'lucide-react';
 
 export const DataSourceSection = ({

@@ -25,7 +25,7 @@ services:
       - key: OPENCODE_PROXY_HOST
         value: "0.0.0.0"
       - key: OPENROUTER_API_KEY
-        sync: false  # Set this in Render dashboard
+        sync: false # Set this in Render dashboard
       - key: MEMBRANE_API_URI
         value: https://api.integration.app
 
@@ -52,4 +52,7 @@ services:
           type: pserv
           property: host
       - key: OPENCODE_SERVER_PORT
-        value: "1337"
+        fromService:
+          name: opencode-server
+          type: pserv
+          property: port

@@ -1,4 +1,4 @@
-import { useAction } from '@integration-app/react';
+import { useAction } from '@membranehq/react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';

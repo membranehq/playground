@@ -1,4 +1,4 @@
-import { useFlows, useIntegration } from '@integration-app/react';
+import { useFlows, useIntegration } from '@membranehq/react';
 import { AlertCircle, Workflow } from 'lucide-react';
 import { useParams } from 'next/navigation';
 

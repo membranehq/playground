@@ -10,8 +10,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useIntegrationApp, useIntegrations } from '@integration-app/react';
-import type { Integration as IntegrationAppIntegration } from '@integration-app/sdk';
+import { useIntegrationApp, useIntegrations } from '@membranehq/react';
+import type { Integration as IntegrationAppIntegration } from '@membranehq/sdk';
 import { ArrowRight, Loader2, Plug, X, Search } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,11 +26,12 @@ export function IntegrationList() {
     return integrations.filter(
       (integration) =>
         integration.name.toLowerCase().includes(query) ||
-        integration.key.toLowerCase().includes(query)
+        integration.key?.toLowerCase().includes(query)
     );
   }, [integrations, searchQuery]);
 
   const handleConnect = async (integration: IntegrationAppIntegration) => {
+    if (!integration.key) return;
     try {
       await integrationApp.integration(integration.key).openNewConnection();
       refresh();

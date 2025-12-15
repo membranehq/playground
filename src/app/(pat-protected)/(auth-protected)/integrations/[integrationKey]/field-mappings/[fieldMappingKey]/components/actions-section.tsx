@@ -1,4 +1,4 @@
-import { useActions, useIntegration } from '@integration-app/react';
+import { useActions, useIntegration } from '@membranehq/react';
 import { AlertCircle, Play } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
@@ -27,8 +27,9 @@ export const ActionsSection = () => {
   });
 
   const relatedActions = actions.filter((action) => {
-    if (typeof action.config === 'object') {
-      return action.config.fieldMapping?.key === fieldMappingKey;
+    if (typeof action.config === 'object' && action.config !== null) {
+      const config = action.config as { fieldMapping?: { key?: string } };
+      return config.fieldMapping?.key === fieldMappingKey;
     }
     return false;
   });

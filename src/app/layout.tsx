@@ -4,7 +4,7 @@ import { ConsoleAuthProvider } from '@/components/providers/console-auth-provide
 import { WorkspaceProvider } from '@/components/providers/workspace-provider';
 
 import './globals.css';
-import '@integration-app/react/styles.css';
+import '@membranehq/react/styles.css';
 
 export const metadata = {
   title: {

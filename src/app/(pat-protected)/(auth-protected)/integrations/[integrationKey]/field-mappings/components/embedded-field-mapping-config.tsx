@@ -5,16 +5,18 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Cog } from 'lucide-react';
-import { useIntegrationApp } from '@integration-app/react';
+import { useIntegrationApp } from '@membranehq/react';
 
 export const EmbeddedFieldMappingConfig = ({
   integrationKey,
   fieldMappingKey,
 }: {
   integrationKey: string;
-  fieldMappingKey: string;
+  fieldMappingKey?: string;
 }) => {
   const client = useIntegrationApp();
+
+  if (!fieldMappingKey) return null;
 
   return (
     <Tooltip>

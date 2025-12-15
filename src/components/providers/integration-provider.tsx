@@ -1,6 +1,6 @@
 'use client';
 
-import { IntegrationAppProvider } from '@integration-app/react';
+import { IntegrationAppProvider } from '@membranehq/react';
 import { useCustomer } from './customer-provider';
 import { getWorkspaceHeaders } from '@/lib/workspace-storage';
 import { useCurrentWorkspace } from './workspace-provider';

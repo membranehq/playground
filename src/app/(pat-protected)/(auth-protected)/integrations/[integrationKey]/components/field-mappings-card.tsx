@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { LinkCard } from './link-card';
-import { useFieldMappings } from '@integration-app/react';
+import { useFieldMappings } from '@membranehq/react';
 
 export const FieldMappingsCard = ({
   integrationId,

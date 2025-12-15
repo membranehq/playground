@@ -12,7 +12,7 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { cn } from '@/lib/utils';
 import { CONTENT_HEIGHT, CONTENT_MAX_HEIGHT } from '@/helpers/common-styles';
 import { UserAuthProtectedRoute } from '@/components/guards/user-auth-protected-route';
-import { FloatingPortalBoundary } from '@integration-app/react';
+import { FloatingPortalBoundary } from '@membranehq/react';
 import { PageHeaderProvider, usePageHeader } from '@/components/page-header-context';
 
 function LayoutContent({ children }: { children: React.ReactNode }) {

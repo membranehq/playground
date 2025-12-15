@@ -1,6 +1,6 @@
 'use client';
 
-import { useActions, useIntegration } from '@integration-app/react';
+import { useActions, useIntegration } from '@membranehq/react';
 
 import {
   Table,

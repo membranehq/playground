@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { useIntegrationApp } from '@integration-app/react';
+import { useIntegrationApp } from '@membranehq/react';
 
 export const OpenClient = () => {
   const client = useIntegrationApp();

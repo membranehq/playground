@@ -4,7 +4,7 @@ import {
   useDataSources,
   useIntegration,
   useIntegrationApp,
-} from '@integration-app/react';
+} from '@membranehq/react';
 
 import {
   Table,
@@ -62,10 +62,12 @@ export function DataSourcesList({
                   <Button
                     variant='outline'
                     onClick={() => {
-                      client
-                        .connection(integrationKey)
-                        .dataSource(source.key)
-                        .openConfiguration();
+                      if (source.key) {
+                        client
+                          .connection(integrationKey)
+                          .dataSource(source.key)
+                          .openConfiguration();
+                      }
                     }}
                   >
                     <Cog /> Configure with prebuilt UI

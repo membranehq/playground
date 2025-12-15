@@ -1,5 +1,5 @@
-import { FlowInstanceNode, FlowNodeType } from '@integration-app/sdk';
-import { FLOW_NODE_SPECS, FlowNode } from '@integration-app/sdk';
+import { FlowInstanceNode, FlowNodeType } from '@membranehq/sdk';
+import { FLOW_NODE_SPECS, FlowNode } from '@membranehq/sdk';
 
 export function isTriggerNode(node: FlowNode | string): boolean {
   if (!node) return false;

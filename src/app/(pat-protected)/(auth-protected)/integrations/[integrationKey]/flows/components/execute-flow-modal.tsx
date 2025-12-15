@@ -5,7 +5,7 @@ import {
   FlowRun,
   useFlow,
   useIntegrationApp,
-} from '@integration-app/react';
+} from '@membranehq/react';
 import JsonView from '@uiw/react-json-view';
 import { toast } from 'sonner';
 
@@ -57,8 +57,8 @@ export function ExecuteFlowModal({
   );
 
   const handleExecute = useCallback(async () => {
-    if (!flow?.integration?.key) {
-      toast.warning('Integration key is missing.');
+    if (!flow?.integration?.key || !flow?.key) {
+      toast.warning('Integration key or flow key is missing.');
       return;
     }
 
@@ -66,6 +66,8 @@ export function ExecuteFlowModal({
       toast.warning('Trigger is missing.');
       return;
     }
+
+    const flowKey = flow.key;
 
     try {
       setTab('result');
@@ -75,7 +77,7 @@ export function ExecuteFlowModal({
 
       const result = await integrationApp
         .connection(flow.integration.key)
-        .flow(flow.key)
+        .flow(flowKey)
         .run({
           nodeKey: trigger,
           input,

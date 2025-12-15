@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { LinkCard } from './link-card';
-import { useDataSources } from '@integration-app/react';
+import { useDataSources } from '@membranehq/react';
 
 export const DataSourcesCard = ({
   integrationId,

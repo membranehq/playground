@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   useFieldMappingInstance,
   useIntegration,
-} from '@integration-app/react';
+} from '@membranehq/react';
 import { CircleX } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { DataSourceSection } from './components/data-source-section';

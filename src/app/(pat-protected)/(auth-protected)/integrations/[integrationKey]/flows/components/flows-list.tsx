@@ -4,7 +4,7 @@ import {
   useFlows,
   useIntegration,
   useIntegrationApp,
-} from '@integration-app/react';
+} from '@membranehq/react';
 
 import {
   Table,
@@ -59,11 +59,14 @@ export function FlowsList({ integrationKey }: { integrationKey: string }) {
                 <TableCell className='flex gap-2'>
                   <Button
                     variant='outline'
+                    disabled={!flow.key}
                     onClick={() => {
-                      client
-                        .connection(integrationKey)
-                        .flow(flow.key)
-                        .openConfiguration();
+                      if (flow.key) {
+                        client
+                          .connection(integrationKey)
+                          .flow(flow.key)
+                          .openConfiguration();
+                      }
                     }}
                   >
                     <TextCursorInput /> Edit parameters
@@ -71,11 +74,14 @@ export function FlowsList({ integrationKey }: { integrationKey: string }) {
 
                   <Button
                     variant='outline'
+                    disabled={!flow.key}
                     onClick={() => {
-                      client
-                        .connection(integrationKey)
-                        .flow(flow.key)
-                        .openEditor();
+                      if (flow.key) {
+                        client
+                          .connection(integrationKey)
+                          .flow(flow.key)
+                          .openEditor();
+                      }
                     }}
                   >
                     <Workflow /> Edit flow

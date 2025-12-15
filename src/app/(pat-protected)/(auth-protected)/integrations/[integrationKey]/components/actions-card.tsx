@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { LinkCard } from './link-card';
-import { useActions } from '@integration-app/react';
+import { useActions } from '@membranehq/react';
 
 export const ActionsCard = ({
   integrationId,

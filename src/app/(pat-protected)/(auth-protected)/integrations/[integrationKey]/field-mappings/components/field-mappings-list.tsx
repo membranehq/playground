@@ -1,6 +1,6 @@
 'use client';
 
-import { useFieldMappings, useIntegration } from '@integration-app/react';
+import { useFieldMappings, useIntegration } from '@membranehq/react';
 
 import {
   Table,

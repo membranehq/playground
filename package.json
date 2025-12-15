@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^1.0.0",
-    "@integration-app/react": "^2.17.3",
-    "@integration-app/sdk": "^1.13.0",
+    "@membranehq/react": "^0.12.0",
+    "@membranehq/sdk": "^0.9.11",
     "@opencode-ai/plugin": "^1.0.64",
     "@opencode-ai/sdk": "^1.0.61",
     "@radix-ui/react-avatar": "^1.1.3",

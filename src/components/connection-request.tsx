@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useIntegrationApp } from '@integration-app/react';
+import { useIntegrationApp } from '@membranehq/react';
 
 interface ConnectionRequestProps {
   integrationKey: string;

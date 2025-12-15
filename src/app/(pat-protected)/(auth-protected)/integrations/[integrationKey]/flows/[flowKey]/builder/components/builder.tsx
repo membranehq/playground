@@ -1,6 +1,6 @@
 'use client';
 
-import { useIntegrationApp } from '@integration-app/react';
+import { useIntegrationApp } from '@membranehq/react';
 import { useEffect, useRef } from 'react';
 
 const targetId = 'flow-builder-emdedding';

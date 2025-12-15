@@ -1,7 +1,7 @@
 'use client';
 
-import type { Integration as IntegrationAppIntegration } from '@integration-app/sdk';
-import { useIntegration, useIntegrationApp } from '@integration-app/react';
+import type { Integration as IntegrationAppIntegration } from '@membranehq/sdk';
+import { useIntegration, useIntegrationApp } from '@membranehq/react';
 import { useParams } from 'next/navigation';
 
 import { OpenGhButton } from '@/components/open-gh-button';
@@ -20,6 +20,7 @@ export default function Connections() {
   const { integration, loading, refresh } = useIntegration(integrationKey);
 
   const handleConnect = async (integration: IntegrationAppIntegration) => {
+    if (!integration.key) return;
     try {
       await integrationApp.integration(integration.key).openNewConnection();
       refresh();
@@ -61,11 +62,11 @@ export default function Connections() {
           {integration.name}
         </h1>
 
-        {integration.connection ? (
+        {integration.connection && integration.key ? (
           <Button
             className='z-10'
             variant='outline'
-            onClick={() => integrationApp.integration(integration.key).open()}
+            onClick={() => integrationApp.integration(integration.key!).open()}
           >
             Configure <Cog />
           </Button>
