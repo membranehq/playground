@@ -6,11 +6,11 @@ import { type LucideIcon } from 'lucide-react';
 
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 export function NavPages({
   pages,
@@ -19,6 +19,7 @@ export function NavPages({
     name: string;
     url: string;
     icon: LucideIcon;
+    disabled?: boolean;
   }[];
 }) {
   const pathname = usePathname();
@@ -28,12 +29,25 @@ export function NavPages({
       <SidebarMenu>
         {pages.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.name}>
-              <Link href={item.url}>
-                <item.icon />
-                <span>{item.name}</span>
-              </Link>
-            </SidebarMenuButton>
+            {item.disabled ? (
+              <SidebarMenuButton
+                tooltip={item.name}
+                className="opacity-50"
+                asChild
+              >
+                <Link href={item.url}>
+                  <item.icon />
+                  <span>{item.name}</span>
+                </Link>
+              </SidebarMenuButton>
+            ) : (
+              <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.name}>
+                <Link href={item.url}>
+                  <item.icon />
+                  <span>{item.name}</span>
+                </Link>
+              </SidebarMenuButton>
+            )}
           </SidebarMenuItem>
         ))}
       </SidebarMenu>

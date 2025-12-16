@@ -14,12 +14,13 @@ import { Fragment } from 'react';
 const mapping: Record<string, string> = {
   integrations: 'Integrations',
   users: 'Users',
-  connections: 'Integrations', // Connections are accessed via Integrations page
+  connections: 'Integrations',
   actions: 'Actions',
   flows: 'Flows',
   'data-sources': 'Data Sources',
   'field-mappings': 'Field Mappings',
   agent: 'Agent',
+  'workflow-builder': 'Workflow Builder',
 };
 
 // Custom href overrides for specific segments

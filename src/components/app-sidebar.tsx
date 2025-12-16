@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Blocks, Bot } from 'lucide-react';
+import { Blocks, Bot, Workflow } from 'lucide-react';
 
 import { NavPages } from '@/components/nav-pages';
 import { NavUser } from '@/components/nav-user';
@@ -22,6 +22,12 @@ const pages = [
     name: 'Agent',
     url: '/agent',
     icon: Bot,
+  },
+  {
+    name: 'Workflow Builder',
+    url: '/workflow-builder',
+    icon: Workflow,
+    disabled: true,
   },
 ];
 
