@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Eye, EyeOff, ExternalLink } from 'lucide-react';
-import { useConsoleAuth } from '@/components/providers/console-auth-provider';
+import { useAuth } from '@/components/providers/auth-provider';
 import { useConsoleEntry } from '@/hooks/use-console-entry';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { WorkspaceSelect } from '@/components/workspace-select';
@@ -28,10 +28,10 @@ enum Step {
 
 export default function PersonalTokenPage() {
   const {
-    setToken: saveToken,
+    setPatToken: saveToken,
     token: storedToken,
-    hasToken,
-  } = useConsoleAuth();
+    isAuthenticated: hasToken,
+  } = useAuth();
   const { isError: workspacesError } = useConsoleEntry();
   const { workspace: currentWorkspace } = useCurrentWorkspace();
 

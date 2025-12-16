@@ -1,8 +1,8 @@
 import useSWR from 'swr';
 
-import { personalAccessTokenAuthFetcher } from '@/lib/fetch-utils';
+import { jwtAuthFetcher } from '@/lib/fetch-utils';
 import { ConsoleEntry, Organization } from '@/types/console-entry';
-import { useConsoleAuth } from '@/components/providers/console-auth-provider';
+import { useAuth } from '@/components/providers/auth-provider';
 import { useMemo } from 'react';
 
 type WorkspaceMap = Record<string, ConsoleEntry['workspace']>;
@@ -19,11 +19,11 @@ export function useConsoleEntry(): Partial<ConsoleEntry> & {
   isLoading: boolean;
   isError: boolean;
 } {
-  const { token } = useConsoleAuth();
+  const { token } = useAuth();
 
   const { data, error, isLoading } = useSWR<ConsoleEntry>(
     token ? ['/console-self', token] : null,
-    ([url]) => personalAccessTokenAuthFetcher<ConsoleEntry>(url),
+    ([url]) => jwtAuthFetcher<ConsoleEntry>(url),
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,

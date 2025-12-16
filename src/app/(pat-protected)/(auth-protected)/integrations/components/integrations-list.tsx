@@ -10,14 +10,19 @@ import {
   useConnections,
 } from '@membranehq/react';
 import type { Integration as IntegrationAppIntegration } from '@membranehq/sdk';
-import { ArrowRight, Loader2, Plug, Search, Cable } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, Plug, Search, Cable, ExternalLink, Blocks, X } from 'lucide-react';
+import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 
 export function IntegrationList() {
   const integrationApp = useIntegrationApp();
   const { integrations, refresh: refreshIntegrations, loading: integrationsLoading } = useIntegrations();
   const { connections, refresh: refreshConnections, loading: connectionsLoading } = useConnections();
+  const { workspace } = useCurrentWorkspace();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const consoleWorkspaceUrl = workspace
+    ? `https://console.getmembrane.com/w/${workspace.id}`
+    : 'https://console.getmembrane.com';
 
   const loading = integrationsLoading || connectionsLoading;
 
@@ -65,6 +70,16 @@ export function IntegrationList() {
     }
   };
 
+  const handleDisconnect = async (connectionId: string) => {
+    try {
+      await integrationApp.connection(connectionId).archive();
+      refreshIntegrations();
+      refreshConnections();
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className='mt-8 flex items-center justify-center py-12'>
@@ -75,10 +90,23 @@ export function IntegrationList() {
 
   if (!integrations.length && !connections.length) {
     return (
-      <div className='mt-8 flex flex-col items-center justify-center py-12 text-center'>
-        <p className='text-muted-foreground'>No integrations found</p>
-        <p className='text-sm text-muted-foreground/60 mt-1'>
-          Configure integrations in your workspace
+      <div className='mt-8 flex flex-col items-center justify-center py-16 text-center'>
+        <div className='w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4'>
+          <Blocks className='h-6 w-6 text-muted-foreground' />
+        </div>
+        <p className='text-lg font-medium text-foreground mb-2'>No integrations yet</p>
+        <p className='text-sm text-muted-foreground max-w-md'>
+          Integrations added in{' '}
+          <a
+            href={consoleWorkspaceUrl}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='inline-flex items-center gap-1 text-blue-600 hover:text-blue-500 underline underline-offset-2'
+          >
+            your workspace
+            <ExternalLink className='h-3 w-3' />
+          </a>{' '}
+          will be displayed here.
         </p>
       </div>
     );
@@ -120,45 +148,51 @@ export function IntegrationList() {
                   ({filteredConnections.length})
                 </span>
               </div>
-              <ul className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3'>
+              <ul className='flex flex-col gap-3'>
                 {filteredConnections.map((connection) => (
-                  <li key={connection.id}>
-                    <Link
-                      href={`/connections/${connection.id}`}
-                      className='group flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-sm no-underline'
-                    >
-                      <div className='shrink-0'>
-                        <Avatar
+                  <li
+                    key={connection.id}
+                    className='flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl shadow-sm'
+                  >
+                    <div className='shrink-0'>
+                      <Avatar
+                        size='lg'
+                        variant='square'
+                        className='ring-1 ring-neutral-200'
+                      >
+                        <AvatarImage src={connection.integration?.logoUri} />
+                        <AvatarFallback
                           size='lg'
                           variant='square'
-                          className='ring-1 ring-neutral-200'
+                          className='bg-neutral-100 text-neutral-600'
                         >
-                          <AvatarImage src={connection.integration?.logoUri} />
-                          <AvatarFallback
-                            size='lg'
-                            variant='square'
-                            className='bg-neutral-100 text-neutral-600'
-                          >
-                            {connection.name?.[0] ||
-                              connection.integration?.name?.[0] ||
-                              '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
+                          {connection.name?.[0] ||
+                            connection.integration?.name?.[0] ||
+                            '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
 
-                      <div className='flex-1 min-w-0'>
-                        <h3 className='font-medium text-neutral-800 truncate'>
-                          {connection.name || connection.integration?.name}
-                        </h3>
-                        <p className='text-xs text-neutral-500 font-mono truncate'>
-                          {connection.integration?.key}
-                        </p>
-                      </div>
+                    <div className='flex-1 min-w-0'>
+                      <h3 className='font-medium text-neutral-800 truncate'>
+                        {connection.name || connection.integration?.name}
+                      </h3>
+                      <p className='text-xs text-neutral-500 font-mono truncate'>
+                        {connection.integration?.key}
+                      </p>
+                    </div>
 
-                      <div className='flex items-center gap-2 shrink-0'>
-                        <ArrowRight className='h-4 w-4 text-neutral-400 group-hover:text-neutral-600 transition-colors' />
-                      </div>
-                    </Link>
+                    <div className='shrink-0'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='border-neutral-300 hover:border-red-300 hover:bg-red-50 hover:text-red-600'
+                        onClick={() => handleDisconnect(connection.id)}
+                      >
+                        <X className='h-3.5 w-3.5' />
+                        Disconnect
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>

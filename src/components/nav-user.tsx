@@ -17,29 +17,20 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { useConsoleAuth } from './providers/console-auth-provider';
+import { useAuth } from './providers/auth-provider';
 import { useCurrentWorkspace } from './providers/workspace-provider';
-import { useRouter } from 'next/navigation';
 import { useCustomer } from './providers/customer-provider';
 
-export const useClearPat = () => {
-  const { clearToken } = useConsoleAuth();
-  const { clearWorkspace } = useCurrentWorkspace();
-  const router = useRouter();
-
-  const clearPat = () => {
-    clearToken();
-    clearWorkspace();
-    router.push('/personal-token');
-    localStorage.clear();
-  };
-
-  return { clearPat };
-};
-
 export function NavUser() {
-  const { setCustomerName, customerName } = useCustomer();
+  const { customerName } = useCustomer();
+  const { logout } = useAuth();
+  const { clearWorkspace } = useCurrentWorkspace();
   const { isMobile } = useSidebar();
+
+  const handleLogout = async () => {
+    clearWorkspace();
+    await logout();
+  };
 
   return (
     <SidebarMenu>
@@ -84,7 +75,7 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setCustomerName(undefined)}>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
               Log out
             </DropdownMenuItem>

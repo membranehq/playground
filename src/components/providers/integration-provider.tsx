@@ -18,7 +18,10 @@ export function IntegrationProvider({
   const fetchToken = async () => {
     const response = await fetch('/api/integration-token', {
       headers: {
-        ...buildAuthHeaders({ customerId, customerName }),
+        ...buildAuthHeaders({
+          customerId: customerId ?? undefined,
+          customerName: customerName ?? undefined,
+        }),
         ...getWorkspaceHeaders(),
       },
     });

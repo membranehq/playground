@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils';
 import React from 'react';
 import { WorkspaceSelect } from './workspace-select';
 import { Button } from './ui/button';
-import { useClearPat } from './nav-user';
+import { useAuth } from './providers/auth-provider';
+import { useCurrentWorkspace } from './providers/workspace-provider';
 import { LogOut, GithubIcon } from 'lucide-react';
 
 const OFFSET_STYLES =
@@ -12,7 +13,15 @@ const OFFSET_STYLES =
 const GITHUB_REPO_URL = 'https://github.com/membranehq/playground';
 
 export function AdminControls() {
-  const { clearPat } = useClearPat();
+  const { logout, authMode } = useAuth();
+  const { clearWorkspace } = useCurrentWorkspace();
+
+  const handleLogout = async () => {
+    clearWorkspace();
+    await logout();
+  };
+
+  const logoutButtonText = authMode === 'pat' ? 'Clear PAT' : 'Log out';
 
   return (
     <div
@@ -29,8 +38,8 @@ export function AdminControls() {
             View on GitHub
           </a>
         </Button>
-        <Button variant='outline' size='sm' onClick={clearPat}>
-          Clear PAT <LogOut />
+        <Button variant='outline' size='sm' onClick={handleLogout}>
+          {logoutButtonText} <LogOut />
         </Button>
       </div>
     </div>

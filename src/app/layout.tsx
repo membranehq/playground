@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { inter } from '@/lib/fonts';
-import { ConsoleAuthProvider } from '@/components/providers/console-auth-provider';
+import { AuthProvider } from '@/components/providers/auth-provider';
 import { WorkspaceProvider } from '@/components/providers/workspace-provider';
 
 import './globals.css';
@@ -33,9 +33,9 @@ export default function RootLayout({
           forcedTheme='light'
           enableSystem={false}
         >
-          <ConsoleAuthProvider>
+          <AuthProvider>
             <WorkspaceProvider>{children}</WorkspaceProvider>
-          </ConsoleAuthProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

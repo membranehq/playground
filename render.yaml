@@ -45,6 +45,11 @@ services:
         value: https://ui.integration.app
       - key: MEMBRANE_API_URI
         value: https://api.integration.app
+      # Auth0 Configuration
+      - key: NEXT_PUBLIC_AUTH0_DOMAIN
+        value: login.getmembrane.com
+      - key: NEXT_PUBLIC_AUTH0_CLIENT_ID
+        value: eSR6dKpwDEHLFMErq3eCndAS2vx8Ouri
       # Connect to the private OpenCode server
       - key: OPENCODE_SERVER_HOST
         fromService:
