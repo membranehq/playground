@@ -76,17 +76,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isHandlingCallback, setIsHandlingCallback] = useState(false);
   const [authMode] = useState<AuthMode>(getAuthMode);
 
-  // Get the appropriate token key based on auth mode
-  const tokenKey = authMode === 'auth0' ? JWT_TOKEN_KEY : PAT_TOKEN_KEY;
-
-  // Initialize token from localStorage on mount
+  // Initialize token from localStorage on mount based on auth mode
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const tokenKey = authMode === 'auth0' ? JWT_TOKEN_KEY : PAT_TOKEN_KEY;
       const storedToken = localStorage.getItem(tokenKey);
       setTokenState(storedToken);
       setIsLoading(false);
     }
-  }, [tokenKey]);
+  }, [authMode]);
 
   // Periodically refresh Auth0 token so it does not expire (only for Auth0 mode)
   useEffect(() => {
@@ -116,25 +114,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setToken = useCallback((newToken: string) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(tokenKey, newToken);
-      setTokenState(newToken);
-    }
-  }, [tokenKey]);
-
-  const clearToken = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(tokenKey);
-      setTokenState(null);
-    }
-  }, [tokenKey]);
-
-  // PAT-specific method to set token
-  const setPatToken = useCallback((newToken: string) => {
-    if (authMode === 'pat' && typeof window !== 'undefined') {
-      localStorage.setItem(PAT_TOKEN_KEY, newToken);
+      // Store in the appropriate key based on auth mode
+      const key = authMode === 'auth0' ? JWT_TOKEN_KEY : PAT_TOKEN_KEY;
+      localStorage.setItem(key, newToken);
       setTokenState(newToken);
     }
   }, [authMode]);
+
+  const clearToken = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      // Clear both token types to ensure clean logout
+      localStorage.removeItem(JWT_TOKEN_KEY);
+      localStorage.removeItem(PAT_TOKEN_KEY);
+      setTokenState(null);
+    }
+  }, []);
+
+  // PAT-specific method to set token
+  const setPatToken = useCallback((newToken: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(PAT_TOKEN_KEY, newToken);
+      setTokenState(newToken);
+    }
+  }, []);
 
   const login = useCallback(async (returnTo?: string) => {
     if (authMode === 'pat') {
@@ -248,6 +250,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  // Try Auth0 token first, then PAT
-  return localStorage.getItem(JWT_TOKEN_KEY) || localStorage.getItem(PAT_TOKEN_KEY);
+  // Use the appropriate token based on auth mode
+  const authMode = isAuth0Enabled() ? 'auth0' : 'pat';
+  const tokenKey = authMode === 'auth0' ? JWT_TOKEN_KEY : PAT_TOKEN_KEY;
+  return localStorage.getItem(tokenKey);
 }
