@@ -6,7 +6,6 @@
  */
 
 import { getWorkspaceHeaders } from './workspace-storage';
-import { cyrb64Hash } from '@/helpers/hash';
 
 export interface MembraneAgentMessage {
   id: string;
@@ -28,21 +27,17 @@ interface LongPollOptions {
   timeout?: number;
 }
 
-// Get customer info from localStorage (same as customer-provider)
 function getCustomerHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
 
   const userEmail = localStorage.getItem('userEmail');
   if (!userEmail) return {};
 
-  // Parse JSON string (useLocalStorage stores as JSON)
   const email = JSON.parse(userEmail) as string | undefined;
   if (!email) return {};
 
-  const customerId = cyrb64Hash(email);
-
   return {
-    'x-auth-id': customerId,
+    'x-auth-id': email,
     'x-customer-name': email,
   };
 }
