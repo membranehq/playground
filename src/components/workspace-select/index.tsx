@@ -67,9 +67,10 @@ export const WorkspaceSelect = ({
           disabled={workspacesError || workspaceLoading}
         >
           <span className='truncate'>
+            <span className='text-muted-foreground'>Workspace:</span>{' '}
             {workspaceId
               ? workspacesMap[workspaceId]?.name
-              : 'Select workspace...'}
+              : 'Select...'}
           </span>
           <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
         </Button>

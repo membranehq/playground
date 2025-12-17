@@ -12,13 +12,18 @@ import {
 import type { Integration as IntegrationAppIntegration } from '@membranehq/sdk';
 import { Loader2, Plug, Search, Cable, ExternalLink, Blocks, X } from 'lucide-react';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
+import { useSettings } from '@/components/providers/settings-provider';
+import { CustomConnectionDialog } from '@/components/custom-connection-dialog';
 
 export function IntegrationList() {
   const integrationApp = useIntegrationApp();
   const { integrations, refresh: refreshIntegrations, loading: integrationsLoading } = useIntegrations();
   const { connections, refresh: refreshConnections, loading: connectionsLoading } = useConnections();
   const { workspace } = useCurrentWorkspace();
+  const { connectionUIMode } = useSettings();
   const [searchQuery, setSearchQuery] = useState('');
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+  const [selectedIntegration, setSelectedIntegration] = useState<IntegrationAppIntegration | null>(null);
 
   const consoleWorkspaceUrl = workspace
     ? `https://console.getmembrane.com/w/${workspace.id}`
@@ -61,6 +66,13 @@ export function IntegrationList() {
 
   const handleConnect = async (integration: IntegrationAppIntegration) => {
     if (!integration.key) return;
+
+    if (connectionUIMode === 'custom') {
+      setSelectedIntegration(integration);
+      setCustomDialogOpen(true);
+      return;
+    }
+
     try {
       await integrationApp.integration(integration.key).openNewConnection();
       refreshIntegrations();
@@ -68,6 +80,12 @@ export function IntegrationList() {
     } catch (error) {
       console.error('Failed to connect:', error);
     }
+  };
+
+  const handleCustomConnectionSuccess = () => {
+    refreshIntegrations();
+    refreshConnections();
+    setSelectedIntegration(null);
   };
 
   const handleDisconnect = async (connectionId: string) => {
@@ -260,6 +278,17 @@ export function IntegrationList() {
             </section>
           )}
         </>
+      )}
+
+      {selectedIntegration && (
+        <CustomConnectionDialog
+          integrationKey={selectedIntegration.key!}
+          integrationName={selectedIntegration.name}
+          integrationLogo={selectedIntegration.logoUri}
+          open={customDialogOpen}
+          onOpenChange={setCustomDialogOpen}
+          onSuccess={handleCustomConnectionSuccess}
+        />
       )}
     </>
   );

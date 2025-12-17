@@ -30,7 +30,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           <Breadcrumbs />
         </div>
         {headerActions && (
-          <div className='px-4'>
+          <div className='flex items-center gap-4 px-4'>
             {headerActions}
           </div>
         )}
