@@ -32,7 +32,7 @@ export function AdminControls() {
       )}
     >
       <div className='flex items-center gap-3'>
-        <span className='text-sm font-medium text-foreground'>Playground Config</span>
+        <span className='text-sm font-medium text-foreground whitespace-nowrap'>Playground Config</span>
         <Separator orientation='vertical' className='h-6' />
         <WorkspaceSelect />
         <Separator orientation='vertical' className='h-6' />
