@@ -67,6 +67,15 @@ export default function SessionPage() {
   const initialMessageSentRef = useRef(false);
   const messagesMapRef = useRef(new Map<string, { info: any; parts: Map<string, any> }>());
 
+  // Reset membrane sidebar when session changes
+  useEffect(() => {
+    setMembraneSessionId(null);
+    initialMessageSentRef.current = false;
+    messagesMapRef.current.clear();
+    setMessages([]);
+    setError(null);
+  }, [sessionId]);
+
   // Convert messages map to array
   const updateMessagesFromMap = () => {
     const messagesList: Message[] = [];

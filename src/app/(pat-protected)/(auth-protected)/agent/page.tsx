@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, MessageSquare } from 'lucide-react';
 import { AgentSessionsDropdown } from '@/components/agent-sessions-dropdown';
 import { PageHeaderActions } from '@/components/page-header-context';
+import { ThinkingIndicator } from '@/components/thinking-indicator';
 
 interface Session {
   id: string;
@@ -78,15 +79,19 @@ export default function AgentPage() {
 
       if (response.ok) {
         const data = await response.json();
+        // Navigate to the new session - keep isCreating true until navigation completes
         if (initialMessage) {
           router.push(`/agent/sessions/${data.sessionId}?message=${encodeURIComponent(initialMessage)}`);
         } else {
           router.push(`/agent/sessions/${data.sessionId}`);
         }
+        // Don't reset isCreating here - the page will unmount during navigation
+      } else {
+        // Only reset on error
+        setIsCreating(false);
       }
     } catch (error) {
       console.error('Error creating session:', error);
-    } finally {
       setIsCreating(false);
     }
   };
@@ -228,26 +233,33 @@ export default function AgentPage() {
 
       {/* Bottom Input Section */}
       <div className="p-4">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <div className="flex gap-3 items-center">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me to help with your tasks and integrations..."
-              disabled={isCreating}
-              className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground disabled:opacity-50"
-            />
-            <Button
-              type="submit"
-              disabled={isCreating || !input.trim()}
-              size="icon"
-              className="h-12 w-12 rounded-full"
-            >
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-          </div>
-        </form>
+        <div className="max-w-3xl mx-auto">
+          {isCreating ? (
+            <div className="flex justify-center">
+              <ThinkingIndicator />
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="flex gap-3 items-center">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask me to help with your tasks and integrations..."
+                  className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
+                />
+                <Button
+                  type="submit"
+                  disabled={!input.trim()}
+                  size="icon"
+                  className="h-12 w-12 rounded-full"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

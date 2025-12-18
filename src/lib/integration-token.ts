@@ -5,6 +5,7 @@ import { CurrentCustomer } from '@/components/providers/customer-provider';
 interface TokenData {
   id: string;
   name: string;
+  isAdmin: number;
 }
 
 export interface WorkspaceAuthDetails {
@@ -38,6 +39,8 @@ export async function generateIntegrationToken(
       id: details.customerId,
       // Required: Human-readable customer name
       name: details.customerName || details.customerId,
+      // Admin mode for full access
+      isAdmin: 1,
     };
 
     const options = {
