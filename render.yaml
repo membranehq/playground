@@ -10,7 +10,7 @@ services:
   - type: pserv
     name: opencode-server
     runtime: node
-    plan: starter
+    plan: pro
     buildCommand: npm install && npm install -g @membranehq/cli && npm run build:server
     startCommand: npm run start:server
     disk:
