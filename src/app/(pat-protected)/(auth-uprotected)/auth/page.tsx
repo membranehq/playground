@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
@@ -10,16 +10,16 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ExternalLink } from "lucide-react";
-import { useConsoleEntry } from "@/hooks/use-console-entry";
-import { useCurrentWorkspace } from "@/components/providers/workspace-provider";
-import { WorkspaceSelect } from "@/components/workspace-select";
-import { useState, useEffect } from "react";
-import { useAuth } from "@/components/providers/auth-provider";
-import { useCustomer } from "@/components/providers/customer-provider";
-import { Metadata } from "next";
+} from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, ExternalLink } from 'lucide-react';
+import { useConsoleEntry } from '@/hooks/use-console-entry';
+import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
+import { WorkspaceSelect } from '@/components/workspace-select';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/components/providers/auth-provider';
+import { useCustomer } from '@/components/providers/customer-provider';
+import { Metadata } from 'next';
 
 export default function WorkspaceSelectionPage() {
   const { isError: workspacesError, isLoading: workspacesLoading } =
@@ -32,13 +32,13 @@ export default function WorkspaceSelectionPage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromPath = searchParams.get("from") || "/";
+  const fromPath = searchParams.get('from') || '/';
 
   const handleWorkspaceSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!currentWorkspace) {
-      setError("Please select a workspace");
+      setError('Please select a workspace');
       return;
     }
 
