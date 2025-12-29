@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
@@ -13,14 +13,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Eye, EyeOff, ExternalLink } from "lucide-react";
-import { useAuth } from "@/components/providers/auth-provider";
-import { useConsoleEntry } from "@/hooks/use-console-entry";
-import { useCurrentWorkspace } from "@/components/providers/workspace-provider";
-import { WorkspaceSelect } from "@/components/workspace-select";
-import { useCustomer } from "@/components/providers/customer-provider";
+} from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { useAuth } from '@/components/providers/auth-provider';
+import { useConsoleEntry } from '@/hooks/use-console-entry';
+import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
+import { WorkspaceSelect } from '@/components/workspace-select';
+import { useCustomer } from '@/components/providers/customer-provider';
 
 enum Step {
   Token,
@@ -37,20 +37,20 @@ export default function PersonalTokenPage() {
   const { workspace: currentWorkspace } = useCurrentWorkspace();
   const { setCustomerName } = useCustomer();
 
-  const [token, setToken] = useState(storedToken || "");
+  const [token, setToken] = useState(storedToken || '');
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<Step>(Step.Token);
   const [showToken, setShowToken] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromPath = searchParams.get("from") || "/";
+  const fromPath = searchParams.get('from') || '/';
 
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!token.trim()) {
-      setError("Please enter a valid personal token");
+      setError('Please enter a valid personal token');
       return;
     }
 
@@ -64,12 +64,12 @@ export default function PersonalTokenPage() {
     e.preventDefault();
 
     if (!currentWorkspace) {
-      setError("Please select a workspace");
+      setError('Please select a workspace');
       return;
     }
 
     if (!hasToken) {
-      setError("Please enter a valid personal token");
+      setError('Please enter a valid personal token');
       setStep(Step.Token);
       return;
     }
@@ -126,7 +126,7 @@ export default function PersonalTokenPage() {
                   <div className="flex items-center gap-2">
                     <Input
                       id="token"
-                      type={showToken ? "text" : "password"}
+                      type={showToken ? 'text' : 'password'}
                       placeholder="Enter your personal token"
                       value={token}
                       onChange={(e) => setToken(e.target.value)}
@@ -145,7 +145,7 @@ export default function PersonalTokenPage() {
                         <Eye className="h-4 w-4" />
                       )}
                       <span className="sr-only">
-                        {showToken ? "Hide token" : "Show token"}
+                        {showToken ? 'Hide token' : 'Show token'}
                       </span>
                     </Button>
                   </div>
