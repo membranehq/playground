@@ -4,11 +4,7 @@ import { usePathname } from 'next/navigation';
 import { LinkCard } from './link-card';
 import { useFieldMappings } from '@membranehq/react';
 
-export const FieldMappingsCard = ({
-  connectionId,
-}: {
-  connectionId: string;
-}) => {
+export const FieldMappingsCard = ({ connectionId }: { connectionId: string }) => {
   const pathname = usePathname();
   const { fieldMappings, loading } = useFieldMappings({ connectionId });
 
@@ -16,7 +12,7 @@ export const FieldMappingsCard = ({
     <LinkCard
       loading={loading}
       href={`${pathname}/field-mappings`}
-      itemName='Field Mappings'
+      itemName="Field Mappings"
       itemsCount={fieldMappings?.length}
     />
   );

@@ -17,22 +17,11 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang='en' suppressHydrationWarning>
-      <body
-        className={`${inter.className} antialiased h-screen overflow-hidden bg-background`}
-      >
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='light'
-          forcedTheme='light'
-          enableSystem={false}
-        >
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} antialiased h-screen overflow-hidden bg-background`}>
+        <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false}>
           <AuthProvider>
             <WorkspaceProvider>{children}</WorkspaceProvider>
           </AuthProvider>

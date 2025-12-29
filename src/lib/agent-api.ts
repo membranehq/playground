@@ -23,7 +23,7 @@ export async function agentFetch(
   url: string,
   customerId: string,
   customerName: string | null | undefined,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const headers = {
     ...getAgentHeaders(customerId, customerName),
@@ -43,7 +43,7 @@ export function getStreamUrl(
   sessionId: string,
   customerId: string,
   workspaceKey: string,
-  workspaceSecret: string
+  workspaceSecret: string,
 ): string {
   const params = new URLSearchParams({
     customerId,

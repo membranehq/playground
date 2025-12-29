@@ -7,11 +7,7 @@ import { useCurrentWorkspace } from './workspace-provider';
 import { SWRConfig } from 'swr';
 import { buildAuthHeaders } from '@/lib/fetch-utils';
 
-export function IntegrationProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function IntegrationProvider({ children }: { children: React.ReactNode }) {
   const { workspace } = useCurrentWorkspace();
   const { customerId, customerName } = useCustomer();
 

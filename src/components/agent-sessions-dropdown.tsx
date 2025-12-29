@@ -4,11 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { History, Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
@@ -121,9 +117,7 @@ export function AgentSessionsDropdown({ onNewChat, isCreating }: AgentSessionsDr
           {/* Sessions List */}
           <div className="max-h-64 overflow-y-auto">
             {isLoading ? (
-              <div className="p-4 text-sm text-muted-foreground text-center">
-                Loading...
-              </div>
+              <div className="p-4 text-sm text-muted-foreground text-center">Loading...</div>
             ) : filteredSessions.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground text-center">
                 {searchQuery ? 'No matching sessions' : 'No previous sessions'}
@@ -140,9 +134,7 @@ export function AgentSessionsDropdown({ onNewChat, isCreating }: AgentSessionsDr
                       {session.title || `Session ${session.id.slice(0, 8)}...`}
                     </div>
                     {session.time?.updated && (
-                      <div className="text-xs text-muted-foreground">
-                        {formatDate(session.time.updated)}
-                      </div>
+                      <div className="text-xs text-muted-foreground">{formatDate(session.time.updated)}</div>
                     )}
                   </button>
                 ))}

@@ -9,9 +9,7 @@ type WorkspaceMap = Record<string, ConsoleEntry['workspace']>;
 type OrganizationMap = Record<string, Organization>;
 
 export function useConsoleEntry(): Partial<ConsoleEntry> & {
-  workspaces?: Array<
-    ConsoleEntry['workspaces'][number] & { org?: Organization }
-  >;
+  workspaces?: Array<ConsoleEntry['workspaces'][number] & { org?: Organization }>;
 
   workspacesMap: WorkspaceMap;
   orgsMap: OrganizationMap;
@@ -32,13 +30,10 @@ export function useConsoleEntry(): Partial<ConsoleEntry> & {
 
   const workspacesMap = useMemo(() => {
     return (
-      data?.workspaces.reduce<Record<string, ConsoleEntry['workspace']>>(
-        (acc, workspace) => {
-          acc[workspace.id] = workspace;
-          return acc;
-        },
-        {},
-      ) || {}
+      data?.workspaces.reduce<Record<string, ConsoleEntry['workspace']>>((acc, workspace) => {
+        acc[workspace.id] = workspace;
+        return acc;
+      }, {}) || {}
     );
   }, [data?.workspaces]);
 
@@ -53,9 +48,7 @@ export function useConsoleEntry(): Partial<ConsoleEntry> & {
 
   const workspacesWithOrgs = useMemo(() => {
     return (
-      data?.workspaces.map<
-        ConsoleEntry['workspaces'][number] & { org?: Organization }
-      >((workspace) => {
+      data?.workspaces.map<ConsoleEntry['workspaces'][number] & { org?: Organization }>((workspace) => {
         return { ...workspace, org: orgsMap[workspace.orgId] };
       }) || []
     );

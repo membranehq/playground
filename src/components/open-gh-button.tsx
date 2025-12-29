@@ -1,22 +1,11 @@
 import { GithubIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const REPO_BASE_URL =
-  'https://github.com/membranehq/playground/tree/main/src';
+const REPO_BASE_URL = 'https://github.com/membranehq/playground/tree/main/src';
 
-export const OpenGhButton = ({
-  metaUrl,
-  className,
-}: {
-  metaUrl: string;
-  className?: string;
-}) => {
+export const OpenGhButton = ({ metaUrl, className }: { metaUrl: string; className?: string }) => {
   const filePath = metaUrl.split('/src')[1];
   const fullUrl = `${REPO_BASE_URL}${filePath}`;
 
@@ -31,14 +20,8 @@ export const OpenGhButton = ({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          variant='outline'
-          size='icon-sm'
-          asChild
-          disabled={!filePath}
-          className={className}
-        >
-          <a href={urlToOpen} target='_blank'>
+        <Button variant="outline" size="icon-sm" asChild disabled={!filePath} className={className}>
+          <a href={urlToOpen} target="_blank">
             <GithubIcon />
           </a>
         </Button>

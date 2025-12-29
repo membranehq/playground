@@ -83,9 +83,7 @@ export function MessagePart({ part, onConnectionComplete, onShowMembraneDetails 
     case 'agent':
       return (
         <div className="border border-border rounded-lg p-3 bg-muted/50">
-          <div className="text-sm font-medium">
-            🤖 Agent: {part.name}
-          </div>
+          <div className="text-sm font-medium">🤖 Agent: {part.name}</div>
         </div>
       );
 
@@ -93,12 +91,8 @@ export function MessagePart({ part, onConnectionComplete, onShowMembraneDetails 
     default:
       return (
         <details className="border border-border rounded-lg p-3 bg-muted/50">
-          <summary className="text-xs font-medium cursor-pointer">
-            Unknown part type: {part.type}
-          </summary>
-          <pre className="text-xs mt-2 overflow-auto">
-            {JSON.stringify(part, null, 2)}
-          </pre>
+          <summary className="text-xs font-medium cursor-pointer">Unknown part type: {part.type}</summary>
+          <pre className="text-xs mt-2 overflow-auto">{JSON.stringify(part, null, 2)}</pre>
         </details>
       );
   }

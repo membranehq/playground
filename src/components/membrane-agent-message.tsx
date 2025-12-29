@@ -22,28 +22,19 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
   const isUser = message.role === 'user';
 
   // Extract tool summaries (name + status only)
-  const toolSummaries: ToolSummary[] = message.parts
-    ?.filter((p: any) => p.type === 'tool')
-    .map((p: any) => ({
-      name: p.tool,
-      status: p.state?.status || 'pending',
-      title: p.state?.title,
-    })) || [];
+  const toolSummaries: ToolSummary[] =
+    message.parts
+      ?.filter((p: any) => p.type === 'tool')
+      .map((p: any) => ({
+        name: p.tool,
+        status: p.state?.status || 'pending',
+        title: p.state?.title,
+      })) || [];
 
   return (
-    <div
-      className={`p-3 rounded-xl text-sm ${
-        isUser
-          ? 'bg-neutral-200'
-          : 'bg-white border border-neutral-200'
-      }`}
-    >
+    <div className={`p-3 rounded-xl text-sm ${isUser ? 'bg-neutral-200' : 'bg-white border border-neutral-200'}`}>
       {/* Text content */}
-      {message.content && (
-        <Streamdown className="streamdown text-neutral-800">
-          {message.content}
-        </Streamdown>
-      )}
+      {message.content && <Streamdown className="streamdown text-neutral-800">{message.content}</Streamdown>}
 
       {/* Tool summaries */}
       {toolSummaries.length > 0 && (
@@ -55,11 +46,7 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
       )}
 
       {/* If no content and no tools, show placeholder */}
-      {!message.content && toolSummaries.length === 0 && (
-        <p className="text-neutral-400 italic">
-          (Empty message)
-        </p>
-      )}
+      {!message.content && toolSummaries.length === 0 && <p className="text-neutral-400 italic">(Empty message)</p>}
     </div>
   );
 }

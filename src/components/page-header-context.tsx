@@ -13,9 +13,7 @@ export function PageHeaderProvider({ children }: { children: ReactNode }) {
   const [headerActions, setHeaderActions] = useState<ReactNode | null>(null);
 
   return (
-    <PageHeaderContext.Provider value={{ headerActions, setHeaderActions }}>
-      {children}
-    </PageHeaderContext.Provider>
+    <PageHeaderContext.Provider value={{ headerActions, setHeaderActions }}>{children}</PageHeaderContext.Provider>
   );
 }
 

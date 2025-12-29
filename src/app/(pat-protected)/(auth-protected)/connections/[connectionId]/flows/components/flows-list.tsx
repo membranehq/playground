@@ -1,19 +1,8 @@
 'use client';
 
-import {
-  useFlows,
-  useIntegrationApp,
-  useConnection,
-} from '@membranehq/react';
+import { useFlows, useIntegrationApp, useConnection } from '@membranehq/react';
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FlowExecutionTrigger } from './flow-menu';
 import { Badge } from '@/components/ui/badge';
@@ -27,10 +16,10 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
   const { flows, loading, error } = useFlows({ connectionId });
 
   return (
-    <div className='rounded-md border border-neutral-200'>
+    <div className="rounded-md border border-neutral-200">
       <Table>
         <TableHeader>
-          <TableRow className='border-neutral-200'>
+          <TableRow className="border-neutral-200">
             <TableHead>Name & Key</TableHead>
             <TableHead>Configure</TableHead>
             <TableHead>Run</TableHead>
@@ -38,11 +27,8 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
         </TableHeader>
         <TableBody>
           {flows.length === 0 && !loading && !error && (
-            <TableRow className='border-neutral-200'>
-              <TableCell
-                colSpan={4}
-                className='text-center text-muted-foreground'
-              >
+            <TableRow className="border-neutral-200">
+              <TableCell colSpan={4} className="text-center text-muted-foreground">
                 No flows found
               </TableCell>
             </TableRow>
@@ -50,48 +36,40 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
 
           <>
             {flows.map((flow) => (
-              <TableRow key={flow.id} className='border-neutral-200'>
-                <TableCell className='font-medium'>
-                  {flow.name} <Badge variant='secondary'>{flow.key}</Badge>
+              <TableRow key={flow.id} className="border-neutral-200">
+                <TableCell className="font-medium">
+                  {flow.name} <Badge variant="secondary">{flow.key}</Badge>
                 </TableCell>
-                <TableCell className='flex gap-2'>
+                <TableCell className="flex gap-2">
                   <Button
-                    variant='outline'
+                    variant="outline"
                     disabled={!flow.key}
-                    className='border-neutral-300 hover:border-neutral-400'
+                    className="border-neutral-300 hover:border-neutral-400"
                     onClick={() => {
                       if (flow.key && connection?.id) {
-                        client
-                          .connection(connection.id)
-                          .flow(flow.key)
-                          .openConfiguration();
+                        client.connection(connection.id).flow(flow.key).openConfiguration();
                       }
                     }}
                   >
-                    <TextCursorInput className='h-4 w-4' /> Edit parameters
+                    <TextCursorInput className="h-4 w-4" /> Edit parameters
                   </Button>
 
                   <Button
-                    variant='outline'
+                    variant="outline"
                     disabled={!flow.key}
-                    className='border-neutral-300 hover:border-neutral-400'
+                    className="border-neutral-300 hover:border-neutral-400"
                     onClick={() => {
                       if (flow.key && connection?.id) {
-                        client
-                          .connection(connection.id)
-                          .flow(flow.key)
-                          .openEditor();
+                        client.connection(connection.id).flow(flow.key).openEditor();
                       }
                     }}
                   >
-                    <Workflow className='h-4 w-4' /> Edit flow
+                    <Workflow className="h-4 w-4" /> Edit flow
                   </Button>
 
-                  <Button variant='outline' asChild className='border-neutral-300 hover:border-neutral-400'>
-                    <Link
-                      href={`/connections/${connectionId}/flows/${flow.key}/builder`}
-                    >
-                      <Workflow className='h-4 w-4' /> Embedded flow editor
+                  <Button variant="outline" asChild className="border-neutral-300 hover:border-neutral-400">
+                    <Link href={`/connections/${connectionId}/flows/${flow.key}/builder`}>
+                      <Workflow className="h-4 w-4" /> Embedded flow editor
                     </Link>
                   </Button>
                 </TableCell>
@@ -104,19 +82,19 @@ export function FlowsList({ connectionId }: { connectionId: string }) {
 
           {loading &&
             Array.from({ length: 3 }).map((_, index) => (
-              <TableRow key={index} className='border-neutral-200'>
+              <TableRow key={index} className="border-neutral-200">
                 <TableCell>
-                  <Skeleton className='h-6 w-[200px]' />
+                  <Skeleton className="h-6 w-[200px]" />
                 </TableCell>
                 <TableCell>
-                  <Skeleton className='h-6 w-[100px]' />
+                  <Skeleton className="h-6 w-[100px]" />
                 </TableCell>
               </TableRow>
             ))}
 
           {error && (
-            <TableRow className='border-neutral-200'>
-              <TableCell colSpan={4} className='text-center text-red-500'>
+            <TableRow className="border-neutral-200">
+              <TableCell colSpan={4} className="text-center text-red-500">
                 Error loading flows
               </TableCell>
             </TableRow>

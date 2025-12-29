@@ -64,9 +64,7 @@ export function ResizablePanelLayout({
   return (
     <div ref={containerRef} className="flex h-full w-full">
       {/* Main content area */}
-      <div className="flex-1 min-w-0 overflow-hidden">
-        {children}
-      </div>
+      <div className="flex-1 min-w-0 overflow-hidden">{children}</div>
 
       {/* Sidebar with draggable divider */}
       {sidebar && (
@@ -75,19 +73,13 @@ export function ResizablePanelLayout({
           <div
             className={`
               w-px flex-shrink-0 cursor-col-resize transition-colors
-              ${isDragging
-                ? 'bg-neutral-400'
-                : 'bg-neutral-200 hover:bg-neutral-400'
-              }
+              ${isDragging ? 'bg-neutral-400' : 'bg-neutral-200 hover:bg-neutral-400'}
             `}
             onMouseDown={handleMouseDown}
           />
 
           {/* Sidebar panel */}
-          <div
-            style={{ width: sidebarWidth }}
-            className="flex-shrink-0 overflow-hidden"
-          >
+          <div style={{ width: sidebarWidth }} className="flex-shrink-0 overflow-hidden">
             {sidebar}
           </div>
         </>

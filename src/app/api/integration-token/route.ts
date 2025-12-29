@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthFromRequest } from '@/lib/server-auth';
-import {
-  generateIntegrationToken,
-  IntegrationTokenError,
-} from '@/lib/integration-token';
+import { generateIntegrationToken, IntegrationTokenError } from '@/lib/integration-token';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,9 +12,6 @@ export async function GET(request: NextRequest) {
     if (error instanceof IntegrationTokenError) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json(
-      { error: 'Failed to generate token' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Failed to generate token' }, { status: 500 });
   }
 }

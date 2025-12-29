@@ -2,11 +2,7 @@
 
 import { createContext, useCallback, useContext, useState } from 'react';
 import { ConsoleEntry } from '@/types/console-entry';
-import {
-  getStoredWorkspace,
-  storeWorkspace,
-  clearWorkspaceStorage,
-} from '@/lib/workspace-storage';
+import { getStoredWorkspace, storeWorkspace, clearWorkspaceStorage } from '@/lib/workspace-storage';
 
 interface WorkspaceContextType {
   workspace: ConsoleEntry['workspace'] | null;
@@ -25,8 +21,7 @@ export function useCurrentWorkspace() {
 }
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [workspace, setWorkspace] =
-    useState<WorkspaceContextType['workspace']>(getStoredWorkspace());
+  const [workspace, setWorkspace] = useState<WorkspaceContextType['workspace']>(getStoredWorkspace());
 
   const saveWorkspace = useCallback(
     (workspace: WorkspaceContextType['workspace']) => {

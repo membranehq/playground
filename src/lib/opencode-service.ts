@@ -52,19 +52,13 @@ class OpencodeService {
   /**
    * Create a new session for a customer.
    */
-  async createSession(
-    customerId: string,
-    credentials: WorkspaceCredentials
-  ): Promise<string> {
+  async createSession(customerId: string, credentials: WorkspaceCredentials): Promise<string> {
     console.log(`[OpencodeService] Creating session for customer: ${customerId}`);
 
-    const response = await fetch(
-      `${this.baseUrl}/${encodeURIComponent(customerId)}/session.create`,
-      {
-        method: 'POST',
-        headers: this.createHeaders(credentials),
-      }
-    );
+    const response = await fetch(`${this.baseUrl}/${encodeURIComponent(customerId)}/session.create`, {
+      method: 'POST',
+      headers: this.createHeaders(credentials),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -86,14 +80,11 @@ class OpencodeService {
 
     // Try to get share URL
     try {
-      const shareResponse = await fetch(
-        `${this.baseUrl}/${encodeURIComponent(customerId)}/session.share`,
-        {
-          method: 'POST',
-          headers: this.createHeaders(credentials),
-          body: JSON.stringify({ id: sessionId }),
-        }
-      );
+      const shareResponse = await fetch(`${this.baseUrl}/${encodeURIComponent(customerId)}/session.share`, {
+        method: 'POST',
+        headers: this.createHeaders(credentials),
+        body: JSON.stringify({ id: sessionId }),
+      });
 
       if (shareResponse.ok) {
         const shareResult = await shareResponse.json();
@@ -116,27 +107,22 @@ class OpencodeService {
     customerId: string,
     sessionId: string,
     message: string,
-    credentials: WorkspaceCredentials
+    credentials: WorkspaceCredentials,
   ): Promise<any> {
-    console.log(
-      `[OpencodeService] Sending prompt to session ${sessionId}: "${message.substring(0, 50)}..."`
-    );
+    console.log(`[OpencodeService] Sending prompt to session ${sessionId}: "${message.substring(0, 50)}..."`);
 
     // Log the request
     opencodeLogger.logRequest(sessionId, message);
 
-    const response = await fetch(
-      `${this.baseUrl}/${encodeURIComponent(customerId)}/session.prompt`,
-      {
-        method: 'POST',
-        headers: this.createHeaders(credentials),
-        body: JSON.stringify({
-          id: sessionId,
-          parts: [{ type: 'text', text: message }],
-          agent: 'self-integration',
-        }),
-      }
-    );
+    const response = await fetch(`${this.baseUrl}/${encodeURIComponent(customerId)}/session.prompt`, {
+      method: 'POST',
+      headers: this.createHeaders(credentials),
+      body: JSON.stringify({
+        id: sessionId,
+        parts: [{ type: 'text', text: message }],
+        agent: 'self-integration',
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -174,11 +160,9 @@ class OpencodeService {
     customerId: string,
     sessionId: string,
     message: string,
-    credentials: WorkspaceCredentials
+    credentials: WorkspaceCredentials,
   ): Promise<AsyncIterableIterator<any>> {
-    console.log(
-      `[OpencodeService] Starting stream for session ${sessionId}: "${message.substring(0, 50)}..."`
-    );
+    console.log(`[OpencodeService] Starting stream for session ${sessionId}: "${message.substring(0, 50)}..."`);
 
     // Start SSE subscription (with credentials in query params)
     const eventUrl = this.getEventSubscribeUrl(customerId, credentials);
@@ -238,11 +222,7 @@ class OpencodeService {
   /**
    * Get messages from a session.
    */
-  async getMessages(
-    customerId: string,
-    sessionId: string,
-    credentials: WorkspaceCredentials
-  ): Promise<any> {
+  async getMessages(customerId: string, sessionId: string, credentials: WorkspaceCredentials): Promise<any> {
     const url = `${this.baseUrl}/${encodeURIComponent(customerId)}/session.messages?id=${encodeURIComponent(sessionId)}`;
     console.log(`[OpencodeService] GET ${url}`);
 
@@ -264,10 +244,7 @@ class OpencodeService {
   /**
    * List sessions for a customer.
    */
-  async listSessions(
-    customerId: string,
-    credentials: WorkspaceCredentials
-  ): Promise<any> {
+  async listSessions(customerId: string, credentials: WorkspaceCredentials): Promise<any> {
     const url = `${this.baseUrl}/${encodeURIComponent(customerId)}/session.list`;
     console.log(`[OpencodeService] GET ${url}`);
 
@@ -289,19 +266,12 @@ class OpencodeService {
   /**
    * Abort a session.
    */
-  async abortSession(
-    customerId: string,
-    sessionId: string,
-    credentials: WorkspaceCredentials
-  ): Promise<void> {
-    const response = await fetch(
-      `${this.baseUrl}/${encodeURIComponent(customerId)}/session.abort`,
-      {
-        method: 'POST',
-        headers: this.createHeaders(credentials),
-        body: JSON.stringify({ id: sessionId }),
-      }
-    );
+  async abortSession(customerId: string, sessionId: string, credentials: WorkspaceCredentials): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/${encodeURIComponent(customerId)}/session.abort`, {
+      method: 'POST',
+      headers: this.createHeaders(credentials),
+      body: JSON.stringify({ id: sessionId }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -312,21 +282,14 @@ class OpencodeService {
   /**
    * Delete a session and all its data.
    */
-  async deleteSession(
-    customerId: string,
-    sessionId: string,
-    credentials: WorkspaceCredentials
-  ): Promise<void> {
+  async deleteSession(customerId: string, sessionId: string, credentials: WorkspaceCredentials): Promise<void> {
     console.log(`[OpencodeService] Deleting session ${sessionId} for customer ${customerId}`);
 
-    const response = await fetch(
-      `${this.baseUrl}/${encodeURIComponent(customerId)}/session.delete`,
-      {
-        method: 'POST',
-        headers: this.createHeaders(credentials),
-        body: JSON.stringify({ id: sessionId }),
-      }
-    );
+    const response = await fetch(`${this.baseUrl}/${encodeURIComponent(customerId)}/session.delete`, {
+      method: 'POST',
+      headers: this.createHeaders(credentials),
+      body: JSON.stringify({ id: sessionId }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();

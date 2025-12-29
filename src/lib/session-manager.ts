@@ -74,7 +74,9 @@ class SessionManager {
   switchSession(userSessionId: string, newOpencodeSessionId: string): void {
     const session = this.sessions.get(userSessionId);
     if (session) {
-      console.log(`[SessionManager] Switching session ${userSessionId} from ${session.opencodeSessionId} to ${newOpencodeSessionId}`);
+      console.log(
+        `[SessionManager] Switching session ${userSessionId} from ${session.opencodeSessionId} to ${newOpencodeSessionId}`,
+      );
       session.opencodeSessionId = newOpencodeSessionId;
       session.lastActivity = new Date();
     } else {
@@ -89,7 +91,10 @@ export const sessionManager = new SessionManager();
 
 // Cleanup expired sessions every 5 minutes
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    sessionManager.cleanupExpiredSessions();
-  }, 5 * 60 * 1000);
+  setInterval(
+    () => {
+      sessionManager.cleanupExpiredSessions();
+    },
+    5 * 60 * 1000,
+  );
 }

@@ -20,13 +20,9 @@ export class IntegrationTokenError extends Error {
   }
 }
 
-export async function generateIntegrationToken(
-  details: CurrentCustomer & WorkspaceAuthDetails,
-): Promise<string> {
+export async function generateIntegrationToken(details: CurrentCustomer & WorkspaceAuthDetails): Promise<string> {
   if (!details.workspaceKey || !details.workspaceSecret) {
-    throw new IntegrationTokenError(
-      'Integration.app credentials not configured',
-    );
+    throw new IntegrationTokenError('Integration.app credentials not configured');
   }
 
   if (!details.customerId || !details.customerName) {

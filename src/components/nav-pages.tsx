@@ -4,12 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type LucideIcon } from 'lucide-react';
 
-import {
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from '@/components/ui/sidebar';
+import { SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
 export function NavPages({
@@ -30,11 +25,7 @@ export function NavPages({
         {pages.map((item) => (
           <SidebarMenuItem key={item.name}>
             {item.disabled ? (
-              <SidebarMenuButton
-                tooltip={item.name}
-                className="opacity-50"
-                asChild
-              >
+              <SidebarMenuButton tooltip={item.name} className="opacity-50" asChild>
                 <Link href={item.url}>
                   <item.icon />
                   <span>{item.name}</span>

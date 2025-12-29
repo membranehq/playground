@@ -29,27 +29,15 @@ function Avatar({
   variant,
   size,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root> &
-  VariantProps<typeof avatarVariants>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Root> & VariantProps<typeof avatarVariants>) {
   return (
-    <AvatarPrimitive.Root
-      data-slot='avatar'
-      className={cn(avatarVariants({ variant, size }), className)}
-      {...props}
-    />
+    <AvatarPrimitive.Root data-slot="avatar" className={cn(avatarVariants({ variant, size }), className)} {...props} />
   );
 }
 
-function AvatarImage({
-  className,
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+function AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
-    <AvatarPrimitive.Image
-      data-slot='avatar-image'
-      className={cn('aspect-square size-full', className)}
-      {...props}
-    />
+    <AvatarPrimitive.Image data-slot="avatar-image" className={cn('aspect-square size-full', className)} {...props} />
   );
 }
 
@@ -58,11 +46,10 @@ function AvatarFallback({
   variant,
   size,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback> &
-  VariantProps<typeof avatarVariants>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Fallback> & VariantProps<typeof avatarVariants>) {
   return (
     <AvatarPrimitive.Fallback
-      data-slot='avatar-fallback'
+      data-slot="avatar-fallback"
       className={cn(
         'bg-muted flex size-full items-center justify-center',
         avatarVariants({ variant, size }),

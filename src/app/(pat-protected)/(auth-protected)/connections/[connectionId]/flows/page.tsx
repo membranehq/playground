@@ -5,16 +5,12 @@ export const metadata: Metadata = {
   title: 'Flows',
 };
 
-export default async function Flows({
-  params,
-}: {
-  params: Promise<{ connectionId: string }>;
-}) {
+export default async function Flows({ params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params;
 
   return (
-    <div className='px-6 py-6 flex flex-col gap-4'>
-      <h1 className='text-2xl font-semibold text-neutral-900'>Flows</h1>
+    <div className="px-6 py-6 flex flex-col gap-4">
+      <h1 className="text-2xl font-semibold text-neutral-900">Flows</h1>
       <FlowsList connectionId={connectionId} />
     </div>
   );

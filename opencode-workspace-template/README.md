@@ -5,23 +5,28 @@ This directory contains all OpenCode-related configuration and runtime files.
 ## Files
 
 - **opencode.json** - OpenCode configuration
+
   - Defines agent type, model, tools, and other settings
   - Read by OpenCode server on startup
 
 - **AGENTS.md** - Instructions for the AI agent
+
   - Contains detailed instructions on how to use the `request-test-connection` tool
   - Explains how to test Membrane integrations
   - Read by OpenCode when running the agent
 
 - **.opencode/tool/** - Custom OpenCode tools
+
   - `request-test-connection.ts` - Tool for requesting OAuth connections from users
   - Integrated with the frontend connection UI
 
 - **.opencode/plugin/** - OpenCode plugins
+
   - `auto-interrupt.plugin.ts` - Automatically stops agent when interactive tool returns `awaiting_user_input`
   - `utils/index.ts` - Utility functions for plugin development
 
 - **.opencode/shared/** - Shared constants
+
   - `constants.js` - Shared constants used by tools and plugins
 
 - **opencode-messages.log** - Runtime logs (auto-generated, gitignored)

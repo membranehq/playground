@@ -4,10 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { MembraneAgentMessage } from './membrane-agent-message';
 import { useMembraneSessionStatus } from '@/hooks/use-membrane-session-status';
-import {
-  fetchMembraneAgentMessages,
-  type MembraneAgentMessage as MessageType,
-} from '@/lib/membrane-agent-api';
+import { fetchMembraneAgentMessages, type MembraneAgentMessage as MessageType } from '@/lib/membrane-agent-api';
 
 interface MembraneAgentSidebarProps {
   sessionId: string;
@@ -87,9 +84,7 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-neutral-50">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-neutral-900">
-            Membrane Agent
-          </h3>
+          <h3 className="font-semibold text-neutral-900">Membrane Agent</h3>
           {/* Status badge in header */}
           {sessionState === 'busy' && (
             <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-600 border border-neutral-300">
@@ -129,9 +124,7 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
         ) : error && messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
             <AlertCircle className="w-6 h-6 text-red-500 mb-2" />
-            <p className="text-sm text-center text-red-500">
-              {error}
-            </p>
+            <p className="text-sm text-center text-red-500">{error}</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-neutral-500">

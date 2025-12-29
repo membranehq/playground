@@ -19,16 +19,16 @@ const sessionControllers = new Map<string, Set<ReadableStreamDefaultController>>
 
 // Per-customer event streams
 // Key: customerId
-const customerEventStreams = new Map<string, {
-  reader: ReadableStreamDefaultReader<Uint8Array>;
-  isProcessing: boolean;
-  credentials: WorkspaceCredentials;
-}>();
+const customerEventStreams = new Map<
+  string,
+  {
+    reader: ReadableStreamDefaultReader<Uint8Array>;
+    isProcessing: boolean;
+    credentials: WorkspaceCredentials;
+  }
+>();
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Get auth info from query params (EventSource doesn't support headers)
   const { searchParams } = new URL(request.url);
   const customerId = searchParams.get('customerId');
@@ -38,7 +38,7 @@ export async function GET(
   if (!customerId || !workspaceKey || !workspaceSecret) {
     return NextResponse.json(
       { error: 'Authentication required (customerId, workspaceKey, workspaceSecret query params)' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -77,7 +77,6 @@ export async function GET(
 
         // Start event stream for this customer if not already started
         await startCustomerEventStream(customerId, credentials);
-
       } catch (error) {
         console.error('[Stream API] Error starting stream:', error);
         controller.error(error);
@@ -104,14 +103,14 @@ export async function GET(
           }
         }
       }
-    }
+    },
   });
 
   return new NextResponse(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
     },
   });
@@ -141,7 +140,6 @@ async function startCustomerEventStream(customerId: string, credentials: Workspa
 
     // Process events in background
     processCustomerEvents(customerId, reader);
-
   } catch (error) {
     console.error(`[Stream API] Failed to start event stream for ${customerId}:`, error);
     customerEventStreams.delete(customerId);
@@ -182,13 +180,18 @@ async function processCustomerEvents(customerId: string, reader: ReadableStreamD
           const errorName = event.error?.name;
           const statusCode = event.error?.data?.statusCode;
 
-          if (errorName === 'APIError' && (statusCode === 401 || statusCode === '401' || statusCode === 'unauthorized')) {
+          if (
+            errorName === 'APIError' &&
+            (statusCode === 401 || statusCode === '401' || statusCode === 'unauthorized')
+          ) {
             console.log(`[Stream API] Filtering out cloud auth error for session ${event.sessionID}`);
             continue;
           }
 
           if (errorName === 'MessageAbortedError') {
-            console.log(`[Stream API] Filtering out MessageAbortedError for session ${event.sessionID} (expected from auto-interrupt plugin)`);
+            console.log(
+              `[Stream API] Filtering out MessageAbortedError for session ${event.sessionID} (expected from auto-interrupt plugin)`,
+            );
             continue;
           }
 
@@ -227,7 +230,7 @@ async function processCustomerEvents(customerId: string, reader: ReadableStreamD
           }
 
           // Remove dead controllers
-          deadControllers.forEach(ctrl => controllers.delete(ctrl));
+          deadControllers.forEach((ctrl) => controllers.delete(ctrl));
 
           // Handle special events
           if (event.type === 'session.idle') {
@@ -258,13 +261,11 @@ async function processCustomerEvents(customerId: string, reader: ReadableStreamD
               }
             }
           }
-
         } catch (e) {
           // Ignore parse errors
         }
       }
     }
-
   } catch (error) {
     console.error(`[Stream API] Error processing events for ${customerId}:`, error);
   } finally {

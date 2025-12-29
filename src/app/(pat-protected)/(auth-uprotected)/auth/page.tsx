@@ -3,14 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, ExternalLink } from 'lucide-react';
 import { useConsoleEntry } from '@/hooks/use-console-entry';
@@ -51,47 +44,44 @@ export default function WorkspaceSelectionPage() {
 
   if (authLoading || workspacesLoading) {
     return (
-      <div className='container mx-auto flex items-center justify-center min-h-[80vh]'>
-        <div className='text-muted-foreground'>Loading...</div>
+      <div className="container mx-auto flex items-center justify-center min-h-[80vh]">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className='container mx-auto flex items-center justify-center min-h-[80vh]'>
-      <form className='w-full' onSubmit={handleWorkspaceSubmit}>
-        <Card className='w-full max-w-md mx-auto'>
+    <div className="container mx-auto flex items-center justify-center min-h-[80vh]">
+      <form className="w-full" onSubmit={handleWorkspaceSubmit}>
+        <Card className="w-full max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className='text-2xl'>Select Workspace</CardTitle>
+            <CardTitle className="text-2xl">Select Workspace</CardTitle>
             <CardDescription>
-              Choose a workspace to use with this playground.
-              You can change it later from the sidebar.
+              Choose a workspace to use with this playground. You can change it later from the sidebar.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
-              <Alert variant='destructive' className='mb-4'>
-                <AlertCircle className='h-4 w-4' />
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
             {workspacesError && (
-              <Alert variant='destructive' className='mb-4'>
-                <AlertCircle className='h-4 w-4' />
-                <AlertDescription>
-                  Failed to fetch workspaces. Please try again.
-                </AlertDescription>
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>Failed to fetch workspaces. Please try again.</AlertDescription>
               </Alert>
             )}
 
-            <div className='grid gap-2'>
-              <Label htmlFor='workspace'>Workspace</Label>
-              <WorkspaceSelect span='full' />
+            <div className="grid gap-2">
+              <Label htmlFor="workspace">Workspace</Label>
+              <WorkspaceSelect span="full" />
             </div>
           </CardContent>
           <CardFooter>
-            <Button type='submit' className='w-full'>
+            <Button type="submit" className="w-full">
               Continue
             </Button>
           </CardFooter>

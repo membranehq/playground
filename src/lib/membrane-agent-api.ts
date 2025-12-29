@@ -89,7 +89,7 @@ async function getMembraneConfig(): Promise<{ token: string; apiUri: string }> {
  */
 export async function fetchMembraneAgentStatus(
   sessionId: string,
-  options?: LongPollOptions
+  options?: LongPollOptions,
 ): Promise<MembraneAgentSessionStatus> {
   const { token, apiUri } = await getMembraneConfig();
 
@@ -104,7 +104,7 @@ export async function fetchMembraneAgentStatus(
 
   const response = await fetch(url.toString(), {
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -127,16 +127,14 @@ export async function fetchMembraneAgentStatus(
  * @param sessionId - The Membrane Agent session ID
  * @returns Promise with messages array
  */
-export async function fetchMembraneAgentMessages(
-  sessionId: string
-): Promise<MembraneAgentMessagesResponse> {
+export async function fetchMembraneAgentMessages(sessionId: string): Promise<MembraneAgentMessagesResponse> {
   const { token, apiUri } = await getMembraneConfig();
 
   const url = new URL(`${apiUri}/agent/sessions/${sessionId}/messages`);
 
   const response = await fetch(url.toString(), {
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -148,7 +146,7 @@ export async function fetchMembraneAgentMessages(
   const data = await response.json();
 
   // API returns array directly, not { items: [...] }
-  const items = Array.isArray(data) ? data : (data.items || []);
+  const items = Array.isArray(data) ? data : data.items || [];
 
   // Transform messages to our expected format
   const messages: MembraneAgentMessage[] = items.map((msg: any) => {

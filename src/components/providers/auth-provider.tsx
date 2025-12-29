@@ -112,14 +112,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(intervalId);
   }, [authMode, token]);
 
-  const setToken = useCallback((newToken: string) => {
-    if (typeof window !== 'undefined') {
-      // Store in the appropriate key based on auth mode
-      const key = authMode === 'auth0' ? JWT_TOKEN_KEY : PAT_TOKEN_KEY;
-      localStorage.setItem(key, newToken);
-      setTokenState(newToken);
-    }
-  }, [authMode]);
+  const setToken = useCallback(
+    (newToken: string) => {
+      if (typeof window !== 'undefined') {
+        // Store in the appropriate key based on auth mode
+        const key = authMode === 'auth0' ? JWT_TOKEN_KEY : PAT_TOKEN_KEY;
+        localStorage.setItem(key, newToken);
+        setTokenState(newToken);
+      }
+    },
+    [authMode],
+  );
 
   const clearToken = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -138,24 +141,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (returnTo?: string) => {
-    if (authMode === 'pat') {
-      // For PAT mode, redirect to PAT entry page
-      const redirectPath = returnTo ?? window.location.pathname;
-      window.location.href = `/personal-token?from=${encodeURIComponent(redirectPath)}`;
-      return;
-    }
+  const login = useCallback(
+    async (returnTo?: string) => {
+      if (authMode === 'pat') {
+        // For PAT mode, redirect to PAT entry page
+        const redirectPath = returnTo ?? window.location.pathname;
+        window.location.href = `/personal-token?from=${encodeURIComponent(redirectPath)}`;
+        return;
+      }
 
-    // Auth0 mode
-    const client = await getAuthClient();
+      // Auth0 mode
+      const client = await getAuthClient();
 
-    localStorage.setItem(REDIRECT_AFTER_LOGIN_PATH_KEY, returnTo ?? window.location.pathname);
-    await client.loginWithRedirect({
-      authorizationParams: {
-        redirect_uri: window.location.origin,
-      },
-    });
-  }, [authMode]);
+      localStorage.setItem(REDIRECT_AFTER_LOGIN_PATH_KEY, returnTo ?? window.location.pathname);
+      await client.loginWithRedirect({
+        authorizationParams: {
+          redirect_uri: window.location.origin,
+        },
+      });
+    },
+    [authMode],
+  );
 
   const logout = useCallback(async () => {
     clearToken();

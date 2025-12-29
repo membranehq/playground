@@ -54,11 +54,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="text-center text-muted-foreground text-sm">
-        Loading previous sessions...
-      </div>
-    );
+    return <div className="text-center text-muted-foreground text-sm">Loading previous sessions...</div>;
   }
 
   if (sessions.length === 0) {
@@ -67,9 +63,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
 
   return (
     <div className="mt-8">
-      <h3 className="text-sm font-medium text-muted-foreground mb-3">
-        Continue Previous Sessions
-      </h3>
+      <h3 className="text-sm font-medium text-muted-foreground mb-3">Continue Previous Sessions</h3>
       <div className="grid grid-cols-1 gap-2 max-w-2xl mx-auto">
         {sessions.map((session) => (
           <button
@@ -82,9 +76,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
                 <div className="text-sm font-medium text-foreground truncate">
                   {session.title || 'Untitled Session'}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {formatDate(session.time.updated)}
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">{formatDate(session.time.updated)}</div>
               </div>
             </div>
           </button>

@@ -11,9 +11,7 @@ export function isTriggerNode(node: FlowNode | string): boolean {
   return !!FLOW_NODE_SPECS[t as FlowNodeType]?.isTrigger;
 }
 
-export function extractTriggerKeys(
-  nodes: Record<string, FlowInstanceNode> | undefined,
-) {
+export function extractTriggerKeys(nodes: Record<string, FlowInstanceNode> | undefined) {
   return Object.entries(nodes ?? {})
     .filter(([, node]) => isTriggerNode(node))
     .map(([key]) => key);
