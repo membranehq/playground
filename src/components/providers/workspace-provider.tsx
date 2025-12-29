@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   createContext,
@@ -6,18 +6,18 @@ import {
   useContext,
   useState,
   useEffect,
-} from "react";
-import { ConsoleEntry } from "@/types/console-entry";
+} from 'react';
+import { ConsoleEntry } from '@/types/console-entry';
 import {
   getStoredWorkspace,
   storeWorkspace,
   clearWorkspaceStorage,
-} from "@/lib/workspace-storage";
+} from '@/lib/workspace-storage';
 
 interface WorkspaceContextType {
-  workspace: ConsoleEntry["workspace"] | null;
+  workspace: ConsoleEntry['workspace'] | null;
   isLoading: boolean;
-  saveWorkspace: (id: ConsoleEntry["workspace"]) => void;
+  saveWorkspace: (id: ConsoleEntry['workspace']) => void;
   clearWorkspace: () => void;
 }
 
@@ -34,7 +34,7 @@ export function useCurrentWorkspace() {
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspace, setWorkspace] =
-    useState<WorkspaceContextType["workspace"]>(null);
+    useState<WorkspaceContextType['workspace']>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Initialize workspace from localStorage on mount
@@ -45,13 +45,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const saveWorkspace = useCallback(
-    (workspace: WorkspaceContextType["workspace"]) => {
+    (workspace: WorkspaceContextType['workspace']) => {
       if (!workspace) return;
 
       storeWorkspace(workspace);
       setWorkspace(workspace);
     },
-    []
+    [],
   );
 
   const clearWorkspace = useCallback(() => {
