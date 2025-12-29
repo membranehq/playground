@@ -6,31 +6,44 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 
 export function AuthProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading: authLoading, login, authMode } = useAuth();
-  const { workspace } = useCurrentWorkspace();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    login,
+    authMode,
+  } = useAuth();
+  const { workspace, isLoading: workspaceLoading } = useCurrentWorkspace();
   const router = useRouter();
   const pathname = usePathname();
-  const [redirecting, setRedirecting] = useState(false);
+  const [redirectingToLogin, setRedirectingToLogin] = useState(false);
 
   // Pages that don't require workspace selection
   const isWorkspaceSelectionPage = pathname === '/auth';
   const isPatTokenPage = pathname === '/personal-token';
 
-  // Check if we need workspace selection (after authentication)
-  const needsWorkspaceSelection = isAuthenticated && !workspace && !isWorkspaceSelectionPage && !isPatTokenPage;
+  // Wait for both auth and workspace to be loaded before making decisions
+  const isLoading = authLoading || workspaceLoading;
+
+  // Check if we need workspace selection (after authentication and loading is complete)
+  const needsWorkspaceSelection =
+    !isLoading &&
+    isAuthenticated &&
+    !workspace &&
+    !isWorkspaceSelectionPage &&
+    !isPatTokenPage;
 
   // Check if we need to login
-  const needsLogin = !isAuthenticated && !authLoading && !isPatTokenPage;
+  const needsLogin = !isLoading && !isAuthenticated && !isPatTokenPage;
 
   useEffect(() => {
-    if (needsLogin && !redirecting) {
-      setRedirecting(true);
+    if (needsLogin && !redirectingToLogin) {
+      setRedirectingToLogin(true);
       login(pathname);
     }
-  }, [needsLogin, redirecting, login, pathname]);
+  }, [needsLogin, redirectingToLogin, login, pathname]);
 
   useEffect(() => {
-    if (needsWorkspaceSelection && typeof window !== 'undefined') {
+    if (needsWorkspaceSelection) {
       // For PAT mode, workspace selection is on the same page
       if (authMode === 'pat') {
         router.push(`/personal-token?from=${encodeURIComponent(pathname)}`);
@@ -40,13 +53,13 @@ export function AuthProtectedRoute({ children }: { children: ReactNode }) {
     }
   }, [needsWorkspaceSelection, pathname, router, authMode]);
 
-  // Show nothing while auth is loading or redirecting to login
-  if (authLoading || redirecting || needsLogin) {
-    return null;
-  }
-
-  // Show nothing if we need workspace selection
-  if (needsWorkspaceSelection) {
+  // Show nothing while loading or redirecting
+  if (
+    isLoading ||
+    redirectingToLogin ||
+    needsLogin ||
+    needsWorkspaceSelection
+  ) {
     return null;
   }
 
