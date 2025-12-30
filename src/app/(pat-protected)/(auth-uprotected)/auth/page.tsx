@@ -11,25 +11,20 @@ import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { WorkspaceSelect } from '@/components/workspace-select';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useCustomer } from '@/components/providers/customer-provider';
 import { Metadata } from 'next';
 
 export default function WorkspaceSelectionPage() {
   const { isError: workspacesError, isLoading: workspacesLoading } = useConsoleEntry();
   const { workspace: currentWorkspace } = useCurrentWorkspace();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { setCustomerName } = useCustomer();
 
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromPath = searchParams.get('from') || '/';
-
-  // Redirect to destination if workspace is already selected
-  useEffect(() => {
-    if (currentWorkspace && isAuthenticated) {
-      router.push(fromPath);
-    }
-  }, [currentWorkspace, isAuthenticated, router, fromPath]);
 
   const handleWorkspaceSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +33,9 @@ export default function WorkspaceSelectionPage() {
       setError('Please select a workspace');
       return;
     }
+
+    // Set customer name based on workspace name for UserAuthProtectedRoute
+    setCustomerName(`user-${currentWorkspace.id}`);
 
     router.push(fromPath);
   };

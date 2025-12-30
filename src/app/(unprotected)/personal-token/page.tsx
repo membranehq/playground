@@ -13,6 +13,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useConsoleEntry } from '@/hooks/use-console-entry';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { WorkspaceSelect } from '@/components/workspace-select';
+import { useCustomer } from '@/components/providers/customer-provider';
 
 enum Step {
   Token,
@@ -23,6 +24,7 @@ export default function PersonalTokenPage() {
   const { setPatToken: saveToken, token: storedToken, isAuthenticated: hasToken } = useAuth();
   const { isError: workspacesError } = useConsoleEntry();
   const { workspace: currentWorkspace } = useCurrentWorkspace();
+  const { setCustomerName } = useCustomer();
 
   const [token, setToken] = useState(storedToken || '');
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +62,9 @@ export default function PersonalTokenPage() {
       setStep(Step.Token);
       return;
     }
+
+    // Set customer name based on workspace for UserAuthProtectedRoute
+    setCustomerName(`user-${currentWorkspace.id}`);
 
     router.push(fromPath);
   };
