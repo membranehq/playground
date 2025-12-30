@@ -3,14 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, ExternalLink } from 'lucide-react';
 import { useConsoleEntry } from '@/hooks/use-console-entry';
@@ -22,8 +15,7 @@ import { useCustomer } from '@/components/providers/customer-provider';
 import { Metadata } from 'next';
 
 export default function WorkspaceSelectionPage() {
-  const { isError: workspacesError, isLoading: workspacesLoading } =
-    useConsoleEntry();
+  const { isError: workspacesError, isLoading: workspacesLoading } = useConsoleEntry();
   const { workspace: currentWorkspace } = useCurrentWorkspace();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { setCustomerName } = useCustomer();
@@ -63,8 +55,7 @@ export default function WorkspaceSelectionPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Select Workspace</CardTitle>
             <CardDescription>
-              Choose a workspace to use with this playground. You can change it
-              later from the sidebar.
+              Choose a workspace to use with this playground. You can change it later from the sidebar.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -78,9 +69,7 @@ export default function WorkspaceSelectionPage() {
             {workspacesError && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Failed to fetch workspaces. Please try again.
-                </AlertDescription>
+                <AlertDescription>Failed to fetch workspaces. Please try again.</AlertDescription>
               </Alert>
             )}
 

@@ -1,19 +1,8 @@
 'use client';
 
-import {
-  useDataSources,
-  useConnection,
-  useIntegrationApp,
-} from '@membranehq/react';
+import { useDataSources, useConnection, useIntegrationApp } from '@membranehq/react';
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataSourceConfigurationTrigger } from './data-source-config-trigger';
 import { Badge } from '@/components/ui/badge';
@@ -26,21 +15,18 @@ export function DataSourcesList({ connectionId }: { connectionId: string }) {
   const { dataSources, loading, error } = useDataSources({ connectionId });
 
   return (
-    <div className='rounded-md border border-neutral-200'>
+    <div className="rounded-md border border-neutral-200">
       <Table>
         <TableHeader>
-          <TableRow className='border-neutral-200'>
+          <TableRow className="border-neutral-200">
             <TableHead>Name & Key</TableHead>
             <TableHead>Configure</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {dataSources.length === 0 && !loading && !error && (
-            <TableRow className='border-neutral-200'>
-              <TableCell
-                colSpan={4}
-                className='text-center text-muted-foreground'
-              >
+            <TableRow className="border-neutral-200">
+              <TableCell colSpan={4} className="text-center text-muted-foreground">
                 No data sources found
               </TableCell>
             </TableRow>
@@ -48,30 +34,24 @@ export function DataSourcesList({ connectionId }: { connectionId: string }) {
 
           <>
             {dataSources.map((source) => (
-              <TableRow key={source.id} className='border-neutral-200'>
-                <TableCell className='font-medium'>
-                  {source.name} <Badge variant='secondary'>{source.key}</Badge>
+              <TableRow key={source.id} className="border-neutral-200">
+                <TableCell className="font-medium">
+                  {source.name} <Badge variant="secondary">{source.key}</Badge>
                 </TableCell>
-                <TableCell className='flex gap-2'>
+                <TableCell className="flex gap-2">
                   <Button
-                    variant='outline'
-                    className='border-neutral-300 hover:border-neutral-400'
+                    variant="outline"
+                    className="border-neutral-300 hover:border-neutral-400"
                     onClick={() => {
                       if (source.key && connection?.id) {
-                        client
-                          .connection(connection.id)
-                          .dataSource(source.key)
-                          .openConfiguration();
+                        client.connection(connection.id).dataSource(source.key).openConfiguration();
                       }
                     }}
                   >
-                    <Cog className='h-4 w-4' /> Configure with prebuilt UI
+                    <Cog className="h-4 w-4" /> Configure with prebuilt UI
                   </Button>
 
-                  <DataSourceConfigurationTrigger
-                    dataSourceId={source.id}
-                    connectionId={connectionId}
-                  />
+                  <DataSourceConfigurationTrigger dataSourceId={source.id} connectionId={connectionId} />
                 </TableCell>
               </TableRow>
             ))}
@@ -79,19 +59,19 @@ export function DataSourcesList({ connectionId }: { connectionId: string }) {
 
           {loading &&
             Array.from({ length: 3 }).map((_, index) => (
-              <TableRow key={index} className='border-neutral-200'>
+              <TableRow key={index} className="border-neutral-200">
                 <TableCell>
-                  <Skeleton className='h-6 w-[200px]' />
+                  <Skeleton className="h-6 w-[200px]" />
                 </TableCell>
                 <TableCell>
-                  <Skeleton className='h-6 w-[100px]' />
+                  <Skeleton className="h-6 w-[100px]" />
                 </TableCell>
               </TableRow>
             ))}
 
           {error && (
-            <TableRow className='border-neutral-200'>
-              <TableCell colSpan={4} className='text-center text-red-500'>
+            <TableRow className="border-neutral-200">
+              <TableCell colSpan={4} className="text-center text-red-500">
                 Error loading data sources
               </TableCell>
             </TableRow>

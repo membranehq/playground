@@ -26,26 +26,58 @@ export default function WorkflowBuilderPage() {
             <path d="M 240 160 L 300 200 L 300 230" stroke="hsl(var(--border))" strokeWidth="2" />
 
             {/* Trigger Node - top */}
-            <rect x="120" y="15" width="160" height="50" rx="8" fill="hsl(var(--background))" stroke="hsl(var(--border))" strokeWidth="1.5" />
+            <rect
+              x="120"
+              y="15"
+              width="160"
+              height="50"
+              rx="8"
+              fill="hsl(var(--background))"
+              stroke="hsl(var(--border))"
+              strokeWidth="1.5"
+            />
             <circle cx="145" cy="40" r="10" fill="hsl(var(--muted))" />
             <rect x="162" y="32" width="70" height="8" rx="2" fill="hsl(var(--muted))" />
             <rect x="162" y="44" width="50" height="6" rx="2" fill="hsl(var(--muted))" />
 
             {/* Decision Node - diamond in center */}
             <g transform="translate(140, 110)">
-              <polygon points="60,0 120,50 60,100 0,50" fill="hsl(var(--background))" stroke="hsl(var(--border))" strokeWidth="1.5" />
+              <polygon
+                points="60,0 120,50 60,100 0,50"
+                fill="hsl(var(--background))"
+                stroke="hsl(var(--border))"
+                strokeWidth="1.5"
+              />
               <rect x="35" y="42" width="50" height="8" rx="2" fill="hsl(var(--muted))" />
               <rect x="42" y="54" width="36" height="6" rx="2" fill="hsl(var(--muted))" />
             </g>
 
             {/* Left Action Node */}
-            <rect x="20" y="230" width="160" height="50" rx="8" fill="hsl(var(--background))" stroke="hsl(var(--border))" strokeWidth="1.5" />
+            <rect
+              x="20"
+              y="230"
+              width="160"
+              height="50"
+              rx="8"
+              fill="hsl(var(--background))"
+              stroke="hsl(var(--border))"
+              strokeWidth="1.5"
+            />
             <rect x="35" y="245" width="20" height="20" rx="4" fill="hsl(var(--muted))" />
             <rect x="62" y="247" width="70" height="8" rx="2" fill="hsl(var(--muted))" />
             <rect x="62" y="259" width="50" height="6" rx="2" fill="hsl(var(--muted))" />
 
             {/* Right Action Node */}
-            <rect x="220" y="230" width="160" height="50" rx="8" fill="hsl(var(--background))" stroke="hsl(var(--border))" strokeWidth="1.5" />
+            <rect
+              x="220"
+              y="230"
+              width="160"
+              height="50"
+              rx="8"
+              fill="hsl(var(--background))"
+              stroke="hsl(var(--border))"
+              strokeWidth="1.5"
+            />
             <rect x="235" y="245" width="20" height="20" rx="4" fill="hsl(var(--muted))" />
             <rect x="262" y="247" width="70" height="8" rx="2" fill="hsl(var(--muted))" />
             <rect x="262" y="259" width="50" height="6" rx="2" fill="hsl(var(--muted))" />

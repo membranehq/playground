@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthFromRequest } from '@/lib/server-auth';
-import {
-  generateIntegrationToken,
-  IntegrationTokenError,
-} from '@/lib/integration-token';
+import { generateIntegrationToken, IntegrationTokenError } from '@/lib/integration-token';
 
 export async function GET(request: NextRequest) {
   try {
     const auth = getAuthFromRequest(request);
 
     if (!auth.customerId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     // Get URIs
@@ -29,9 +23,6 @@ export async function GET(request: NextRequest) {
     if (error instanceof IntegrationTokenError) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json(
-      { error: 'Failed to generate config' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to generate config' }, { status: 500 });
   }
 }

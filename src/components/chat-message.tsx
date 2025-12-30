@@ -40,9 +40,7 @@ export function ChatMessage({ role, content, parts, onConnectionComplete, onShow
           <p className="whitespace-pre-wrap">{content}</p>
         ) : (
           <div className="space-y-3">
-            {content && (
-              <MessageResponse>{content}</MessageResponse>
-            )}
+            {content && <MessageResponse>{content}</MessageResponse>}
             {visibleParts.length > 0 && (
               <div className="space-y-2">
                 {visibleParts.map((part, index) => (

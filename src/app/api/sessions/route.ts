@@ -12,25 +12,16 @@ export async function GET(request: NextRequest) {
     console.log('[Sessions API] Customer ID:', auth?.customerId);
 
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     console.log('[Sessions API] Calling opencodeService.listSessions...');
-    const response = await opencodeService.listSessions(
-      auth.customerId,
-      auth.workspaceCredentials
-    );
+    const response = await opencodeService.listSessions(auth.customerId, auth.workspaceCredentials);
     console.log('[Sessions API] Response:', JSON.stringify(response).slice(0, 500));
 
     if (response.error) {
       console.error('[Sessions API] Response contains error:', response.error);
-      return NextResponse.json(
-        { error: 'Failed to list sessions', details: response.error },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to list sessions', details: response.error }, { status: 500 });
     }
 
     if (!response.data) {
@@ -51,7 +42,7 @@ export async function GET(request: NextRequest) {
         error: error instanceof Error ? error.message : 'Internal server error',
         stack: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -66,17 +57,11 @@ export async function POST(request: NextRequest) {
     console.log('[Sessions API] Customer ID:', auth?.customerId);
 
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     console.log('[Sessions API] Calling opencodeService.createSession...');
-    const sessionId = await opencodeService.createSession(
-      auth.customerId,
-      auth.workspaceCredentials
-    );
+    const sessionId = await opencodeService.createSession(auth.customerId, auth.workspaceCredentials);
     console.log('[Sessions API] Created session:', sessionId);
 
     return NextResponse.json({ sessionId });
@@ -88,7 +73,7 @@ export async function POST(request: NextRequest) {
         error: error instanceof Error ? error.message : 'Failed to create session',
         stack: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

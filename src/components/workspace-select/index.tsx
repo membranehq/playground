@@ -8,19 +8,8 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cva, VariantProps } from 'class-variance-authority';
 
 const selectVariants = cva('w-full', {
@@ -35,9 +24,7 @@ const selectVariants = cva('w-full', {
   },
 });
 
-export const WorkspaceSelect = ({
-  span,
-}: VariantProps<typeof selectVariants>) => {
+export const WorkspaceSelect = ({ span }: VariantProps<typeof selectVariants>) => {
   const [open, setOpen] = useState(false);
 
   const {
@@ -61,26 +48,21 @@ export const WorkspaceSelect = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant='outline'
-          role='combobox'
+          variant="outline"
+          role="combobox"
           className={cn('justify-between', selectVariants({ span }))}
           disabled={workspacesError || workspaceLoading}
         >
-          <span className='truncate'>
-            <span className='text-muted-foreground'>Workspace:</span>{' '}
-            {workspaceId
-              ? workspacesMap[workspaceId]?.name
-              : 'Select...'}
+          <span className="truncate">
+            <span className="text-muted-foreground">Workspace:</span>{' '}
+            {workspaceId ? workspacesMap[workspaceId]?.name : 'Select...'}
           </span>
-          <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className={cn('p-0', selectVariants({ span }))}
-        align='start'
-      >
+      <PopoverContent className={cn('p-0', selectVariants({ span }))} align="start">
         <Command>
-          <CommandInput placeholder='Search workspace...' />
+          <CommandInput placeholder="Search workspace..." />
           <CommandList>
             <CommandEmpty>No workspaces found.</CommandEmpty>
             {orgs.sort(updatedAtPredicate).map((org) => {
@@ -102,12 +84,7 @@ export const WorkspaceSelect = ({
                           }
                         }}
                       >
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            workspaceId === ws.id ? 'opacity-100' : 'opacity-0',
-                          )}
-                        />
+                        <Check className={cn('mr-2 h-4 w-4', workspaceId === ws.id ? 'opacity-100' : 'opacity-0')} />
                         {ws.name}
                       </CommandItem>
                     ))}
@@ -121,10 +98,7 @@ export const WorkspaceSelect = ({
   );
 };
 
-const updatedAtPredicate = (
-  left: { updatedAt: string },
-  right: { updatedAt: string },
-) => {
+const updatedAtPredicate = (left: { updatedAt: string }, right: { updatedAt: string }) => {
   const leftUpdatedAt = new Date(left.updatedAt);
   const rightUpdatedAt = new Date(right.updatedAt);
   return rightUpdatedAt.getTime() - leftUpdatedAt.getTime();

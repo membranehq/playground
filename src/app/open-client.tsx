@@ -8,7 +8,7 @@ export const OpenClient = () => {
 
   return (
     <Button
-      className='my-2'
+      className="my-2"
       onClick={() => {
         client.open();
       }}

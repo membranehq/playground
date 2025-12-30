@@ -23,10 +23,7 @@ export function useCustomer() {
 }
 
 export function CustomerProvider({ children }: { children: React.ReactNode }) {
-  const [userEmail, setUserEmail] = useLocalStorage<string | undefined>(
-    'userEmail',
-    undefined,
-  );
+  const [userEmail, setUserEmail] = useLocalStorage<string | undefined>('userEmail', undefined);
 
   // Use email directly as customer ID for easier debugging in console
   const userId = userEmail;

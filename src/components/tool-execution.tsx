@@ -41,30 +41,18 @@ export function ToolExecution({ part }: ToolExecutionProps) {
 
   return (
     <Tool defaultOpen={false}>
-      <ToolHeader
-        title={state?.title || tool}
-        type="tool-invocation"
-        state={mappedState}
-      />
+      <ToolHeader title={state?.title || tool} type="tool-invocation" state={mappedState} />
       <ToolContent>
-        {hasInput && (
-          isRuncode && state.input.code ? (
+        {hasInput &&
+          (isRuncode && state.input.code ? (
             <RuncodeInput code={state.input.code} />
           ) : (
             <ToolInput input={state.input} />
-          )
-        )}
-        {(state?.output || state?.error) && (
-          <ToolOutput
-            output={state.output}
-            errorText={state.error}
-          />
-        )}
+          ))}
+        {(state?.output || state?.error) && <ToolOutput output={state.output} errorText={state.error} />}
         {state?.time && (
           <div className="px-4 pb-3 text-xs text-muted-foreground">
-            {state.time.end
-              ? `Completed in ${((state.time.end - state.time.start) / 1000).toFixed(2)}s`
-              : 'Running...'}
+            {state.time.end ? `Completed in ${((state.time.end - state.time.start) / 1000).toFixed(2)}s` : 'Running...'}
           </div>
         )}
       </ToolContent>

@@ -38,18 +38,10 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-neutral-800">
-              Building integrations
-            </span>
-            {isBusy && (
-              <Loader2 className="w-4 h-4 text-neutral-500 animate-spin" />
-            )}
-            {isIdle && (
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
-            )}
-            {isError && (
-              <AlertCircle className="w-4 h-4 text-red-500" />
-            )}
+            <span className="font-medium text-neutral-800">Building integrations</span>
+            {isBusy && <Loader2 className="w-4 h-4 text-neutral-500 animate-spin" />}
+            {isIdle && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+            {isError && <AlertCircle className="w-4 h-4 text-red-500" />}
           </div>
           <p className="text-sm text-neutral-500 mt-0.5">
             {isBusy && 'Membrane Agent is working...'}
@@ -69,11 +61,7 @@ export function MembraneAgentSession({ part, onShowDetails }: MembraneAgentSessi
         </button>
       )}
 
-      {!sessionId && (
-        <p className="mt-3 text-xs text-neutral-400">
-          Waiting for session to start...
-        </p>
-      )}
+      {!sessionId && <p className="mt-3 text-xs text-neutral-400">Waiting for session to start...</p>}
     </div>
   );
 }
@@ -93,9 +81,7 @@ function extractSessionId(part: any): string | null {
   if (part.state?.output) {
     try {
       // Output might be a JSON string
-      const output = typeof part.state.output === 'string'
-        ? JSON.parse(part.state.output)
-        : part.state.output;
+      const output = typeof part.state.output === 'string' ? JSON.parse(part.state.output) : part.state.output;
 
       if (output.sessionId) return output.sessionId;
       if (output.id) return output.id;

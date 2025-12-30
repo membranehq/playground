@@ -73,7 +73,9 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
   button,
@@ -177,7 +179,8 @@
   }
 
   @keyframes typingPulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.3;
       transform: scale(1);
     }
@@ -222,8 +225,13 @@
   }
 
   @keyframes cursorBlink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
   }
 
   /* Streaming text animation - words fade in */
@@ -391,7 +399,7 @@
   /* Gradient utilities */
   .gradient-border {
     position: relative;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.02));
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
     border-radius: 0.75rem;
   }
 

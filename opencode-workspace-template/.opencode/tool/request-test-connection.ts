@@ -1,5 +1,5 @@
-import { tool } from '@opencode-ai/plugin'
-import { InteractiveToolStatus } from '../shared/constants.js'
+import { tool } from '@opencode-ai/plugin';
+import { InteractiveToolStatus } from '../shared/constants.js';
 
 export default tool({
   description:
@@ -10,12 +10,14 @@ export default tool({
       .describe('Membrane integration ID that should be used to create the connection'),
     integrationName: tool.schema
       .string()
-      .describe('Human-readable name of the integration (e.g., "Linear", "HubSpot", "Salesforce") for display purposes'),
+      .describe(
+        'Human-readable name of the integration (e.g., "Linear", "HubSpot", "Salesforce") for display purposes',
+      ),
   },
   async execute(args: { integrationSelector: string; integrationName: string }) {
     return JSON.stringify({
       status: InteractiveToolStatus.AWAITING_USER_INPUT,
       args,
-    })
+    });
   },
-})
+});

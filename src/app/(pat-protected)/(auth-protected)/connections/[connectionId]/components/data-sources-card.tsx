@@ -4,11 +4,7 @@ import { usePathname } from 'next/navigation';
 import { LinkCard } from './link-card';
 import { useDataSources } from '@membranehq/react';
 
-export const DataSourcesCard = ({
-  connectionId,
-}: {
-  connectionId: string;
-}) => {
+export const DataSourcesCard = ({ connectionId }: { connectionId: string }) => {
   const pathname = usePathname();
   const { dataSources, loading } = useDataSources({ connectionId });
 
@@ -16,7 +12,7 @@ export const DataSourcesCard = ({
     <LinkCard
       loading={loading}
       href={`${pathname}/data-sources`}
-      itemName='Data Sources'
+      itemName="Data Sources"
       itemsCount={dataSources?.length}
     />
   );

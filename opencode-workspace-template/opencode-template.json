@@ -5,10 +5,7 @@
   "mcp": {
     "membrane": {
       "type": "local",
-      "command": [
-        "membrane",
-        "mcp"
-      ],
+      "command": ["membrane", "mcp"],
       "enabled": true,
       "environment": {
         "MEMBRANE_WORKSPACE_KEY": "${MEMBRANE_WORKSPACE_KEY}",

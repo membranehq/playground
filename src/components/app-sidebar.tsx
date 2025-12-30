@@ -5,12 +5,7 @@ import { Blocks, Bot, Workflow } from 'lucide-react';
 
 import { NavPages } from '@/components/nav-pages';
 import { NavUser } from '@/components/nav-user';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarRail,
-} from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
 
 const pages = [
   {
@@ -33,7 +28,7 @@ const pages = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible='icon' {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <NavUser />
       </SidebarHeader>

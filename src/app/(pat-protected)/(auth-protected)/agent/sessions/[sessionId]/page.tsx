@@ -13,11 +13,7 @@ import { PageHeaderActions } from '@/components/page-header-context';
 import { ChatMessage } from '@/components/chat-message';
 import { ResizablePanelLayout } from '@/components/resizable-panel-layout';
 import { MembraneAgentSidebar } from '@/components/membrane-agent-sidebar';
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from '@/components/ai-elements/conversation';
+import { Conversation, ConversationContent, ConversationScrollButton } from '@/components/ai-elements/conversation';
 
 interface Message {
   id: string;
@@ -310,19 +306,15 @@ export default function SessionPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeaderActions>
-        <AgentSessionsDropdown
-          onNewChat={createNewSession}
-          isCreating={false}
-        />
+        <AgentSessionsDropdown onNewChat={createNewSession} isCreating={false} />
       </PageHeaderActions>
 
       <ResizablePanelLayout
-        sidebar={membraneSessionId ? (
-          <MembraneAgentSidebar
-            sessionId={membraneSessionId}
-            onClose={() => setMembraneSessionId(null)}
-          />
-        ) : null}
+        sidebar={
+          membraneSessionId ? (
+            <MembraneAgentSidebar sessionId={membraneSessionId} onClose={() => setMembraneSessionId(null)} />
+          ) : null
+        }
       >
         <div className="flex flex-col h-full">
           {/* Messages Area */}
@@ -335,9 +327,7 @@ export default function SessionPage() {
             </div>
           ) : messages.length === 0 ? (
             <div className="flex-1 flex items-center justify-center text-center">
-              <p className="text-muted-foreground">
-                Send a message to start the conversation
-              </p>
+              <p className="text-muted-foreground">Send a message to start the conversation</p>
             </div>
           ) : (
             <Conversation className="flex-1">
@@ -396,12 +386,7 @@ export default function SessionPage() {
                     <Square className="w-4 h-4 fill-current" />
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={!input.trim()}
-                    size="icon"
-                    className="h-12 w-12 rounded-full"
-                  >
+                  <Button type="submit" disabled={!input.trim()} size="icon" className="h-12 w-12 rounded-full">
                     <ArrowRight className="w-5 h-5" />
                   </Button>
                 )}

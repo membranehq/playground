@@ -118,10 +118,7 @@ export default function AgentPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeaderActions>
-        <AgentSessionsDropdown
-          onNewChat={() => createSessionAndNavigate()}
-          isCreating={isCreating}
-        />
+        <AgentSessionsDropdown onNewChat={() => createSessionAndNavigate()} isCreating={isCreating} />
       </PageHeaderActions>
 
       {/* Main Content */}
@@ -129,18 +126,12 @@ export default function AgentPage() {
         <div className="max-w-3xl mx-auto px-6 py-12">
           {/* Logo/Icon - Membrane Agent */}
           <div className="flex justify-center mb-6">
-            <img
-              src="/membrane-icon.png"
-              alt="Membrane"
-              className="w-16 h-16"
-            />
+            <img src="/membrane-icon.png" alt="Membrane" className="w-16 h-16" />
           </div>
 
           {/* Welcome Text */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-foreground mb-2">
-              Welcome to the Self-integrating AI Agent
-            </h1>
+            <h1 className="text-2xl font-semibold text-foreground mb-2">Welcome to the Self-integrating AI Agent</h1>
             <p className="text-muted-foreground">
               I build integrations on the fly. Tell me how I can help you automate tasks across your apps and services.
             </p>
@@ -164,9 +155,7 @@ export default function AgentPage() {
                       </div>
                     </div>
                     {session.time?.updated && (
-                      <div className="text-xs text-muted-foreground shrink-0">
-                        {formatDate(session.time.updated)}
-                      </div>
+                      <div className="text-xs text-muted-foreground shrink-0">{formatDate(session.time.updated)}</div>
                     )}
                   </button>
                 ))}
@@ -178,54 +167,54 @@ export default function AgentPage() {
           <div className="mb-8">
             <h2 className="text-sm font-medium text-muted-foreground mb-3">Try asking</h2>
             <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => handleExampleClick('Create a task in Linear for fixing the login bug')}
-              disabled={isCreating}
-              className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-blue-500">●</span>
-                <span className="font-medium text-foreground">Create Linear Task</span>
-              </div>
-              <div className="text-sm text-muted-foreground">Add tasks to your project</div>
-            </button>
+              <button
+                onClick={() => handleExampleClick('Create a task in Linear for fixing the login bug')}
+                disabled={isCreating}
+                className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-blue-500">●</span>
+                  <span className="font-medium text-foreground">Create Linear Task</span>
+                </div>
+                <div className="text-sm text-muted-foreground">Add tasks to your project</div>
+              </button>
 
-            <button
-              onClick={() => handleExampleClick('Summarize my calendar for this week')}
-              disabled={isCreating}
-              className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-purple-500">■</span>
-                <span className="font-medium text-foreground">Summarize Calendar</span>
-              </div>
-              <div className="text-sm text-muted-foreground">Get your schedule overview</div>
-            </button>
+              <button
+                onClick={() => handleExampleClick('Summarize my calendar for this week')}
+                disabled={isCreating}
+                className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-purple-500">■</span>
+                  <span className="font-medium text-foreground">Summarize Calendar</span>
+                </div>
+                <div className="text-sm text-muted-foreground">Get your schedule overview</div>
+              </button>
 
-            <button
-              onClick={() => handleExampleClick('Find contacts in HubSpot matching "Acme Corp"')}
-              disabled={isCreating}
-              className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-orange-500">■</span>
-                <span className="font-medium text-foreground">Search HubSpot</span>
-              </div>
-              <div className="text-sm text-muted-foreground">Find contacts and companies</div>
-            </button>
+              <button
+                onClick={() => handleExampleClick('Find contacts in HubSpot matching "Acme Corp"')}
+                disabled={isCreating}
+                className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-orange-500">■</span>
+                  <span className="font-medium text-foreground">Search HubSpot</span>
+                </div>
+                <div className="text-sm text-muted-foreground">Find contacts and companies</div>
+              </button>
 
-            <button
-              onClick={() => handleExampleClick('Sync my Slack messages to Notion')}
-              disabled={isCreating}
-              className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-green-500">■</span>
-                <span className="text-pink-500">■</span>
-                <span className="font-medium text-foreground">Sync Slack to Notion</span>
-              </div>
-              <div className="text-sm text-muted-foreground">Connect your apps together</div>
-            </button>
+              <button
+                onClick={() => handleExampleClick('Sync my Slack messages to Notion')}
+                disabled={isCreating}
+                className="p-4 text-left border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-green-500">■</span>
+                  <span className="text-pink-500">■</span>
+                  <span className="font-medium text-foreground">Sync Slack to Notion</span>
+                </div>
+                <div className="text-sm text-muted-foreground">Connect your apps together</div>
+              </button>
             </div>
           </div>
         </div>
@@ -248,12 +237,7 @@ export default function AgentPage() {
                   placeholder="Ask me to help with your tasks and integrations..."
                   className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
                 />
-                <Button
-                  type="submit"
-                  disabled={!input.trim()}
-                  size="icon"
-                  className="h-12 w-12 rounded-full"
-                >
+                <Button type="submit" disabled={!input.trim()} size="icon" className="h-12 w-12 rounded-full">
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </div>

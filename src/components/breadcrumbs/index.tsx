@@ -40,14 +40,14 @@ function getHrefForSegment(segments: string[], targetSegment: string): string {
 
 export const Breadcrumbs = () => {
   const segments = useSelectedLayoutSegments();
-  const visibleSegments = segments.filter(s => !hiddenSegments.includes(s));
+  const visibleSegments = segments.filter((s) => !hiddenSegments.includes(s));
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
         {visibleSegments.map((segment, index, source) => (
           <Fragment key={segment}>
-            {index > 0 && <BreadcrumbSeparator className='hidden md:block' />}
+            {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
 
             {index === source.length - 1 ? (
               <BreadcrumbItem>
@@ -55,10 +55,7 @@ export const Breadcrumbs = () => {
               </BreadcrumbItem>
             ) : (
               <BreadcrumbLink asChild>
-                <Link
-                  href={hrefOverrides[segment] || getHrefForSegment(segments, segment)}
-                  className='capitalize'
-                >
+                <Link href={hrefOverrides[segment] || getHrefForSegment(segments, segment)} className="capitalize">
                   {mapping[segment] || segment}
                 </Link>
               </BreadcrumbLink>

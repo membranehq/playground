@@ -1,35 +1,17 @@
 'use client';
 
-import {
-  ActionRunResponse,
-  DataInput,
-  useAction,
-  useIntegrationApp,
-} from '@membranehq/react';
+import { ActionRunResponse, DataInput, useAction, useIntegrationApp } from '@membranehq/react';
 import JsonView from '@uiw/react-json-view';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCallback, useState } from 'react';
 import { ArrowLeft, Loader } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 
-export function ExecuteActionModal({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) {
+export function ExecuteActionModal({ id, children }: { id: string; children: React.ReactNode }) {
   const { action, loading: actionLoading, error: actionError } = useAction(id);
   const integrationApp = useIntegrationApp();
 
@@ -37,12 +19,8 @@ export function ExecuteActionModal({
 
   const [input, setInput] = useState({});
   const [executionLoading, setExecutionLoading] = useState(false);
-  const [executionResult, setExecutionResult] = useState<
-    ActionRunResponse | undefined
-  >(undefined);
-  const [executionError, setExecutionError] = useState<Error | undefined>(
-    undefined,
-  );
+  const [executionResult, setExecutionResult] = useState<ActionRunResponse | undefined>(undefined);
+  const [executionError, setExecutionError] = useState<Error | undefined>(undefined);
 
   const handleExecute = useCallback(async () => {
     try {
@@ -74,62 +52,52 @@ export function ExecuteActionModal({
       modal
     >
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <Tabs defaultValue='input' value={tab}>
-        <DialogContent className='sm:max-w-3xl'>
+      <Tabs defaultValue="input" value={tab}>
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Run action: {action?.name}</DialogTitle>
 
             {!actionLoading && !actionError && !action?.inputSchema && (
-              <Alert className='mt-2'>
+              <Alert className="mt-2">
                 <AlertTitle>Please note</AlertTitle>
-                <AlertDescription>
-                  This action has no input, but you can still execute it.
-                </AlertDescription>
+                <AlertDescription>This action has no input, but you can still execute it.</AlertDescription>
               </Alert>
             )}
           </DialogHeader>
 
-          <TabsContent value='input'>
-            <div className='flex gap-6 flex-col sm:flex-row'>
+          <TabsContent value="input">
+            <div className="flex gap-6 flex-col sm:flex-row">
               {action?.inputSchema && (
-                <div className='flex-1 flex flex-col gap-2'>
-                  <h2 className='font-semibold'>Input</h2>
-                  <DataInput
-                    schema={action?.inputSchema}
-                    value={input}
-                    onChange={setInput}
-                  />
+                <div className="flex-1 flex flex-col gap-2">
+                  <h2 className="font-semibold">Input</h2>
+                  <DataInput schema={action?.inputSchema} value={input} onChange={setInput} />
                 </div>
               )}
             </div>
           </TabsContent>
 
-          <TabsContent value='result'>
-            <div className='flex-1 flex flex-col gap-2'>
+          <TabsContent value="result">
+            <div className="flex-1 flex flex-col gap-2">
               {!executionError && (
                 <>
-                  <div className='flex-1 flex flex-col gap-2'>
-                    <h2 className='font-semibold'>Output</h2>
-                    <ScrollArea className='max-h-80 overflow-scroll h-full flex-1 min-h-40 border rounded-md p-2'>
-                      {executionResult && (
-                        <JsonView value={executionResult?.output || {}} />
-                      )}
+                  <div className="flex-1 flex flex-col gap-2">
+                    <h2 className="font-semibold">Output</h2>
+                    <ScrollArea className="max-h-80 overflow-scroll h-full flex-1 min-h-40 border rounded-md p-2">
+                      {executionResult && <JsonView value={executionResult?.output || {}} />}
                     </ScrollArea>
                   </div>
                   {'logs' in (executionResult || {}) && (
-                    <div className='flex-1 flex flex-col gap-2'>
-                      <h2 className='font-semibold'>Logs</h2>
-                      <ScrollArea className='max-h-80 overflow-scroll h-full flex-1 min-h-40 border rounded-md p-2'>
-                        {executionResult && (
-                          <JsonView value={(executionResult as any)?.logs || {}} />
-                        )}
+                    <div className="flex-1 flex flex-col gap-2">
+                      <h2 className="font-semibold">Logs</h2>
+                      <ScrollArea className="max-h-80 overflow-scroll h-full flex-1 min-h-40 border rounded-md p-2">
+                        {executionResult && <JsonView value={(executionResult as any)?.logs || {}} />}
                       </ScrollArea>
                     </div>
                   )}
                 </>
               )}
               {!!executionError && (
-                <Alert className='mt-2'>
+                <Alert className="mt-2">
                   <AlertTitle>Error</AlertTitle>
                   <AlertDescription>{executionError.message}</AlertDescription>
                 </Alert>
@@ -137,24 +105,21 @@ export function ExecuteActionModal({
             </div>
           </TabsContent>
 
-          <DialogFooter className='flex-row justify-end'>
-            <TabsContent value='result'>
+          <DialogFooter className="flex-row justify-end">
+            <TabsContent value="result">
               <Button
                 onClick={() => {
                   setTab('input');
                 }}
-                variant='outline'
+                variant="outline"
               >
                 <ArrowLeft />
                 Edit input
               </Button>
             </TabsContent>
-            <Button
-              onClick={handleExecute}
-              disabled={actionLoading || executionLoading}
-            >
+            <Button onClick={handleExecute} disabled={actionLoading || executionLoading}>
               Run
-              {executionLoading && <Loader className='ml-2 animate-spin' />}
+              {executionLoading && <Loader className="ml-2 animate-spin" />}
             </Button>
           </DialogFooter>
         </DialogContent>

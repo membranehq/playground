@@ -12,6 +12,7 @@
     "start:server": "npx tsx scripts/opencode-server.mts",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
+    "format": "prettier --write .",
     "typecheck": "npx tsc --noEmit",
     "opencode-server": "npx tsx scripts/opencode-server.mts"
   },

@@ -1,7 +1,3 @@
-export default function UnprotectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function UnprotectedLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

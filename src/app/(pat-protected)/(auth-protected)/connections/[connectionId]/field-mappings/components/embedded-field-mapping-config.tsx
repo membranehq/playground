@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Cog } from 'lucide-react';
 import { useIntegrationApp } from '@membranehq/react';
@@ -24,19 +20,16 @@ export const EmbeddedFieldMappingConfig = ({
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          variant='outline'
-          className='border-neutral-300 hover:border-neutral-400'
+          variant="outline"
+          className="border-neutral-300 hover:border-neutral-400"
           onClick={() => {
-            client
-              .connection(connectionId)
-              .fieldMapping(fieldMappingKey)
-              .openConfiguration();
+            client.connection(connectionId).fieldMapping(fieldMappingKey).openConfiguration();
           }}
         >
-          <Cog className='h-4 w-4' /> Prebuilt UI
+          <Cog className="h-4 w-4" /> Prebuilt UI
         </Button>
       </TooltipTrigger>
-      <TooltipContent side='top'>Configure with prebuilt UI</TooltipContent>
+      <TooltipContent side="top">Configure with prebuilt UI</TooltipContent>
     </Tooltip>
   );
 };

@@ -12,11 +12,7 @@ import {
   FRAME_WINDOW_HEADER_HEIGHT,
 } from '@/helpers/common-styles';
 
-export default function ProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProtectedRoute>
       <SettingsProvider>
@@ -31,16 +27,13 @@ export default function ProtectedLayout({
           }
         >
           <div
-            className='absolute -z-10 inset-0 h-full w-full
+            className="absolute -z-10 inset-0 h-full w-full
         bg-[linear-gradient(to_right,#73737320_1px,transparent_1px),linear-gradient(to_bottom,#73737320_1px,transparent_1px)]
-        bg-[size:20px_20px]'
+        bg-[size:20px_20px]"
           />
           <AdminControls />
           <div
-            className={cn(
-              'm-[calc(var(--frame-margin-around)/2)] mt-[calc(var(--frame-margin-top))]',
-              FRAME_HEIGHT,
-            )}
+            className={cn('m-[calc(var(--frame-margin-around)/2)] mt-[calc(var(--frame-margin-top))]', FRAME_HEIGHT)}
           >
             <VirtualWindow>
               <CustomerProvider>{children}</CustomerProvider>

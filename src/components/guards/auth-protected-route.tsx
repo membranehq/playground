@@ -6,12 +6,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 
 export function AuthProtectedRoute({ children }: { children: ReactNode }) {
-  const {
-    isAuthenticated,
-    isLoading: authLoading,
-    login,
-    authMode,
-  } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, login, authMode } = useAuth();
   const { workspace, isLoading: workspaceLoading } = useCurrentWorkspace();
   const router = useRouter();
   const pathname = usePathname();
@@ -26,11 +21,7 @@ export function AuthProtectedRoute({ children }: { children: ReactNode }) {
 
   // Check if we need workspace selection (after authentication and loading is complete)
   const needsWorkspaceSelection =
-    !isLoading &&
-    isAuthenticated &&
-    !workspace &&
-    !isWorkspaceSelectionPage &&
-    !isPatTokenPage;
+    !isLoading && isAuthenticated && !workspace && !isWorkspaceSelectionPage && !isPatTokenPage;
 
   // Check if we need to login
   const needsLogin = !isLoading && !isAuthenticated && !isPatTokenPage;
@@ -54,12 +45,7 @@ export function AuthProtectedRoute({ children }: { children: ReactNode }) {
   }, [needsWorkspaceSelection, pathname, router, authMode]);
 
   // Show nothing while loading or redirecting
-  if (
-    isLoading ||
-    redirectingToLogin ||
-    needsLogin ||
-    needsWorkspaceSelection
-  ) {
+  if (isLoading || redirectingToLogin || needsLogin || needsWorkspaceSelection) {
     return null;
   }
 

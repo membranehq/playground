@@ -1,8 +1,8 @@
-import type { Plugin } from '@opencode-ai/plugin'
-import { InteractiveToolName, InteractiveToolStatus } from '../shared/constants.js'
-import { getToolOutput } from './utils/index.js'
+import type { Plugin } from '@opencode-ai/plugin';
+import { InteractiveToolName, InteractiveToolStatus } from '../shared/constants.js';
+import { getToolOutput } from './utils/index.js';
 
-const INTERACTIVE_TOOL_NAMES = new Set(Object.values(InteractiveToolName))
+const INTERACTIVE_TOOL_NAMES = new Set(Object.values(InteractiveToolName));
 
 /**
  * This plugin automatically interrupts the OpenCode session
@@ -18,24 +18,24 @@ const INTERACTIVE_TOOL_NAMES = new Set(Object.values(InteractiveToolName))
  */
 export const plugin: Plugin = async ({ client }) => {
   // Track interactive tool calls that need session abort after tool call completion
-  const interactiveToolCalls = new Map<string, string>()
+  const interactiveToolCalls = new Map<string, string>();
 
   return {
     'tool.execute.after': async (input, output) => {
       if (!INTERACTIVE_TOOL_NAMES.has(input.tool)) {
-        return
+        return;
       }
 
-      const toolOutput = getToolOutput(output)
+      const toolOutput = getToolOutput(output);
       if (!toolOutput) {
-        return
+        return;
       }
 
       try {
-        const result = JSON.parse(toolOutput)
+        const result = JSON.parse(toolOutput);
 
         if (result.status === InteractiveToolStatus.AWAITING_USER_INPUT) {
-          interactiveToolCalls.set(input.callID, input.sessionID)
+          interactiveToolCalls.set(input.callID, input.sessionID);
         }
       } catch (error) {
         // Ignore parse errors
@@ -46,34 +46,34 @@ export const plugin: Plugin = async ({ client }) => {
       // We can't abort session directly in 'tool.execute.after', because OpenCode will mark the tool call itself as aborted
       // + this way we're also losing tool input (that we rely on for UI rendering), since OpenCode cleans it up
       // Instead, we let the tool call complete successfully and abort right after
-      const event = input.event
+      const event = input.event;
 
       if (event.type !== 'message.part.updated') {
-        return
+        return;
       }
 
-      const part = event.properties.part
+      const part = event.properties.part;
 
       if (part.type !== 'tool' || part.state.status !== 'completed') {
-        return
+        return;
       }
 
       if (!INTERACTIVE_TOOL_NAMES.has(part.tool)) {
-        return
+        return;
       }
 
-      const sessionId = interactiveToolCalls.get(part.callID)
+      const sessionId = interactiveToolCalls.get(part.callID);
       if (!sessionId) {
-        return
+        return;
       }
 
-      interactiveToolCalls.delete(part.callID)
+      interactiveToolCalls.delete(part.callID);
 
       try {
-        await client.session.abort({ path: { id: sessionId } })
+        await client.session.abort({ path: { id: sessionId } });
       } catch (error) {
         // Silently fail if abort fails
       }
     },
-  }
-}
+  };
+};
