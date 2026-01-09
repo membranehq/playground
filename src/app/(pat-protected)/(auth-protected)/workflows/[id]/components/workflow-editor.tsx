@@ -2,6 +2,8 @@
 
 import React, { useCallback, useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Node } from '@xyflow/react';
+import { Settings, History, Activity } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 import { WorkflowNode } from './types/workflow';
 import { useWorkflow } from './workflow-context';
@@ -50,7 +52,14 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
     setSelectedNodeId,
   } = useWorkflow();
 
-  const [activeTab, setActiveTab] = useState<'runs' | 'events' | 'properties'>('properties');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get('tab') as 'runs' | 'events' | 'properties' | null;
+  const runIdParam = searchParams.get('runId');
+
+  const [activeTab, setActiveTab] = useState<'runs' | 'events' | 'properties'>(
+    tabParam && ['runs', 'events', 'properties'].includes(tabParam) ? tabParam : 'properties'
+  );
   const [runsRefreshKey, setRunsRefreshKey] = useState(0);
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
 
@@ -64,12 +73,40 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
     },
   }));
 
-  // Switch to properties tab when a node is selected
+  // Sync activeTab with URL params on mount and when params change
   useEffect(() => {
-    if (selectedNodeId) {
+    if (tabParam && ['runs', 'events', 'properties'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  // Switch to properties tab when a node is selected (unless URL param says otherwise)
+  useEffect(() => {
+    if (selectedNodeId && !tabParam) {
       setActiveTab('properties');
     }
-  }, [selectedNodeId]);
+  }, [selectedNodeId, tabParam]);
+
+  // Handle tab change and update URL
+  const handleTabChange = useCallback((value: string) => {
+    const newTab = value as 'properties' | 'runs' | 'events';
+    setActiveTab(newTab);
+    
+    // Update URL with tab param, preserving runId if switching to runs tab
+    const params = new URLSearchParams(searchParams.toString());
+    if (newTab === 'runs' && runIdParam) {
+      params.set('tab', 'runs');
+      params.set('runId', runIdParam);
+    } else if (newTab === 'runs') {
+      params.set('tab', 'runs');
+      params.delete('runId'); // Remove runId if no specific run to show
+    } else {
+      params.set('tab', newTab);
+      params.delete('runId'); // Remove runId when switching away from runs
+    }
+    
+    router.push(`/workflows/${workflowId}?${params.toString()}`, { scroll: false });
+  }, [workflowId, router, searchParams, runIdParam]);
 
   const selectedNode = selectedNodeId
     ? ((workflow?.nodes ?? []).find((n) => n.id === selectedNodeId) ?? null)
@@ -218,14 +255,21 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
         rightPane={
           !viewOnly ? (
             <div className="flex flex-col h-full">
-              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'properties' | 'runs' | 'events')} className="flex flex-col h-full">
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
                 <div className="border-b border-border p-4">
                   <TabsList className="w-full rounded-t-xl rounded-b-xl">
                     <TabsTrigger value="properties" disabled={!selectedNode} className="flex-1">
+                      <Settings className="h-4 w-4" />
                       Properties
                     </TabsTrigger>
-                    <TabsTrigger value="runs" className="flex-1">Runs</TabsTrigger>
-                    <TabsTrigger value="events" className="flex-1">Events</TabsTrigger>
+                    <TabsTrigger value="runs" className="flex-1">
+                      <History className="h-4 w-4" />
+                      Runs
+                    </TabsTrigger>
+                    <TabsTrigger value="events" className="flex-1">
+                      <Activity className="h-4 w-4" />
+                      Events
+                    </TabsTrigger>
                   </TabsList>
                 </div>
                 <TabsContent value="properties" className="flex-1 overflow-hidden m-0">
@@ -243,7 +287,7 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
                   )}
                 </TabsContent>
                 <TabsContent value="runs" className="flex-1 overflow-hidden m-0">
-                  <WorkflowRuns workflowId={workflowId} refreshKey={runsRefreshKey} />
+                  <WorkflowRuns workflowId={workflowId} refreshKey={runsRefreshKey} expandedRunId={runIdParam || undefined} />
                 </TabsContent>
                 <TabsContent value="events" className="flex-1 overflow-hidden m-0">
                   <WorkflowEvents workflowId={workflowId} refreshKey={eventsRefreshKey} />

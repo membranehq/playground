@@ -7,6 +7,7 @@ import { getAgentHeaders } from '@/lib/agent-api';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Loader } from '@/components/ai-elements/loader';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface WorkflowEvent {
   _id: string;
@@ -26,6 +27,8 @@ interface WorkflowEventsProps {
 export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) {
   const { customerId, customerName } = useCustomer();
   const { workspace } = useCurrentWorkspace();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [events, setEvents] = useState<WorkflowEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
@@ -180,8 +183,21 @@ export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) 
                     </div>
                   </div>
                   {event.runId && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Triggered run: {event.runId}
+                    <div className="mt-2 text-xs">
+                      <span className="text-muted-foreground">Triggered run: </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Update URL to switch to runs tab and expand the specific run
+                          const params = new URLSearchParams(searchParams.toString());
+                          params.set('tab', 'runs');
+                          params.set('runId', event.runId!);
+                          router.push(`/workflows/${workflowId}?${params.toString()}`, { scroll: false });
+                        }}
+                        className="text-blue-600 dark:text-blue-400 hover:underline font-mono"
+                      >
+                        {event.runId}
+                      </button>
                     </div>
                   )}
                 </div>

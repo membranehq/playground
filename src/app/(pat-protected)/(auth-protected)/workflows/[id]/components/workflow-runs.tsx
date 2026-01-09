@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
@@ -8,6 +8,7 @@ import { Minimizer } from '@/components/ui/minimizer';
 import { ChevronDown, ChevronRight, Check, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Loader } from '@/components/ai-elements/loader';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface WorkflowRunResult {
   nodeId: string;
@@ -40,14 +41,17 @@ interface WorkflowRun {
 interface WorkflowRunsProps {
   workflowId: string;
   refreshKey?: number;
+  expandedRunId?: string;
 }
 
-export function WorkflowRuns({ workflowId, refreshKey }: WorkflowRunsProps) {
+export function WorkflowRuns({ workflowId, refreshKey, expandedRunId }: WorkflowRunsProps) {
   const { customerId, customerName } = useCustomer();
   const { workspace } = useCurrentWorkspace();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
+  const scrollRef = useRef<string | null>(null);
 
   const loadRuns = useCallback(async () => {
     if (!customerId || !workspace) return;
@@ -75,6 +79,22 @@ export function WorkflowRuns({ workflowId, refreshKey }: WorkflowRunsProps) {
     setIsLoading(true);
     loadRuns();
   }, [loadRuns, refreshKey]);
+
+  // Scroll to expanded run when it changes
+  useEffect(() => {
+    if (!expandedRunId || runs.length === 0) return;
+    
+    const runExists = runs.some((run) => run._id === expandedRunId);
+    if (runExists && scrollRef.current !== expandedRunId) {
+      scrollRef.current = expandedRunId;
+      setTimeout(() => {
+        const element = document.getElementById(`run-${expandedRunId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [expandedRunId, runs]);
 
   // Poll for updates when there are running workflows
   useEffect(() => {
@@ -149,19 +169,21 @@ export function WorkflowRuns({ workflowId, refreshKey }: WorkflowRunsProps) {
     }
   };
 
-  const toggleRun = (runId: string) => {
-    setExpandedRuns((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(runId)) {
-        newSet.delete(runId);
-      } else {
-        newSet.add(runId);
-      }
-      return newSet;
-    });
-  };
+  const toggleRun = useCallback((runId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const isCurrentlyExpanded = expandedRunId === runId;
+    
+    if (isCurrentlyExpanded) {
+      params.delete('runId');
+    } else {
+      params.set('runId', runId);
+      params.set('tab', 'runs');
+    }
+    
+    router.push(`/workflows/${workflowId}?${params.toString()}`, { scroll: false });
+  }, [expandedRunId, searchParams, router, workflowId]);
 
-  const isExpanded = (runId: string) => expandedRuns.has(runId);
+  const isExpanded = (runId: string) => expandedRunId === runId;
 
   if (isLoading) {
     return (
@@ -193,7 +215,7 @@ export function WorkflowRuns({ workflowId, refreshKey }: WorkflowRunsProps) {
           const executionTime = run.executionTime;
 
           return (
-            <div key={run._id} className="border rounded-lg overflow-hidden">
+            <div key={run._id} id={`run-${run._id}`} className="border rounded-lg overflow-hidden">
               <button
                 onClick={() => hasResults && toggleRun(run._id)}
                 className={cn(
