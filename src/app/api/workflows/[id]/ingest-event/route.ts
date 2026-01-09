@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/workflow/database';
 import { WorkflowRun } from '@/lib/workflow/models/workflow-run';
-import { executeWorkflowNodes } from '@/lib/workflow/execution/activities';
-import type { WorkflowNode } from '@/lib/workflow/execution/types';
 import { Workflow } from '@/lib/workflow/models/workflow';
 import { WorkflowEvent } from '@/lib/workflow/models/workflow-event';
 import {
   verifyVerificationHashForWorkflowEvent,
   WORKFLOW_EVENT_VERIFICATION_HASH_HEADER,
 } from '@/lib/workflow/workflow-event-verification';
+import { inngest } from '@/inngest/client';
 
 // CORS headers for cross-origin requests
 const corsHeaders = {
@@ -124,22 +123,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       runId: workflowRun._id.toString(),
     });
 
-    // Execute workflow asynchronously
-    executeWorkflowNodes(
-      workflow.nodes as WorkflowNode[],
-      membraneAccessToken,
-      eventBody,
-      workflowRun._id.toString(),
-    ).catch((error) => {
-      console.error('[Ingest Event] Error executing workflow:', error);
-      // Update run status to failed
-      WorkflowRun.findByIdAndUpdate(workflowRun._id, {
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        completedAt: new Date(),
-      }).catch((updateError) => {
-        console.error('[Ingest Event] Error updating failed run:', updateError);
-      });
+    // Send event to Inngest for durable workflow execution
+    await inngest.send({
+      name: "workflow/execute",
+      data: {
+        workflowId: workflowId,
+        runId: workflowRun._id.toString(),
+        membraneToken: membraneAccessToken,
+        triggerInput: eventBody,
+      },
     });
 
     // Update last run timestamp

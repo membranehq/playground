@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/workflow/database';
 import { WorkflowRun } from '@/lib/workflow/models/workflow-run';
-import { executeWorkflowNodes } from '@/lib/workflow/execution/activities';
-import type { WorkflowNode } from '@/lib/workflow/execution/types';
 import { Workflow } from '@/lib/workflow/models/workflow';
 import { getAuthenticationFromRequest } from '@/lib/auth';
 import { generateIntegrationToken } from '@/lib/integration-token';
+import { inngest } from '@/inngest/client';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -57,23 +56,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Generate membrane access token
     const membraneAccessToken = await generateIntegrationToken(auth);
 
-    // Execute workflow directly in the API route (without Temporal)
-    // Run this asynchronously so we can return immediately
-    executeWorkflowNodes(
-      workflow.nodes as WorkflowNode[],
-      membraneAccessToken,
-      triggerInput,
-      workflowRun._id.toString(),
-    ).catch((error) => {
-      console.error('Error executing workflow:', error);
-      // Update run status to failed if execution fails
-      WorkflowRun.findByIdAndUpdate(workflowRun._id, {
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        completedAt: new Date(),
-      }).catch((updateError) => {
-        console.error('Error updating failed run:', updateError);
-      });
+    // Send event to Inngest for durable workflow execution
+    await inngest.send({
+      name: "workflow/execute",
+      data: {
+        workflowId: workflowId,
+        runId: workflowRun._id.toString(),
+        membraneToken: membraneAccessToken,
+        triggerInput: triggerInput,
+      },
     });
 
     // Update lastRunAt timestamp

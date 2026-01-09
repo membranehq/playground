@@ -6,94 +6,9 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { experimental_createMCPClient } from '@ai-sdk/mcp';
 
-/**
- * Resolves variables from previous node outputs using inputMapping
- */
-export function resolveVariables(
-  inputMapping: Record<string, unknown>,
-  previousResults: NodeExecutionResult[],
-): Record<string, unknown> {
-  const resolvedInputs: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(inputMapping)) {
-    if (typeof value === 'object' && value !== null && '$var' in value) {
-      // Handle variable references like { "$var": "$.Previous Steps.HTTP Request.id" }
-      const variablePath = (value as { $var: string }).$var;
-      resolvedInputs[key] = resolveVariablePath(variablePath, previousResults);
-    } else {
-      // Direct value
-      resolvedInputs[key] = value;
-    }
-  }
-
-  return resolvedInputs;
-}
-
-/**
- * Resolves a variable path from previous node results
- * Supports paths like "$.Previous Steps.HTTP Request.id" or "$.HTTP Request.data"
- */
-function resolveVariablePath(path: string, previousResults: NodeExecutionResult[]): unknown {
-  if (!path.startsWith('$.')) {
-    throw new Error(`Invalid variable path: ${path}. Must start with "$."`);
-  }
-
-  const pathParts = path.substring(2).split('.'); // Remove "$." and split
-
-  // Handle "Previous Steps" prefix
-  if (pathParts[0] === 'Previous Steps') {
-    pathParts.shift(); // Remove "Previous Steps"
-  }
-
-  let currentData: unknown = previousResults;
-
-  // Find the node result by name (combining multiple parts if needed)
-  let nodeName = '';
-  let remainingPath: string[] = [];
-
-  // Try to find the node by combining path parts until we find a match
-  for (let i = 0; i < pathParts.length; i++) {
-    const testName = pathParts.slice(0, i + 1).join(' ');
-    const result = previousResults.find(
-      (result) =>
-        result.nodeId === testName ||
-        (result as any).nodeName === testName ||
-        // Also check if any result has a name that matches
-        (result as any).name === testName,
-    );
-
-    if (result) {
-      nodeName = testName;
-      remainingPath = pathParts.slice(i + 1);
-      currentData = result.output;
-      break;
-    }
-  }
-
-  if (!nodeName) {
-    // If no node found by name, try to find by ID or use the first part as node identifier
-    const result = previousResults.find((result) => result.nodeId === pathParts[0]);
-    if (result) {
-      currentData = result.output;
-      remainingPath = pathParts.slice(1);
-    } else {
-      throw new Error(`Node not found: ${pathParts[0]}`);
-    }
-  }
-
-  // Navigate through the remaining path in the output data
-  for (const part of remainingPath) {
-    if (currentData && typeof currentData === 'object') {
-      currentData = (currentData as Record<string, unknown>)[part];
-    } else {
-      throw new Error(
-        `Cannot access property ${part} on ${typeof currentData}. Current data: ${JSON.stringify(currentData)}`,
-      );
-    }
-  }
-
-  return currentData;
-}
+////////////////////
+//  NODE EXECUTION
+////////////////////
 
 /**
  * Executes a trigger node
@@ -339,40 +254,6 @@ export async function executeMembraneActionNode(
 }
 
 /**
- * Converts JSON Schema to Zod schema for AI SDK structured output
- */
-function jsonSchemaToZod(schema: Record<string, unknown>): z.ZodTypeAny {
-  const type = schema.type as string;
-
-  switch (type) {
-    case 'string':
-      return z.string();
-    case 'number':
-      return z.number();
-    case 'boolean':
-      return z.boolean();
-    case 'object':
-      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
-      if (!properties) {
-        return z.record(z.string(), z.unknown());
-      }
-      const zodShape: Record<string, z.ZodTypeAny> = {};
-      for (const [key, propSchema] of Object.entries(properties)) {
-        zodShape[key] = jsonSchemaToZod(propSchema);
-      }
-      return z.object(zodShape);
-    case 'array':
-      const items = schema.items as Record<string, unknown> | undefined;
-      if (!items) {
-        return z.array(z.unknown());
-      }
-      return z.array(jsonSchemaToZod(items));
-    default:
-      return z.unknown();
-  }
-}
-
-/**
  * Executes an AI action node using AI SDK
  */
 export async function executeAIActionNode(
@@ -399,7 +280,7 @@ export async function executeAIActionNode(
     }
 
     // Initialize the AI model
-    const model = anthropic('claude-3-5-haiku-latest');
+    const model =  anthropic("claude-sonnet-4-5")
 
     // Prepare context from previous results
     const context = previousResults.map((result) => ({
@@ -570,4 +451,131 @@ export async function executeWorkflowNode(
     ...result,
     nodeName: node.name,
   };
+}
+
+//////////////////
+//   UTILS
+/////////////////
+
+/**
+ * Resolves variables from previous node outputs using inputMapping
+ */
+export function resolveVariables(
+  inputMapping: Record<string, unknown>,
+  previousResults: NodeExecutionResult[],
+): Record<string, unknown> {
+  const resolvedInputs: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(inputMapping)) {
+    if (typeof value === 'object' && value !== null && '$var' in value) {
+      // Handle variable references like { "$var": "$.Previous Steps.HTTP Request.id" }
+      const variablePath = (value as { $var: string }).$var;
+      resolvedInputs[key] = resolveVariablePath(variablePath, previousResults);
+    } else {
+      // Direct value
+      resolvedInputs[key] = value;
+    }
+  }
+
+  return resolvedInputs;
+}
+
+/**
+ * Resolves a variable path from previous node results
+ * Supports paths like "$.Previous Steps.HTTP Request.id" or "$.HTTP Request.data"
+ */
+function resolveVariablePath(path: string, previousResults: NodeExecutionResult[]): unknown {
+  if (!path.startsWith('$.')) {
+    throw new Error(`Invalid variable path: ${path}. Must start with "$."`);
+  }
+
+  const pathParts = path.substring(2).split('.'); // Remove "$." and split
+
+  // Handle "Previous Steps" prefix
+  if (pathParts[0] === 'Previous Steps') {
+    pathParts.shift(); // Remove "Previous Steps"
+  }
+
+  let currentData: unknown = previousResults;
+
+  // Find the node result by name (combining multiple parts if needed)
+  let nodeName = '';
+  let remainingPath: string[] = [];
+
+  // Try to find the node by combining path parts until we find a match
+  for (let i = 0; i < pathParts.length; i++) {
+    const testName = pathParts.slice(0, i + 1).join(' ');
+    const result = previousResults.find(
+      (result) =>
+        result.nodeId === testName ||
+        (result as any).nodeName === testName ||
+        // Also check if any result has a name that matches
+        (result as any).name === testName,
+    );
+
+    if (result) {
+      nodeName = testName;
+      remainingPath = pathParts.slice(i + 1);
+      currentData = result.output;
+      break;
+    }
+  }
+
+  if (!nodeName) {
+    // If no node found by name, try to find by ID or use the first part as node identifier
+    const result = previousResults.find((result) => result.nodeId === pathParts[0]);
+    if (result) {
+      currentData = result.output;
+      remainingPath = pathParts.slice(1);
+    } else {
+      throw new Error(`Node not found: ${pathParts[0]}`);
+    }
+  }
+
+  // Navigate through the remaining path in the output data
+  for (const part of remainingPath) {
+    if (currentData && typeof currentData === 'object') {
+      currentData = (currentData as Record<string, unknown>)[part];
+    } else {
+      throw new Error(
+        `Cannot access property ${part} on ${typeof currentData}. Current data: ${JSON.stringify(currentData)}`,
+      );
+    }
+  }
+
+  return currentData;
+}
+
+/**
+ * Converts JSON Schema to Zod schema for AI SDK structured output
+ */
+function jsonSchemaToZod(schema: Record<string, unknown>): z.ZodTypeAny {
+  const type = schema.type as string;
+
+  switch (type) {
+    case 'string':
+      return z.string();
+    case 'number':
+      return z.number();
+    case 'boolean':
+      return z.boolean();
+    case 'object':
+      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+      if (!properties) {
+        return z.record(z.string(), z.unknown());
+      }
+      const zodShape: Record<string, z.ZodTypeAny> = {};
+      for (const [key, propSchema] of Object.entries(properties)) {
+        zodShape[key] = jsonSchemaToZod(propSchema);
+      }
+      return z.object(zodShape);
+    case 'array':
+      const items = schema.items as Record<string, unknown> | undefined;
+      if (!items) {
+        return z.array(z.unknown());
+      }
+      return z.array(jsonSchemaToZod(items));
+    default:
+      return z.unknown();
+  }
 }
