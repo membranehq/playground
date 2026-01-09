@@ -46,6 +46,35 @@ function WorkflowDetailInner({ id }: { id: string }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const workflowEditorRef = useRef<WorkflowEditorRef>(null);
 
+  const manualTriggerNode = workflow?.nodes.find(
+    (node) => node.type === 'trigger' && node.triggerType === 'manual'
+  );
+
+  const hasManualTrigger = !!manualTriggerNode;
+
+  // Check if the manual trigger has input - must be called before early returns
+  const hasInput = useMemo(() => {
+    if (!manualTriggerNode) return false;
+    return manualTriggerNode.config?.hasInput !== false; // Default to true for backward compatibility
+  }, [manualTriggerNode]);
+
+  // Get the input schema from the manual trigger - must be called before early returns
+  const triggerInputSchema = useMemo((): DataSchema | null => {
+    if (!manualTriggerNode || !hasInput) return null;
+    const inputSchema = manualTriggerNode.config?.inputSchema as DataSchema | undefined;
+    if (!inputSchema || !inputSchema.properties || Object.keys(inputSchema.properties).length === 0) {
+      return null;
+    }
+    return inputSchema;
+  }, [manualTriggerNode, hasInput]);
+
+  // Update workflow name when workflow changes
+  React.useEffect(() => {
+    if (workflow) {
+      setWorkflowName(workflow.name);
+    }
+  }, [workflow]);
+
   const onCreate = async () => {
     if (!customerId || !workspace) return;
 
@@ -83,13 +112,6 @@ function WorkflowDetailInner({ id }: { id: string }) {
     setEditNameDialogOpen(false);
   };
 
-  // Update workflow name when workflow changes
-  React.useEffect(() => {
-    if (workflow) {
-      setWorkflowName(workflow.name);
-    }
-  }, [workflow]);
-
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -107,31 +129,6 @@ function WorkflowDetailInner({ id }: { id: string }) {
       </div>
     );
   }
-
-  // Find the manual trigger node
-  const manualTriggerNode = useMemo(() => {
-    return workflow.nodes.find(
-      (node) => node.type === 'trigger' && node.triggerType === 'manual'
-    );
-  }, [workflow.nodes]);
-
-  const hasManualTrigger = !!manualTriggerNode;
-
-  // Check if the manual trigger has input
-  const hasInput = useMemo(() => {
-    if (!manualTriggerNode) return false;
-    return manualTriggerNode.config?.hasInput !== false; // Default to true for backward compatibility
-  }, [manualTriggerNode]);
-
-  // Get the input schema from the manual trigger
-  const triggerInputSchema = useMemo((): DataSchema | null => {
-    if (!manualTriggerNode || !hasInput) return null;
-    const inputSchema = manualTriggerNode.config?.inputSchema as DataSchema | undefined;
-    if (!inputSchema || !inputSchema.properties || Object.keys(inputSchema.properties).length === 0) {
-      return null;
-    }
-    return inputSchema;
-  }, [manualTriggerNode, hasInput]);
 
   const handleRunWorkflow = async (input: Record<string, unknown> = {}) => {
     if (!customerId || !workspace || !id) return;
