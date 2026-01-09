@@ -21,6 +21,7 @@ const mapping: Record<string, string> = {
   'field-mappings': 'Field Mappings',
   agent: 'Agent',
   'workflow-builder': 'Workflow Builder',
+  workflows: 'Workflows',
 };
 
 // Custom href overrides for specific segments

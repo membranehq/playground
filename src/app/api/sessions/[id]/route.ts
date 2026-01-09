@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgentAuthFromRequest } from '@/lib/agent-auth';
+import { getAuthenticationFromRequest } from '@/lib/auth';
 import { opencodeService } from '@/lib/opencode-service';
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get auth info from headers
-    const auth = getAgentAuthFromRequest(request);
+    const auth = getAuthenticationFromRequest(request);
 
     if (!auth) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });

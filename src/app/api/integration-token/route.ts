@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthFromRequest } from '@/lib/server-auth';
+import { getAuthenticationFromRequest } from '@/lib/auth';
 import { generateIntegrationToken, IntegrationTokenError } from '@/lib/integration-token';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = getAuthFromRequest(request);
+    const auth = getAuthenticationFromRequest(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
     const token = await generateIntegrationToken(auth);
     return NextResponse.json({ token });
   } catch (error) {

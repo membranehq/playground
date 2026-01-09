@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthFromRequest } from '@/lib/server-auth';
+import { getAuthenticationFromRequest } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = getAuthFromRequest(request);
+    const auth = getAuthenticationFromRequest(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
     return NextResponse.json({
       customerId: auth.customerId,
       customerName: auth.customerName,
