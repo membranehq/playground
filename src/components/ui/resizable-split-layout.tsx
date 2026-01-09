@@ -82,11 +82,11 @@ export function ResizableSplitLayout({
         {/* Right pane with resize handle */}
         {rightPane && (
           <>
-            {/* Resize handle */}
+            {/* Resize handle - transparent but still functional */}
             <div
               className={cn(
-                'w-px bg-gray-200 dark:bg-gray-800 hover:bg-blue-500 dark:hover:bg-blue-600 cursor-col-resize transition-colors relative group',
-                isResizing && 'bg-blue-500 dark:bg-blue-600'
+                'w-1 bg-transparent hover:bg-blue-500/30 dark:hover:bg-blue-600/30 cursor-col-resize transition-colors relative group',
+                isResizing && 'bg-blue-500/50 dark:bg-blue-600/50'
               )}
               onMouseDown={handleMouseDown}
             >
@@ -94,11 +94,13 @@ export function ResizableSplitLayout({
             </div>
 
             {/* Right pane */}
-            <div
-              style={{ width: rightWidth }}
-              className="bg-white dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden"
-            >
-              <div className="flex-1 overflow-y-auto">{rightPane}</div>
+            <div className="flex items-stretch py-4 pr-4 min-h-0">
+              <div
+                style={{ width: rightWidth }}
+                className="bg-white dark:bg-gray-950 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden min-h-0"
+              >
+                <div className="flex-1 overflow-y-auto min-h-0">{rightPane}</div>
+              </div>
             </div>
           </>
         )}

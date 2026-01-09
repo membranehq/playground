@@ -219,8 +219,8 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
           !viewOnly ? (
             <div className="flex flex-col h-full">
               <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'properties' | 'runs' | 'events')} className="flex flex-col h-full">
-                <div className="border-b border-border">
-                  <TabsList className="w-full rounded-none">
+                <div className="border-b border-border p-4">
+                  <TabsList className="w-full rounded-t-xl rounded-b-xl">
                     <TabsTrigger value="properties" disabled={!selectedNode} className="flex-1">
                       Properties
                     </TabsTrigger>

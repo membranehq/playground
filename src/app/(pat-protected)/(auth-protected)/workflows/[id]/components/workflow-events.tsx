@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
-import { Minimizer } from '@/components/ui/minimizer';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Loader } from '@/components/ai-elements/loader';
@@ -30,6 +29,7 @@ export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) 
   const [events, setEvents] = useState<WorkflowEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  const loadEventsRef = useRef<() => Promise<void>>();
 
   const formatRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -73,6 +73,11 @@ export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) 
     }
   }, [workflowId, customerId, customerName, workspace]);
 
+  // Keep ref updated with latest loadEvents function
+  useEffect(() => {
+    loadEventsRef.current = loadEvents;
+  }, [loadEvents]);
+
   useEffect(() => {
     loadEvents();
   }, [loadEvents, refreshKey]);
@@ -82,11 +87,11 @@ export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) 
     if (events.length === 0) return;
 
     const interval = setInterval(() => {
-      loadEvents();
+      loadEventsRef.current?.();
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [events.length, loadEvents]);
+  }, [events.length]);
 
   const isExpanded = (eventId: string) => expandedEvents.has(eventId);
 
@@ -166,13 +171,14 @@ export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) 
               </button>
               {expanded && (
                 <div className="p-4 bg-muted/30 border-t">
-                  <Minimizer title="Event Data" defaultOpen={true}>
+                  <div className="mb-3">
+                    <div className="text-sm font-semibold text-foreground mb-2">Event Data</div>
                     <div className="p-3 bg-background rounded-md border max-h-96 overflow-y-auto">
                       <pre className="text-xs text-foreground">
                         {JSON.stringify(event.eventData, null, 2)}
                       </pre>
                     </div>
-                  </Minimizer>
+                  </div>
                   {event.runId && (
                     <div className="mt-2 text-xs text-muted-foreground">
                       Triggered run: {event.runId}
