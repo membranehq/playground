@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { Suspense, useState, useRef } from 'react';
+import { Suspense, useState, useRef, useMemo } from 'react';
 import * as React from 'react';
 import { Plus, Play, MoreVertical, Settings, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DataInput, DataSchema } from '@membranehq/react';
 import { PageHeaderActions } from '@/components/page-header-context';
 import { WorkflowEditor, WorkflowEditorRef } from './components/workflow-editor';
 import { WorkflowProvider, useWorkflow } from './components/workflow-context';
@@ -40,6 +42,8 @@ function WorkflowDetailInner({ id }: { id: string }) {
   const [isRunning, setIsRunning] = useState(false);
   const [editNameDialogOpen, setEditNameDialogOpen] = useState(false);
   const [workflowName, setWorkflowName] = useState('');
+  const [triggerInput, setTriggerInput] = useState<Record<string, unknown>>({});
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const workflowEditorRef = useRef<WorkflowEditorRef>(null);
 
   const onCreate = async () => {
@@ -104,6 +108,62 @@ function WorkflowDetailInner({ id }: { id: string }) {
     );
   }
 
+  // Find the manual trigger node
+  const manualTriggerNode = useMemo(() => {
+    return workflow.nodes.find(
+      (node) => node.type === 'trigger' && node.triggerType === 'manual'
+    );
+  }, [workflow.nodes]);
+
+  const hasManualTrigger = !!manualTriggerNode;
+
+  // Check if the manual trigger has input
+  const hasInput = useMemo(() => {
+    if (!manualTriggerNode) return false;
+    return manualTriggerNode.config?.hasInput !== false; // Default to true for backward compatibility
+  }, [manualTriggerNode]);
+
+  // Get the input schema from the manual trigger
+  const triggerInputSchema = useMemo((): DataSchema | null => {
+    if (!manualTriggerNode || !hasInput) return null;
+    const inputSchema = manualTriggerNode.config?.inputSchema as DataSchema | undefined;
+    if (!inputSchema || !inputSchema.properties || Object.keys(inputSchema.properties).length === 0) {
+      return null;
+    }
+    return inputSchema;
+  }, [manualTriggerNode, hasInput]);
+
+  const handleRunWorkflow = async (input: Record<string, unknown> = {}) => {
+    if (!customerId || !workspace || !id) return;
+
+    setPopoverOpen(false);
+    setIsRunning(true);
+    try {
+      // Switch to runs tab first
+      workflowEditorRef.current?.switchToRunsTab();
+
+      // Call the run API
+      const response = await fetch(`/api/workflows/${id}/run`, {
+        method: 'POST',
+        headers: getAgentHeaders(customerId, customerName),
+        body: JSON.stringify({ input }),
+      });
+
+      if (response.ok) {
+        // Refresh the runs list to show the new run
+        workflowEditorRef.current?.refreshRuns();
+        // Reset input after successful run
+        setTriggerInput({});
+      } else {
+        console.error('Failed to run workflow');
+      }
+    } catch (error) {
+      console.error('Error running workflow:', error);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   return (
     <>
       <PageHeaderActions>
@@ -146,42 +206,88 @@ function WorkflowDetailInner({ id }: { id: string }) {
             <Plus className="w-4 h-4 mr-2" />
             {isCreating ? 'Creating...' : 'New Workflow'}
           </Button>
-          {/* Run button */}
-          <Button
-            onClick={async () => {
-              if (!customerId || !workspace || !id) return;
+          {/* Run button - only show when there's a manual trigger */}
+          {hasManualTrigger && (
+            <>
+              {hasInput && triggerInputSchema ? (
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={workflow?.status !== 'active' || isRunning}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      {isRunning ? 'Running...' : 'Run'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-96"
+                    align="end"
+                    side="bottom"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="space-y-6">
+                      {/* Header */}
+                      <div className="border-b border-gray-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Play className="h-4 w-4 text-green-600" />
+                          <h3 className="font-semibold text-sm text-gray-900">Run Workflow</h3>
+                        </div>
+                      </div>
 
-              setIsRunning(true);
-              try {
-                // Switch to runs tab first
-                workflowEditorRef.current?.switchToRunsTab();
+                      {/* Content */}
+                      <div className="space-y-4">
+                        <div>
+                          <DataInput
+                            schema={triggerInputSchema}
+                            value={triggerInput}
+                            variablesSchema={{ type: 'object', properties: {} }}
+                            onChange={setTriggerInput}
+                          />
+                        </div>
+                      </div>
 
-                // Call the run API
-                const response = await fetch(`/api/workflows/${id}/run`, {
-                  method: 'POST',
-                  headers: getAgentHeaders(customerId, customerName),
-                  body: JSON.stringify({ input: {} }),
-                });
-
-                if (response.ok) {
-                  // Refresh the runs list to show the new run
-                  workflowEditorRef.current?.refreshRuns();
-                } else {
-                  console.error('Failed to run workflow');
-                }
-              } catch (error) {
-                console.error('Error running workflow:', error);
-              } finally {
-                setIsRunning(false);
-              }
-            }}
-            size="sm"
-            variant="ghost"
-            disabled={workflow?.status !== 'active' || isRunning}
-          >
-            <Play className="w-4 h-4 mr-2" />
-            {isRunning ? 'Running...' : 'Run'}
-          </Button>
+                      {/* Actions */}
+                      <div className="flex justify-end pt-2 border-t border-gray-100">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRunWorkflow(triggerInput);
+                          }}
+                          disabled={isRunning || workflow?.status !== 'active'}
+                          className="text-white px-4 rounded-full"
+                        >
+                          <div className="flex items-center gap-2">
+                            {isRunning ? (
+                              <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            ) : (
+                              <Play className="h-3 w-3" />
+                            )}
+                            Run Workflow
+                          </div>
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <Button
+                  onClick={() => handleRunWorkflow()}
+                  size="sm"
+                  variant="ghost"
+                  disabled={workflow?.status !== 'active' || isRunning}
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  {isRunning ? 'Running...' : 'Run'}
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </PageHeaderActions>
 
@@ -231,7 +337,7 @@ export default function WorkflowDetailPage() {
   const { id } = useParams();
 
   const resolvedId = Array.isArray(id) ? id[0] : (id as string);
-  
+
   if (!resolvedId) return null;
   return (
     <Suspense

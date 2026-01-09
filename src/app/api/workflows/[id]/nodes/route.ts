@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/workflow/lib/mongodb';
+import { connectToDatabase } from '@/lib/workflow/database';
 import { Workflow } from '@/lib/workflow/models/workflow';
-import { updateNodesWithOutputSchemas } from '@/lib/workflow/lib/output-schema-calculator';
+import { updateNodesWithOutputSchemas } from '@/lib/workflow/output-schema-calculator';
 import { IWorkflowNode } from '@/lib/workflow/models/workflow';
 import { IntegrationAppClient } from '@membranehq/sdk';
 import { getAuthenticationFromRequest } from '@/lib/auth';
@@ -10,7 +10,7 @@ import { capitalize } from '@/lib/utils';
 import {
   generateVerificationHashForWorkflowEvent,
   WORKFLOW_EVENT_VERIFICATION_HASH_HEADER,
-} from '@/lib/workflow/lib/workflow-event-verification';
+} from '@/lib/workflow/workflow-event-verification';
 
 /**
  * Get the event ingest URL for a workflow

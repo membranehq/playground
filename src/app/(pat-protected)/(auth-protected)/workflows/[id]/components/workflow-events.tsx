@@ -7,6 +7,7 @@ import { getAgentHeaders } from '@/lib/agent-api';
 import { Minimizer } from '@/components/ui/minimizer';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Loader } from '@/components/ai-elements/loader';
 
 interface WorkflowEvent {
   _id: string;
@@ -103,8 +104,11 @@ export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-sm text-muted-foreground">Loading events...</div>
+      <div className="flex-1 flex items-center justify-center h-full">
+        <div className="text-center">
+          <Loader size={24} className="text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading events...</p>
+        </div>
       </div>
     );
   }

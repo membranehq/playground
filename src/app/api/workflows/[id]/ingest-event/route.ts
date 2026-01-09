@@ -8,7 +8,7 @@ import { WorkflowEvent } from '@/lib/workflow/models/workflow-event';
 import {
   verifyVerificationHashForWorkflowEvent,
   WORKFLOW_EVENT_VERIFICATION_HASH_HEADER,
-} from '@/lib/workflow/lib/workflow-event-verification';
+} from '@/lib/workflow/workflow-event-verification';
 
 // CORS headers for cross-origin requests
 const corsHeaders = {

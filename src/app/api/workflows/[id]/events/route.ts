@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/workflow/lib/mongodb';
+import { connectToDatabase } from '@/lib/workflow/database';
 import { WorkflowEvent } from '@/lib/workflow/models/workflow-event';
 import { getAuthenticationFromRequest } from '@/lib/auth';
 

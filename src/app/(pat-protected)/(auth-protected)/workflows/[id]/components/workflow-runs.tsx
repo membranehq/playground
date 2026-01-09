@@ -7,6 +7,7 @@ import { getAgentHeaders } from '@/lib/agent-api';
 import { Minimizer } from '@/components/ui/minimizer';
 import { ChevronDown, ChevronRight, Check, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Loader } from '@/components/ai-elements/loader';
 
 interface WorkflowRunResult {
   nodeId: string;
@@ -164,8 +165,11 @@ export function WorkflowRuns({ workflowId, refreshKey }: WorkflowRunsProps) {
 
   if (isLoading) {
     return (
-      <div className="p-4">
-        <div className="text-sm text-muted-foreground">Loading runs...</div>
+      <div className="flex-1 flex items-center justify-center h-full">
+        <div className="text-center">
+          <Loader size={24} className="text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading runs...</p>
+        </div>
       </div>
     );
   }

@@ -319,9 +319,9 @@ export default function SessionPage() {
         <div className="flex flex-col h-full">
           {/* Messages Area */}
           {isLoadingSession ? (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center h-full">
               <div className="text-center">
-                <Loader size={48} className="text-muted-foreground mx-auto mb-4" />
+                <Loader size={24} className="text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">Loading session...</p>
               </div>
             </div>
