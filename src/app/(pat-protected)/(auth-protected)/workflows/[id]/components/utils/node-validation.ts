@@ -14,10 +14,22 @@ export function isNodeConfigured(node: WorkflowNode): boolean {
     return true;
   }
 
-  // Event trigger - requires integrationKey, dataCollection, and eventType
+  // Event trigger - requires different fields based on event source
   if (node.type === 'trigger' && node.triggerType === 'event') {
     const config = node.config || {};
-    return !!(config.integrationKey && config.dataCollection && config.eventType);
+    const eventSource = config.eventSource as 'connector' | 'data-record' | undefined;
+    const eventType = config.eventType as string;
+    
+    // Check if it's a connector event (either by eventSource or eventType)
+    const isConnectorEvent = eventSource === 'connector' || eventType === 'connector-event-trigger';
+    
+    if (isConnectorEvent) {
+      // Connector events require: integrationKey, connectorEventKey, and eventType
+      return !!(config.integrationKey && config.connectorEventKey && config.eventType);
+    } else {
+      // Data record events require: integrationKey, dataCollection, and eventType
+      return !!(config.integrationKey && config.dataCollection && config.eventType);
+    }
   }
 
   // Membrane action - requires integrationKey and actionId

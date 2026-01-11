@@ -21,78 +21,168 @@ function getEventIngestUrl(workflowId: string, request?: NextRequest): string {
 }
 
 /**
+ * Valid event type values
+ */
+const VALID_EVENT_TYPES = [
+  'data-record-created-trigger',
+  'data-record-updated-trigger',
+  'data-record-deleted-trigger',
+  'connector-event-trigger',
+] as const;
+
+/**
+ * Extract base event type from full event type value
+ * e.g., 'data-record-created-trigger' -> 'created'
+ */
+function extractBaseEventType(fullEventType: string): string {
+  const match = fullEventType.match(/^data-record-(created|updated|deleted)-trigger$/);
+  if (!match) {
+    throw new Error(`Invalid event type: ${fullEventType}. Must be one of: ${VALID_EVENT_TYPES.join(', ')}`);
+  }
+  return match[1];
+}
+
+
+/**
+ * Parameters for creating a flow instance
+ */
+interface CreateFlowInstanceParams {
+  membrane: IntegrationAppClient;
+  integrationKey: string;
+  workflowId: string;
+  request?: NextRequest;
+
+  /**
+   * For use with data Data Record Events 
+   * e.g., 'users', 'products', 'orders'
+   */
+  dataCollection: string;
+
+  /**
+   * The type of the trigger
+   * e.g., 'data-record-created-trigger', 'data-record-updated-trigger', 'data-record-deleted-trigger', 'connector-event-trigger'
+   */
+  triggerType: (typeof VALID_EVENT_TYPES)[number];
+
+  /**
+   * For use with connector events
+   * e.g., 'channel-left', 'call-ended'
+   */
+  connectorEventKey: string | undefined;
+}
+
+/**
  * Create flow instance to source event for event trigger node
  * Returns the flow instance ID
  */
-async function createFlowInstance(
-  membrane: IntegrationAppClient,
-  integrationKey: string,
-  dataCollection: string,
-  eventType: string,
-  workflowId: string,
-  request?: NextRequest,
-): Promise<string | null> {
+async function createFlowInstance({
+  membrane,
+  integrationKey,
+  dataCollection,
+  triggerType,
+  workflowId,
+  request,
+  connectorEventKey,
+}: CreateFlowInstanceParams): Promise<string | null> {
+
+  const isConnectorEvent = triggerType === 'connector-event-trigger';
+
+  // Extract base event type for naming/keys (e.g., 'created' from 'data-record-created-trigger')
+  // For connector events, use the connector event key as the identifier
+  const baseEventType = isConnectorEvent
+    ? (connectorEventKey || 'connector-event')
+    : extractBaseEventType(triggerType);
+
   const integration = await membrane.integration(integrationKey).get();
 
   if (integration.id && integration.connection?.id) {
-    const flowInstance = await membrane.flowInstances.create({
-      name: `Receive ${capitalize(dataCollection)} ${capitalize(eventType)} Event`,
-      connectionId: integration.connection?.id,
-      integrationId: integration.id,
-      instanceKey: `${workflowId}-${dataCollection}-${eventType}`,
-      nodes: {
-        [`${eventType}-${dataCollection}`]: {
-          name: `${capitalize(eventType)}: ${capitalize(dataCollection)}`,
-          type: `data-record-${eventType}-trigger`,
-          config: {
-            dataSource: {
-              collectionKey: dataCollection,
-            },
-          },
-          links: [{ key: 'find-data-record-by-id' }],
+    // Build the trigger node config based on event type
+    const triggerNodeConfig = isConnectorEvent
+      ? { eventKey: connectorEventKey }
+      : {
+        dataSource: {
+          collectionKey: dataCollection,
         },
+      };
 
-        'find-data-record-by-id': {
-          type: 'find-data-record-by-id',
-          name: 'Find Data Record By Id',
-          links: [{ key: 'send-update-to-my-app' }],
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore - state and dependencies are custom properties for this flow instance
-          state: 'READY',
-          dependencies: [],
-          config: {
-            id: {
-              $var: `$.input.${eventType}-${dataCollection}.record.id`,
-            },
-            dataSource: {
-              collectionKey: dataCollection,
-            },
+    const flowInstanceName = isConnectorEvent
+      ? `Receive ${capitalize(connectorEventKey || 'Connector')} Event`
+      : `Receive ${capitalize(dataCollection)} ${capitalize(baseEventType)} Event`;
+
+    const instanceKey = isConnectorEvent
+      ? `${workflowId}-connector-${connectorEventKey}`
+      : `${workflowId}-${dataCollection}-${baseEventType}`;
+
+    const triggerNodeKey = isConnectorEvent
+      ? `connector-${connectorEventKey}`
+      : `${baseEventType}-${dataCollection}`;
+
+    const triggerNodeName = isConnectorEvent
+      ? `${capitalize(connectorEventKey || 'Connector Event')}`
+      : `${capitalize(baseEventType)}: ${capitalize(dataCollection)}`;
+
+    // Build nodes object conditionally
+    const nodes: Record<string, unknown> = {
+      [triggerNodeKey]: {
+        name: triggerNodeName,
+        type: triggerType, // Use full trigger type value directly
+        config: triggerNodeConfig,
+        links: [isConnectorEvent ? { key: "send-update-to-my-app" } : { key: 'find-data-record-by-id' }],
+      },
+    };
+
+    // Don't add this node if it's a connector event
+    if (!isConnectorEvent) {
+      nodes['find-data-record-by-id'] = {
+        type: 'find-data-record-by-id',
+        name: 'Find Data Record By Id',
+        links: [{ key: 'send-update-to-my-app' }],
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - state and dependencies are custom properties for this flow instance
+        state: 'READY',
+        dependencies: [],
+        config: {
+          id: {
+            $var: `$.input.${baseEventType}-${dataCollection}.record.id`,
           },
-          isCustomized: true,
+          dataSource: {
+            collectionKey: dataCollection,
+          },
         },
+        isCustomized: true,
+      };
+    }
 
-        'send-update-to-my-app': {
-          type: 'api-request-to-your-app',
-          name: 'Create Data Record in my App',
-          config: {
-            request: {
-              body: {
-                data: {
-                  $var: `$.input.${eventType}-${dataCollection}.record`,
-                },
-                headers: {
-                  [WORKFLOW_EVENT_VERIFICATION_HASH_HEADER]: generateVerificationHashForWorkflowEvent(workflowId),
-                },
-              },
-              method: 'POST',
-              uri: getEventIngestUrl(workflowId, request),
+    nodes['send-update-to-my-app'] = {
+      type: 'api-request-to-your-app',
+      name: 'Create Data Record in my App',
+      config: {
+        request: {
+          body: {
+            data: {
+              $var: isConnectorEvent ? `$.input.${triggerNodeKey}.record` : `$.input.${triggerNodeKey}.record`,
+            },
+            headers: {
+              [WORKFLOW_EVENT_VERIFICATION_HASH_HEADER]: generateVerificationHashForWorkflowEvent(workflowId),
             },
           },
-          links: [],
-          isCustomized: true,
+          method: 'POST',
+          uri: getEventIngestUrl(workflowId, request),
         },
       },
+      links: [],
+      isCustomized: true,
+    };
+
+    const flowInstance = await membrane.flowInstances.create({
+      name: flowInstanceName,
+      connectionId: integration.connection?.id,
+      integrationId: integration.id,
+      instanceKey: instanceKey,
+      nodes: nodes as any,
     });
+
+
     return flowInstance.id || null;
   }
   return null;
@@ -125,17 +215,25 @@ async function createEventTriggerFlowInstance(
     const integrationKey = config.integrationKey as string;
     const dataCollection = config.dataCollection as string;
     const eventType = config.eventType as string;
+    const connectorEventKey = config.connectorEventKey as string | undefined;
+    const eventSource = config.eventSource as 'connector' | 'data-record' | undefined;
 
     const membrane = new IntegrationAppClient({ token: membraneAccessToken });
 
-    const flowInstanceId = await createFlowInstance(
+    // Determine trigger type based on event source
+    const triggerType = eventSource === 'connector'
+      ? 'connector-event-trigger'
+      : (eventType || 'data-record-created-trigger');
+
+    const flowInstanceId = await createFlowInstance({
       membrane,
       integrationKey,
-      dataCollection,
-      eventType,
+      dataCollection: dataCollection || '',
+      triggerType: triggerType as (typeof VALID_EVENT_TYPES)[number],
       workflowId,
       request,
-    );
+      connectorEventKey,
+    });
 
     return {
       ...node,
@@ -184,15 +282,19 @@ async function updateEventTriggerFlowInstance(
       // Delete old flow instance
       await deleteFlowInstance(membrane, flowInstanceId);
 
+      // Determine trigger type
+      const triggerType = newEventType || 'data-record-created-trigger';
+
       // Create new flow instance
-      const newFlowInstanceId = await createFlowInstance(
+      const newFlowInstanceId = await createFlowInstance({
         membrane,
-        newIntegrationKey,
-        newDataCollection,
-        newEventType,
+        integrationKey: newIntegrationKey,
+        dataCollection: newDataCollection || '',
+        triggerType: triggerType as (typeof VALID_EVENT_TYPES)[number],
         workflowId,
         request,
-      );
+        connectorEventKey: undefined,
+      });
 
       return {
         ...newNode,
@@ -205,12 +307,15 @@ async function updateEventTriggerFlowInstance(
 
     // If only dataCollection or eventType changed, patch the existing instance
     if (oldDataCollection !== newDataCollection || oldEventType !== newEventType) {
+      // Extract base event type for naming/keys
+      const baseEventType = extractBaseEventType(newEventType);
+
       await membrane.flowInstance(flowInstanceId).patch({
-        name: `Receive ${capitalize(newDataCollection)} ${capitalize(newEventType)} Event`,
+        name: `Receive ${capitalize(newDataCollection)} ${capitalize(baseEventType)} Event`,
         nodes: {
-          [`${newEventType}-${newDataCollection}`]: {
-            name: `${capitalize(newEventType)}: ${capitalize(newDataCollection)}`,
-            type: `data-record-${newEventType}-trigger`,
+          [`${baseEventType}-${newDataCollection}`]: {
+            name: `${capitalize(baseEventType)}: ${capitalize(newDataCollection)}`,
+            type: newEventType, // Use full event type value directly
             config: {
               dataSource: {
                 collectionKey: newDataCollection,
@@ -274,43 +379,63 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         const integrationKey = config.integrationKey;
         const dataCollection = config.dataCollection;
         const eventType = config.eventType;
+        const connectorEventKey = config.connectorEventKey;
+        const eventSource = config.eventSource;
 
         const existingIntegrationKey = existingConfig.integrationKey;
         const existingDataCollection = existingConfig.dataCollection;
         const existingEventType = existingConfig.eventType;
+        const existingConnectorEventKey = existingConfig.connectorEventKey;
+        const existingEventSource = existingConfig.eventSource;
 
-        // Check if all required fields are present
-        const hasAllFields = !!(integrationKey && dataCollection && eventType);
-        const hadAllFields = !!(existingIntegrationKey && existingDataCollection && existingEventType);
+        // Determine if this is a connector event
+        const isConnectorEvent = eventSource === 'connector' || eventType === 'connector-event-trigger';
+        const wasConnectorEvent = existingEventSource === 'connector' || existingEventType === 'connector-event-trigger';
+
+        // Check if all required fields are present based on event type
+        const hasAllFields = isConnectorEvent
+          ? !!(integrationKey && connectorEventKey && eventType)
+          : !!(integrationKey && dataCollection && eventType);
+        const hadAllFields = wasConnectorEvent
+          ? !!(existingIntegrationKey && existingConnectorEventKey && existingEventType)
+          : !!(existingIntegrationKey && existingDataCollection && existingEventType);
 
         if (hasAllFields) {
           let updatedFirstNode = firstNode;
+          const existingFlowInstanceId = existingConfig.flowInstanceId as string | undefined;
 
-          // Determine action based on field comparison
-          if (!hadAllFields) {
-            // No existing configuration - create new flow instance
+          // Determine action based on field comparison and flow instance existence
+          if (!hadAllFields || !existingFlowInstanceId) {
+            // No existing configuration OR no flow instance ID - create new flow instance
             updatedFirstNode = await createEventTriggerFlowInstance(firstNode, id, membraneAccessToken, req).catch(
               (error) => {
                 console.error(`Failed to create flow instance for node ${firstNode.id}:`, error);
                 return firstNode;
               },
             );
-          } else if (
-            integrationKey !== existingIntegrationKey ||
-            dataCollection !== existingDataCollection ||
-            eventType !== existingEventType
-          ) {
-            // Configuration changed - update flow instance
-            updatedFirstNode = await updateEventTriggerFlowInstance(
-              existingFirstNode,
-              firstNode,
-              id,
-              membraneAccessToken,
-              req,
-            ).catch((error) => {
-              console.error(`Failed to update flow instance for node ${firstNode.id}:`, error);
-              return firstNode;
-            });
+          } else {
+            // Check if configuration changed
+            const integrationKeyChanged = integrationKey !== existingIntegrationKey;
+            const eventSourceTypeChanged = isConnectorEvent !== wasConnectorEvent;
+            const eventConfigChanged = isConnectorEvent
+              ? connectorEventKey !== existingConnectorEventKey || eventType !== existingEventType
+              : dataCollection !== existingDataCollection || eventType !== existingEventType;
+
+            const configurationChanged = integrationKeyChanged || eventSourceTypeChanged || eventConfigChanged;
+
+            if (configurationChanged) {
+              // Configuration changed - update flow instance
+              updatedFirstNode = await updateEventTriggerFlowInstance(
+                existingFirstNode,
+                firstNode,
+                id,
+                membraneAccessToken,
+                req,
+              ).catch((error) => {
+                console.error(`Failed to update flow instance for node ${firstNode.id}:`, error);
+                return firstNode;
+              });
+            }
           }
 
           // Create new nodes array with updated first node

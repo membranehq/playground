@@ -45,7 +45,14 @@ export function TriggerNode({ data, selected }: TriggerNodeProps) {
         const collectionName = data.node.config.dataCollection as string;
         const eventType = data.node.config.eventType as string;
         const collectionNameLabel = collectionName.charAt(0).toUpperCase() + collectionName.slice(1); // Capitalize first letter
-        const eventTypeLabel = eventType.charAt(0).toUpperCase() + eventType.slice(1); // Capitalize first letter
+        
+        // Extract base event type from full value (e.g., 'created' from 'data-record-created-trigger')
+        let baseEventType = eventType;
+        const match = eventType.match(/^data-record-(created|updated|deleted)-trigger$/);
+        if (match) {
+          baseEventType = match[1];
+        }
+        const eventTypeLabel = baseEventType.charAt(0).toUpperCase() + baseEventType.slice(1); // Capitalize first letter
 
         return {
           title: `${collectionNameLabel}: ${eventTypeLabel}`,

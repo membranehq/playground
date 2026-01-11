@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { DataSchema, useIntegrationApp } from '@membranehq/react';
+import { DataSchema, useIntegrationApp, useIntegration } from '@membranehq/react';
 import { WorkflowNode } from '../types/workflow';
 import { TriggerType, TRIGGER_TYPES } from '@/lib/workflow/node-types';
 import { Label } from '@/components/ui/label';
@@ -43,10 +43,17 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
   const selectedIntegrationKey = value.config?.integrationKey as string;
   const selectedDataCollection = value.config?.dataCollection as string;
   const selectedEventType = value.config?.eventType as string;
+  const selectedConnectorEventKey = value.config?.connectorEventKey as string;
+  const eventSource = (value.config?.eventSource as 'connector' | 'data-record') || 'data-record';
+  
+  // Derive event source from eventType (fallback if eventSource not set)
+  const isConnectorEvent = eventSource === 'connector' || selectedEventType === 'connector-event-trigger';
+  
   const params = useParams();
 
   const { workflow } = useWorkflow();
   const membrane = useIntegrationApp();
+  const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey || '');
   const { customerId, customerName } = useCustomer();
   const { workspace } = useCurrentWorkspace();
 
@@ -56,17 +63,22 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
     return getAgentHeaders(customerId, customerName);
   }, [customerId, customerName, workspace]);
 
-  // Event type options
+  // Event type options - store full values
   const eventTypes = [
-    { value: 'created', label: 'Created' },
-    { value: 'updated', label: 'Updated' },
-    { value: 'deleted', label: 'Deleted' },
+    { value: 'data-record-created-trigger', label: 'Created' },
+    { value: 'data-record-updated-trigger', label: 'Updated' },
+    { value: 'data-record-deleted-trigger', label: 'Deleted' },
   ];
 
   // State for data collections
   const [dataCollections, setDataCollections] = useState<Array<{ key: string; name: string }>>([]);
   const [isLoadingDataCollections, setIsLoadingDataCollections] = useState(false);
   const [dataCollectionError, setDataCollectionError] = useState<string | null>(null);
+
+  // State for connector events
+  const [connectorEvents, setConnectorEvents] = useState<Array<{ key: string; name: string }>>([]);
+  const [isLoadingConnectorEvents, setIsLoadingConnectorEvents] = useState(false);
+  const [connectorEventsError, setConnectorEventsError] = useState<string | null>(null);
 
   // State for output schema
   const [outputSchema, setOutputSchema] = useState<unknown>(null);
@@ -80,30 +92,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
   // Generate event ingest URL
   const workflowId = workflow?.id || (params.id as string);
 
-  // Generate sample data from JSON schema
-  const generateSampleData = (schema: unknown): unknown => {
-    if (!schema || typeof schema !== 'object') {
-      return {};
-    }
-
-    const jsonSchema = schema as JsonSchema;
-
-    // Handle different schema types
-    if (jsonSchema.type === 'object' && jsonSchema.properties) {
-      const sampleData: Record<string, unknown> = {};
-      for (const [key, property] of Object.entries(jsonSchema.properties)) {
-        sampleData[key] = generateSampleValue(property);
-      }
-      return sampleData;
-    } else if (Array.isArray(schema)) {
-      // Handle array schemas
-      return schema.map((item) => generateSampleData(item));
-    } else if (jsonSchema.type) {
-      return generateSampleValue(jsonSchema);
-    }
-
-    return {};
-  };
+ 
 
   const generateSampleValue = (property: JsonSchemaProperty): unknown => {
     const type = property.type || 'string';
@@ -141,7 +130,51 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
   // State for connection status from AppConnectionSelector
   const [isConnected, setIsConnected] = useState(false);
 
-  // Fetch data collections when connected
+  // Fetch connector events when connected and event type is connector-event-trigger
+  useEffect(() => {
+    const fetchConnectorEvents = async () => {
+      if (!isConnected || !selectedIntegrationKey || !isConnectorEvent || !selectedIntegration?.id) {
+        setConnectorEvents([]);
+        return;
+      }
+
+      setIsLoadingConnectorEvents(true);
+      setConnectorEventsError(null);
+
+      try {
+        const response = await fetch(`/api/integrations/${selectedIntegration.id}/events`, {
+          headers,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch connector events');
+        }
+
+        const data = await response.json();
+        const events = data.events || [];
+        
+        // Transform events to match expected format
+        const formattedEvents = Array.isArray(events)
+          ? events.map((event: { key?: string; name?: string }) => ({
+              key: event.key || '',
+              name: event.name || event.key || '',
+            }))
+          : [];
+        
+        setConnectorEvents(formattedEvents);
+      } catch (error) {
+        console.error('Failed to fetch connector events:', error);
+        setConnectorEventsError('Failed to fetch connector events');
+        setConnectorEvents([]);
+      } finally {
+        setIsLoadingConnectorEvents(false);
+      }
+    };
+
+    fetchConnectorEvents();
+  }, [isConnected, selectedIntegrationKey, isConnectorEvent, selectedIntegration?.id, headers]);
+
+  // Fetch data collections when connected (only for data record events)
   useEffect(() => {
     const fetchDataCollections = async () => {
       if (!isConnected || !selectedIntegrationKey) {
@@ -172,12 +205,12 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
     };
 
     fetchDataCollections();
-  }, [isConnected, selectedIntegrationKey, membrane]);
+  }, [isConnected, selectedIntegrationKey, membrane, isConnectorEvent]);
 
-  // Fetch output schema when data collection is selected
+  // Fetch output schema when data collection is selected (only for data-record events)
   useEffect(() => {
     const fetchOutputSchema = async () => {
-      if (!isConnected || !selectedIntegrationKey || !selectedDataCollection) {
+      if (!isConnected || !selectedIntegrationKey || !selectedDataCollection || isConnectorEvent) {
         setOutputSchema(null);
         return;
       }
@@ -198,7 +231,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
     };
 
     fetchOutputSchema();
-  }, [isConnected, selectedIntegrationKey, selectedDataCollection, membrane]);
+  }, [isConnected, selectedIntegrationKey, selectedDataCollection, membrane, isConnectorEvent]);
 
   const currentTriggerType = value.triggerType || 'event';
 
@@ -249,6 +282,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
                 integrationKey,
                 dataCollection: undefined, // Clear data collection when changing integration
                 eventType: undefined, // Clear event type when changing integration
+                connectorEventKey: undefined, // Clear connector event key when changing integration
               },
             });
           }}
@@ -257,15 +291,40 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
 
         {/* Event Configuration - Only show if connected */}
         {isConnected ? (
-          <Minimizer
-            title="Event Configuration"
-            defaultOpen={true}
-            tooltip="Configure which data collection and event type should trigger this workflow."
-          >
-            <div className="space-y-4">
-              {/* Data Collection Selection */}
+          <div className="space-y-4">
+            {/* Event Source Selector */}
+            <div className="space-y-2">
+              <Label required>Event Source</Label>
+              <Select
+                value={eventSource}
+                onValueChange={(newEventSource: 'connector' | 'data-record') => {
+                  onChange({
+                    ...value,
+                    config: {
+                      ...value.config,
+                      eventSource: newEventSource,
+                      // Clear event-specific fields when switching
+                      dataCollection: undefined,
+                      eventType: undefined,
+                      connectorEventKey: undefined,
+                    },
+                  });
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  {eventSource === 'connector' ? 'Connector Event' : 'Data Record Event'}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="data-record">Data Record Event</SelectItem>
+                  <SelectItem value="connector">Connector Event</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Data Record Event Configuration */}
+            {!isConnectorEvent && (
               <div className="space-y-2">
-                <Label required>Data Collection</Label>
+                <Label required>Collection Event</Label>
                 {isLoadingDataCollections ? (
                   <div className="space-y-2">
                     <Skeleton className="h-10 w-full" />
@@ -279,56 +338,17 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
                 ) : (
                   <div className="space-y-2">
                     <Select
-                      value={selectedDataCollection || ''}
-                      onValueChange={(dataCollection) => {
-                        // Update node name if event type is already selected
+                      value={
+                        selectedDataCollection && selectedEventType
+                          ? `${selectedDataCollection}:${selectedEventType}`
+                          : ''
+                      }
+                      onValueChange={(combinedValue) => {
+                        // Parse the combined value to extract collection and event type
+                        const [dataCollection, eventType] = combinedValue.split(':');
+                        
                         const dataCollectionName =
                           dataCollections.find((dc) => dc.key === dataCollection)?.name || dataCollection;
-                        const nodeName = selectedEventType
-                          ? `${dataCollectionName}: ${eventTypes.find((et) => et.value === selectedEventType)?.label || selectedEventType}`
-                          : value.name;
-
-                        onChange({
-                          ...value,
-                          name: nodeName,
-                          config: {
-                            ...value.config,
-                            dataCollection,
-                            eventType: undefined, // Clear event type when changing data collection
-                          },
-                        });
-                      }}
-                    >
-                      <SelectTrigger aria-label="Select data collection" className="w-full">
-                        <span>
-                          {dataCollections.find((dc) => dc.key === selectedDataCollection)?.name ||
-                            'Select a data collection'}
-                        </span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dataCollections.map((collection) => (
-                          <SelectItem key={collection.key} value={collection.key}>
-                            <span>{collection.name}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-
-              {/* Event Type Selection - Only show if data collection selected */}
-              {selectedDataCollection && (
-                <div className="space-y-2">
-                  <Label required>Event Type</Label>
-                  <div className="space-y-2">
-                    <Select
-                      value={selectedEventType || ''}
-                      onValueChange={(eventType) => {
-                        // Calculate the node name based on data collection and event type
-                        const dataCollectionName =
-                          dataCollections.find((dc) => dc.key === selectedDataCollection)?.name ||
-                          selectedDataCollection;
                         const eventTypeLabel = eventTypes.find((et) => et.value === eventType)?.label || eventType;
                         const nodeName = `${dataCollectionName}: ${eventTypeLabel}`;
 
@@ -337,33 +357,100 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
                           name: nodeName,
                           config: {
                             ...value.config,
+                            dataCollection,
                             eventType,
+                            eventSource: 'data-record',
+                            connectorEventKey: undefined, // Clear connector event key when selecting data record event
                           },
                         });
                       }}
                     >
-                      <SelectTrigger aria-label="Select event type" className="w-full">
+                      <SelectTrigger aria-label="Select collection event" className="w-full">
                         <span>
-                          {eventTypes.find((et) => et.value === selectedEventType)?.label || 'Select an event type'}
+                          {selectedDataCollection && selectedEventType
+                            ? `${dataCollections.find((dc) => dc.key === selectedDataCollection)?.name || selectedDataCollection}: ${eventTypes.find((et) => et.value === selectedEventType)?.label || selectedEventType}`
+                            : 'Select a collection event'}
                         </span>
                       </SelectTrigger>
                       <SelectContent>
-                        {eventTypes.map((eventType) => (
-                          <SelectItem key={eventType.value} value={eventType.value}>
-                            <span>{eventType.label}</span>
+                        {dataCollections.map((collection) =>
+                          eventTypes.map((eventType) => (
+                            <SelectItem
+                              key={`${collection.key}:${eventType.value}`}
+                              value={`${collection.key}:${eventType.value}`}
+                            >
+                              <span>
+                                {collection.name}: {eventType.label}
+                              </span>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Connector Event Configuration */}
+            {isConnectorEvent && (
+              <div className="space-y-2">
+                <Label required>Connector Event</Label>
+                {isLoadingConnectorEvents ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : connectorEventsError ? (
+                  <div className="p-4 border rounded-lg text-sm text-red-600 text-center">{connectorEventsError}</div>
+                ) : connectorEvents.length === 0 ? (
+                  <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
+                    No connector events available for this integration
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Select
+                      value={selectedConnectorEventKey || ''}
+                      onValueChange={(eventKey) => {
+                        const event = connectorEvents.find((e) => e.key === eventKey);
+                        const nodeName = event?.name || eventKey;
+
+                        onChange({
+                          ...value,
+                          name: nodeName,
+                          config: {
+                            ...value.config,
+                            connectorEventKey: eventKey,
+                            eventType: 'connector-event-trigger',
+                            eventSource: 'connector',
+                            dataCollection: undefined, // Clear data collection when selecting connector event
+                          },
+                        });
+                      }}
+                    >
+                      <SelectTrigger aria-label="Select connector event" className="w-full">
+                        <span>
+                          {selectedConnectorEventKey
+                            ? connectorEvents.find((e) => e.key === selectedConnectorEventKey)?.name || selectedConnectorEventKey
+                            : 'Select a connector event'}
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {connectorEvents.map((event) => (
+                          <SelectItem key={event.key} value={event.key}>
+                            {event.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-              )}
-            </div>
-          </Minimizer>
+                )}
+              </div>
+            )}
+          </div>
         ) : null}
 
-        {/* Output Schema - Show when connected and data collection is selected */}
-        {isConnected && selectedDataCollection && (
+        {/* Output Schema - Show when connected and data collection is selected (only for data-record events) */}
+        {isConnected && selectedDataCollection && !isConnectorEvent && (
           <Minimizer
             title="Output Schema"
             defaultOpen={false}
