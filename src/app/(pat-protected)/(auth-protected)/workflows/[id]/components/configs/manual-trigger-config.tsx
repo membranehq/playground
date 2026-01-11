@@ -20,7 +20,7 @@ export function ManualTriggerConfig({ value, onChange }: ManualTriggerConfigProp
     <div className="space-y-4 pt-4">
       {/* Trigger Type Selector */}
       <div className="space-y-2">
-        <Label required>Trigger Type</Label>
+        <Label>Trigger Type</Label>
         <Select
           value={currentTriggerType}
           onValueChange={(newTriggerType) => {

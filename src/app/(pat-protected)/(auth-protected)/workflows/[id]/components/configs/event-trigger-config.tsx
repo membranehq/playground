@@ -4,7 +4,7 @@ import { WorkflowNode } from '../types/workflow';
 import { TriggerType, TRIGGER_TYPES } from '@/lib/workflow/node-types';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger } from '@/components/ui/select';
 import { Minimizer } from '@/components/ui/minimizer';
 import { SelectAppAndConnect } from '@/components/ui/select-app-and-connect';
 import { useWorkflow } from '../workflow-context';
@@ -45,10 +45,10 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
   const selectedEventType = value.config?.eventType as string;
   const selectedConnectorEventKey = value.config?.connectorEventKey as string;
   const eventSource = (value.config?.eventSource as 'connector' | 'data-record') || 'data-record';
-  
+
   // Derive event source from eventType (fallback if eventSource not set)
   const isConnectorEvent = eventSource === 'connector' || selectedEventType === 'connector-event-trigger';
-  
+
   const params = useParams();
 
   const { workflow } = useWorkflow();
@@ -84,15 +84,6 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
   const [outputSchema, setOutputSchema] = useState<unknown>(null);
   const [isLoadingSchema, setIsLoadingSchema] = useState(false);
   const [schemaError, setSchemaError] = useState<string | null>(null);
-
-  // State for sample event sending
-  const [isSendingSample, setIsSendingSample] = useState(false);
-  const [sampleEventResult, setSampleEventResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  // Generate event ingest URL
-  const workflowId = workflow?.id || (params.id as string);
-
- 
 
   const generateSampleValue = (property: JsonSchemaProperty): unknown => {
     const type = property.type || 'string';
@@ -130,10 +121,10 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
   // State for connection status from AppConnectionSelector
   const [isConnected, setIsConnected] = useState(false);
 
-  // Fetch connector events when connected and event type is connector-event-trigger
+  // Fetch connector events when connected
   useEffect(() => {
     const fetchConnectorEvents = async () => {
-      if (!isConnected || !selectedIntegrationKey || !isConnectorEvent || !selectedIntegration?.id) {
+      if (!isConnected || !selectedIntegrationKey || !selectedIntegration?.id) {
         setConnectorEvents([]);
         return;
       }
@@ -152,15 +143,15 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
 
         const data = await response.json();
         const events = data.events || [];
-        
+
         // Transform events to match expected format
         const formattedEvents = Array.isArray(events)
           ? events.map((event: { key?: string; name?: string }) => ({
-              key: event.key || '',
-              name: event.name || event.key || '',
-            }))
+            key: event.key || '',
+            name: event.name || event.key || '',
+          }))
           : [];
-        
+
         setConnectorEvents(formattedEvents);
       } catch (error) {
         console.error('Failed to fetch connector events:', error);
@@ -172,7 +163,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
     };
 
     fetchConnectorEvents();
-  }, [isConnected, selectedIntegrationKey, isConnectorEvent, selectedIntegration?.id, headers]);
+  }, [isConnected, selectedIntegrationKey, selectedIntegration?.id, headers]);
 
   // Fetch data collections when connected (only for data record events)
   useEffect(() => {
@@ -190,9 +181,9 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
         // Transform the collections to match our expected format
         const formattedCollections = Array.isArray(collections)
           ? collections.map((collection: { key?: string; name?: string }) => ({
-              key: collection.key || collection.name || '',
-              name: collection.name || collection.key || '',
-            }))
+            key: collection.key || collection.name || '',
+            name: collection.name || collection.key || '',
+          }))
           : [];
         setDataCollections(formattedCollections);
       } catch (error) {
@@ -205,7 +196,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
     };
 
     fetchDataCollections();
-  }, [isConnected, selectedIntegrationKey, membrane, isConnectorEvent]);
+  }, [isConnected, selectedIntegrationKey, membrane]);
 
   // Fetch output schema when data collection is selected (only for data-record events)
   useEffect(() => {
@@ -235,6 +226,32 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
 
   const currentTriggerType = value.triggerType || 'event';
 
+  // Compute the current selected value for the combined selector
+  const getCurrentSelectedValue = () => {
+    if (isConnectorEvent && selectedConnectorEventKey) {
+      return `connector:${selectedConnectorEventKey}`;
+    }
+    if (!isConnectorEvent && selectedDataCollection && selectedEventType) {
+      return `data-record:${selectedDataCollection}:${selectedEventType}`;
+    }
+    return '';
+  };
+
+  // Get display text for the selected value
+  const getDisplayText = () => {
+    if (isConnectorEvent && selectedConnectorEventKey) {
+      const event = connectorEvents.find((e) => e.key === selectedConnectorEventKey);
+      return event?.name || selectedConnectorEventKey;
+    }
+    if (!isConnectorEvent && selectedDataCollection && selectedEventType) {
+      const dataCollectionName =
+        dataCollections.find((dc) => dc.key === selectedDataCollection)?.name || selectedDataCollection;
+      const eventTypeLabel = eventTypes.find((et) => et.value === selectedEventType)?.label || selectedEventType;
+      return `${dataCollectionName}: ${eventTypeLabel}`;
+    }
+    return 'Select an event';
+  };
+
   return (
     <div className="space-y-2 pt-4">
       <div className="space-y-4">
@@ -249,7 +266,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
               const newConfig = newTriggerType === 'event'
                 ? value.config || {}
                 : {};
-              
+
               onChange({
                 ...value,
                 triggerType: newTriggerType,
@@ -292,160 +309,116 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
         {/* Event Configuration - Only show if connected */}
         {isConnected ? (
           <div className="space-y-4">
-            {/* Event Source Selector */}
             <div className="space-y-2">
-              <Label required>Event Source</Label>
-              <Select
-                value={eventSource}
-                onValueChange={(newEventSource: 'connector' | 'data-record') => {
-                  onChange({
-                    ...value,
-                    config: {
-                      ...value.config,
-                      eventSource: newEventSource,
-                      // Clear event-specific fields when switching
-                      dataCollection: undefined,
-                      eventType: undefined,
-                      connectorEventKey: undefined,
-                    },
-                  });
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  {eventSource === 'connector' ? 'Connector Event' : 'Data Record Event'}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="data-record">Data Record Event</SelectItem>
-                  <SelectItem value="connector">Connector Event</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <Label required>Event</Label>
+              {isLoadingConnectorEvents || isLoadingDataCollections ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : connectorEventsError || dataCollectionError ? (
+                <div className="p-4 border rounded-lg text-sm text-red-600 text-center">
+                  {connectorEventsError || dataCollectionError}
+                </div>
+              ) : connectorEvents.length === 0 && dataCollections.length === 0 ? (
+                <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
+                  No events available for this integration
+                </div>
+              ) : (
+                <Select
+                  value={getCurrentSelectedValue()}
+                  onValueChange={(combinedValue) => {
+                    if (combinedValue.startsWith('connector:')) {
+                      // Handle connector event selection
+                      const eventKey = combinedValue.replace('connector:', '');
+                      const event = connectorEvents.find((e) => e.key === eventKey);
+                      const nodeName = event?.name || eventKey;
 
-            {/* Data Record Event Configuration */}
-            {!isConnectorEvent && (
-              <div className="space-y-2">
-                <Label required>Collection Event</Label>
-                {isLoadingDataCollections ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                ) : dataCollectionError ? (
-                  <div className="p-4 border rounded-lg text-sm text-red-600 text-center">{dataCollectionError}</div>
-                ) : dataCollections.length === 0 ? (
-                  <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
-                    No data collections available for this integration
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Select
-                      value={
-                        selectedDataCollection && selectedEventType
-                          ? `${selectedDataCollection}:${selectedEventType}`
-                          : ''
-                      }
-                      onValueChange={(combinedValue) => {
-                        // Parse the combined value to extract collection and event type
-                        const [dataCollection, eventType] = combinedValue.split(':');
-                        
-                        const dataCollectionName =
-                          dataCollections.find((dc) => dc.key === dataCollection)?.name || dataCollection;
-                        const eventTypeLabel = eventTypes.find((et) => et.value === eventType)?.label || eventType;
-                        const nodeName = `${dataCollectionName}: ${eventTypeLabel}`;
+                      onChange({
+                        ...value,
+                        name: nodeName,
+                        config: {
+                          ...value.config,
+                          connectorEventKey: eventKey,
+                          eventType: 'connector-event-trigger',
+                          eventSource: 'connector',
+                          dataCollection: undefined,
+                        },
+                      });
+                    } else if (combinedValue.startsWith('data-record:')) {
+                      // Handle data record event selection
+                      const parts = combinedValue.replace('data-record:', '').split(':');
+                      const [dataCollection, eventType] = parts;
 
-                        onChange({
-                          ...value,
-                          name: nodeName,
-                          config: {
-                            ...value.config,
-                            dataCollection,
-                            eventType,
-                            eventSource: 'data-record',
-                            connectorEventKey: undefined, // Clear connector event key when selecting data record event
-                          },
-                        });
-                      }}
-                    >
-                      <SelectTrigger aria-label="Select collection event" className="w-full">
-                        <span>
-                          {selectedDataCollection && selectedEventType
-                            ? `${dataCollections.find((dc) => dc.key === selectedDataCollection)?.name || selectedDataCollection}: ${eventTypes.find((et) => et.value === selectedEventType)?.label || selectedEventType}`
-                            : 'Select a collection event'}
-                        </span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dataCollections.map((collection) =>
-                          eventTypes.map((eventType) => (
-                            <SelectItem
-                              key={`${collection.key}:${eventType.value}`}
-                              value={`${collection.key}:${eventType.value}`}
-                            >
-                              <span>
-                                {collection.name}: {eventType.label}
-                              </span>
-                            </SelectItem>
-                          ))
+                      const dataCollectionName =
+                        dataCollections.find((dc) => dc.key === dataCollection)?.name || dataCollection;
+                      const eventTypeLabel = eventTypes.find((et) => et.value === eventType)?.label || eventType;
+                      const nodeName = `${dataCollectionName}: ${eventTypeLabel}`;
+
+                      onChange({
+                        ...value,
+                        name: nodeName,
+                        config: {
+                          ...value.config,
+                          dataCollection,
+                          eventType,
+                          eventSource: 'data-record',
+                          connectorEventKey: undefined,
+                        },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger aria-label="Select event" className="w-full">
+                    <span>{getDisplayText()}</span>
+                  </SelectTrigger>
+                  <SelectContent side="bottom">
+                    {/* Connector events first */}
+                    {connectorEvents.map((event) => (
+                      <SelectItem key={`connector:${event.key}`} value={`connector:${event.key}`}>
+                        {event.name}
+                      </SelectItem>
+                    ))}
+
+                    {/* Data record events - show in "Others" group only if there are connector events */}
+                    {dataCollections.length > 0 && (
+                      <>
+                        {connectorEvents.length > 0 ? (
+                          <SelectGroup>
+                            <SelectLabel>Others</SelectLabel>
+                            {dataCollections.map((collection) =>
+                              eventTypes.map((eventType) => (
+                                <SelectItem
+                                  key={`data-record:${collection.key}:${eventType.value}`}
+                                  value={`data-record:${collection.key}:${eventType.value}`}
+                                >
+                                  <span>
+                                    {collection.name}: {eventType.label}
+                                  </span>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectGroup>
+                        ) : (
+                          // If no connector events, show data record events directly without group
+                          dataCollections.map((collection) =>
+                            eventTypes.map((eventType) => (
+                              <SelectItem
+                                key={`data-record:${collection.key}:${eventType.value}`}
+                                value={`data-record:${collection.key}:${eventType.value}`}
+                              >
+                                <span>
+                                  {collection.name}: {eventType.label}
+                                </span>
+                              </SelectItem>
+                            ))
+                          )
                         )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Connector Event Configuration */}
-            {isConnectorEvent && (
-              <div className="space-y-2">
-                <Label required>Connector Event</Label>
-                {isLoadingConnectorEvents ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                ) : connectorEventsError ? (
-                  <div className="p-4 border rounded-lg text-sm text-red-600 text-center">{connectorEventsError}</div>
-                ) : connectorEvents.length === 0 ? (
-                  <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
-                    No connector events available for this integration
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Select
-                      value={selectedConnectorEventKey || ''}
-                      onValueChange={(eventKey) => {
-                        const event = connectorEvents.find((e) => e.key === eventKey);
-                        const nodeName = event?.name || eventKey;
-
-                        onChange({
-                          ...value,
-                          name: nodeName,
-                          config: {
-                            ...value.config,
-                            connectorEventKey: eventKey,
-                            eventType: 'connector-event-trigger',
-                            eventSource: 'connector',
-                            dataCollection: undefined, // Clear data collection when selecting connector event
-                          },
-                        });
-                      }}
-                    >
-                      <SelectTrigger aria-label="Select connector event" className="w-full">
-                        <span>
-                          {selectedConnectorEventKey
-                            ? connectorEvents.find((e) => e.key === selectedConnectorEventKey)?.name || selectedConnectorEventKey
-                            : 'Select a connector event'}
-                        </span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {connectorEvents.map((event) => (
-                          <SelectItem key={event.key} value={event.key}>
-                            {event.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            )}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         ) : null}
 
