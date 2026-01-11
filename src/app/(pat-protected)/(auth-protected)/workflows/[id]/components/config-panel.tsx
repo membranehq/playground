@@ -156,8 +156,8 @@ export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerType
   }
 
   return (
-    <div className="p-4">
-      <div className="space-y-4">
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 space-y-4">
         {selectedNode.type === 'trigger' && selectedTriggerTypeConfig && formData.triggerType === 'manual' && (
           <ManualTriggerConfig
             value={formData}

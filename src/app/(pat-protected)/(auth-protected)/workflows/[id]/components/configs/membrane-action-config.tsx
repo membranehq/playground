@@ -180,9 +180,15 @@ export function MembraneActionConfig({ value, onChange, variableSchema }: Membra
               )}
 
               <Minimizer title="Output Schema" defaultOpen={false} className="mt-4">
-                <div className="h-40 overflow-y-auto border rounded-md p-2 w-full">
-                  <pre className="text-xs">{JSON.stringify(selectedActionData?.outputSchema, null, 2)}</pre>
-                </div>
+                {selectedActionData?.outputSchema ? (
+                  <div className="h-40 overflow-y-auto border rounded-md p-2 w-full">
+                    <pre className="text-xs">{JSON.stringify(selectedActionData.outputSchema, null, 2)}</pre>
+                  </div>
+                ) : (
+                  <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
+                    No output schema specified for this action
+                  </div>
+                )}
               </Minimizer>
             </>
           ) : (
