@@ -12,7 +12,6 @@ export interface NodeOutputSchema {
  */
 export async function calculateNodeOutputSchema(
   node: WorkflowNode,
-  previousNodeSchemas: Map<string, DataSchema>,
   membraneAccessToken: string,
 ): Promise<DataSchema> {
   const membrane = new IntegrationAppClient({ token: membraneAccessToken });
@@ -24,14 +23,49 @@ export async function calculateNodeOutputSchema(
         return node.config.inputSchema as DataSchema;
       }
 
-      if (node.triggerType === 'event' && node.config?.integrationKey && node.config?.dataCollection) {
-        const collection = await membrane
-          .connection(node.config.integrationKey as string)
-          .dataCollection(node.config.dataCollection as string)
-          .get();
-        return collection.fieldsSchema as DataSchema;
+      if (node.triggerType === 'event') {
+        const config = node.config || {};
+        const eventSource = config.eventSource as 'connector' | 'data-record' | undefined;
+        const isConnectorEvent = eventSource === 'connector';
+
+        // Handle connector event triggers
+        if (isConnectorEvent && config.integrationKey && config.connectorEventKey) {
+          const integration = await membrane.integration(config.integrationKey as string).get();
+
+          if (!integration.connectorId) {
+            throw new Error(`Integration ${config.integrationKey} does not have a connectorId`);
+          }
+
+          const connectorId = integration.connectorId;
+          const eventKey = config.connectorEventKey as string;
+          const apiUrl = `https://api.getmembrane.com/connectors/${connectorId}/events/${eventKey}`;
+
+          const response = await fetch(apiUrl, {
+            headers: {
+              Authorization: `Bearer ${membraneAccessToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch connector event schema: ${response.status} ${response.statusText}`);
+          }
+
+          const eventData = await response.json();
+          return (eventData.schema || { type: 'object', properties: {} }) as DataSchema;
+        }
+
+        // Handle data record event triggers
+        if (!isConnectorEvent && config.integrationKey && config.dataCollection) {
+          const collection = await membrane
+            .connection(config.integrationKey as string)
+            .dataCollection(config.dataCollection as string)
+            .get();
+          return collection.fieldsSchema as DataSchema;
+        }
       }
-      // For event triggers, return empty schema for now
+
+      // For event triggers without proper configuration, return empty schema
       return {
         type: 'object',
         properties: {
@@ -117,7 +151,7 @@ export async function calculateWorkflowOutputSchemas(
 
   // Process nodes in order
   for (const node of nodes) {
-    const outputSchema = await calculateNodeOutputSchema(node, nodeSchemas, membraneAccessToken);
+    const outputSchema = await calculateNodeOutputSchema(node, membraneAccessToken);
 
     // Store the schema for this node
     nodeSchemas.set(node.id, outputSchema);
