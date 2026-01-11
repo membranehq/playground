@@ -155,6 +155,13 @@ export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerType
     );
   }
 
+  // Prevent rendering stale config when node selection changes
+  // formData is updated in useEffect, so there's a brief moment where
+  // selectedNode.id !== formData.id (old node's data with new node's type)
+  if (formData.id !== selectedNode.id) {
+    return null;
+  }
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-4 space-y-4">
