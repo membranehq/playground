@@ -275,7 +275,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
               });
             }}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full h-10">
               {TRIGGER_TYPES[currentTriggerType]?.name || 'Select trigger type'}
             </SelectTrigger>
             <SelectContent>
@@ -319,7 +319,7 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
                 <div className="p-4 border rounded-lg text-sm text-red-600 text-center">
                   {connectorEventsError || dataCollectionError}
                 </div>
-              ) : connectorEvents.length === 0 && dataCollections.length === 0 ? (
+              ) : connectorEvents.filter((e) => e.key !== 'any-webhook-event').length === 0 && dataCollections.length === 0 ? (
                 <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
                   No events available for this integration
                 </div>
@@ -368,21 +368,23 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
                     }
                   }}
                 >
-                  <SelectTrigger aria-label="Select event" className="w-full">
+                  <SelectTrigger aria-label="Select event" className="w-full h-10">
                     <span>{getDisplayText()}</span>
                   </SelectTrigger>
                   <SelectContent side="bottom">
                     {/* Connector events first */}
-                    {connectorEvents.map((event) => (
-                      <SelectItem key={`connector:${event.key}`} value={`connector:${event.key}`}>
-                        {event.name}
-                      </SelectItem>
-                    ))}
+                    {connectorEvents
+                      .filter((event) => event.key !== 'any-webhook-event')
+                      .map((event) => (
+                        <SelectItem key={`connector:${event.key}`} value={`connector:${event.key}`}>
+                          {event.name}
+                        </SelectItem>
+                      ))}
 
                     {/* Data record events - show in "Others" group only if there are connector events */}
                     {dataCollections.length > 0 && (
                       <>
-                        {connectorEvents.length > 0 ? (
+                        {connectorEvents.filter((e) => e.key !== 'any-webhook-event').length > 0 ? (
                           <SelectGroup>
                             <SelectLabel>Others</SelectLabel>
                             {dataCollections.map((collection) =>

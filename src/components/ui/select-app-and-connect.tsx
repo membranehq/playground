@@ -73,7 +73,7 @@ export function SelectAppAndConnect({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full justify-between p-3 h-auto"
+              className="w-full justify-between px-3 h-10"
             >
               <div className="flex items-center gap-3">
                 {selectedIntegration.logoUri ? (
@@ -98,7 +98,7 @@ export function SelectAppAndConnect({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full justify-between p-3 h-auto"
+              className="w-full justify-between px-3 h-10"
             >
               <span className="text-sm font-medium text-muted-foreground">Select an app</span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -152,14 +152,14 @@ export function SelectAppAndConnect({
         <div className="space-y-2">
           <Label required>Account</Label>
           {isConnectionLoading ? (
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between px-3 h-10 border rounded-lg">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-5 w-5 rounded" />
                 <Skeleton className="h-4 w-32" />
               </div>
             </div>
           ) : isConnected ? (
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between px-3 h-10 border rounded-lg">
               <div className="flex items-center gap-3">
                 {selectedIntegration.logoUri ? (
                   <Image
@@ -176,12 +176,12 @@ export function SelectAppAndConnect({
                 )}
                 <span className="text-sm font-medium text-foreground">Connected to {selectedIntegration.name}</span>
               </div>
-              <Button onClick={handleConnect} disabled={isConnecting} variant="outline" size="sm" className="rounded-full">
+              <Button onClick={handleConnect} disabled={isConnecting} variant="outline" size="xs" className="rounded-full">
                 {isConnecting ? 'Reconnecting...' : 'Reconnect'}
               </Button>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between px-3 h-10 border rounded-lg">
               <div className="flex items-center gap-3">
                 {selectedIntegration.logoUri ? (
                   <Image
@@ -198,7 +198,7 @@ export function SelectAppAndConnect({
                 )}
                 <span className="text-sm font-medium text-foreground">Connect {selectedIntegration.name}</span>
               </div>
-              <Button onClick={handleConnect} disabled={isConnecting} variant="default" size="sm" className="rounded-full">
+              <Button onClick={handleConnect} disabled={isConnecting} variant="default" size="xs" className="rounded-full">
                 {isConnecting ? 'Connecting...' : 'Connect'}
               </Button>
             </div>
