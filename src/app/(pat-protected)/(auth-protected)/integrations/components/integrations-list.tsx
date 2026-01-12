@@ -1,25 +1,45 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useIntegrationApp, useIntegrations, useConnections } from '@membranehq/react';
 import type { Integration as IntegrationAppIntegration } from '@membranehq/sdk';
-import { Loader2, Plug, Search, Cable, ExternalLink, Blocks, X } from 'lucide-react';
+import { Loader2, Plug, Search, Cable, ExternalLink, Blocks, X, Sparkles } from 'lucide-react';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { useSettings } from '@/components/providers/settings-provider';
 import { CustomConnectionDialog } from '@/components/custom-connection-dialog';
+import { useCustomer } from '@/components/providers/customer-provider';
+import { getAgentHeaders } from '@/lib/agent-api';
 
 export function IntegrationList() {
+  const router = useRouter();
   const integrationApp = useIntegrationApp();
   const { integrations, refresh: refreshIntegrations, loading: integrationsLoading } = useIntegrations();
   const { connections, refresh: refreshConnections, loading: connectionsLoading } = useConnections();
   const { workspace } = useCurrentWorkspace();
   const { connectionUIMode } = useSettings();
+  const { customerId, customerName } = useCustomer();
   const [searchQuery, setSearchQuery] = useState('');
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<IntegrationAppIntegration | null>(null);
+
+  // Connect Any App dialog state
+  const [connectAnyAppOpen, setConnectAnyAppOpen] = useState(false);
+  const [appName, setAppName] = useState('');
+  const [appUrl, setAppUrl] = useState('');
+  const [isBuilding, setIsBuilding] = useState(false);
 
   const consoleWorkspaceUrl = workspace
     ? `https://console.getmembrane.com/w/${workspace.id}`
@@ -92,6 +112,35 @@ export function IntegrationList() {
     }
   };
 
+  const handleBuildIntegration = async () => {
+    if (!appName.trim() || !appUrl.trim() || !customerId || !workspace) return;
+
+    setIsBuilding(true);
+    try {
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: getAgentHeaders(customerId, customerName),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const prompt = `Build a connector and integration for this app ${appName} ${appUrl}.`;
+        router.push(`/agent/sessions/${data.sessionId}?message=${encodeURIComponent(prompt)}`);
+      }
+    } catch (error) {
+      console.error('Error creating session:', error);
+      setIsBuilding(false);
+    }
+  };
+
+  const handleConnectAnyAppClose = (open: boolean) => {
+    if (!open) {
+      setAppName('');
+      setAppUrl('');
+    }
+    setConnectAnyAppOpen(open);
+  };
+
   if (loading) {
     return (
       <div className="mt-8 flex items-center justify-center py-12">
@@ -128,14 +177,20 @@ export function IntegrationList() {
 
   return (
     <>
-      <div className="mt-6 relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-        <Input
-          placeholder="Search connections and integrations..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 bg-white border-neutral-300 focus:border-neutral-400 placeholder:text-neutral-400"
-        />
+      <div className="mt-6 flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <Input
+            placeholder="Search connections and integrations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-white border-neutral-300 focus:border-neutral-400 placeholder:text-neutral-400"
+          />
+        </div>
+        <Button onClick={() => setConnectAnyAppOpen(true)} className="shrink-0">
+          <Sparkles className="h-4 w-4" />
+          Connect Any App
+        </Button>
       </div>
 
       {noResults ? (
@@ -249,6 +304,59 @@ export function IntegrationList() {
           onSuccess={handleCustomConnectionSuccess}
         />
       )}
+
+      {/* Connect Any App Dialog */}
+      <Dialog open={connectAnyAppOpen} onOpenChange={handleConnectAnyAppClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Any App</DialogTitle>
+            <DialogDescription>
+              Enter the app details and our AI agent will build a custom integration for you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="appName">App Name</Label>
+              <Input
+                id="appName"
+                placeholder="e.g. Notion, Airtable, Trello"
+                value={appName}
+                onChange={(e) => setAppName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="appUrl">App URL</Label>
+              <Input
+                id="appUrl"
+                type="url"
+                placeholder="e.g. https://notion.so"
+                value={appUrl}
+                onChange={(e) => setAppUrl(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleConnectAnyAppClose(false)} disabled={isBuilding}>
+              Cancel
+            </Button>
+            <Button onClick={handleBuildIntegration} disabled={isBuilding || !appName.trim() || !appUrl.trim()}>
+              {isBuilding ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Building...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Build
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
