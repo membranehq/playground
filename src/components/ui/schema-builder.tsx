@@ -111,7 +111,11 @@ function NestedObjectEditor({ property, onSchemaChange, level, parentKey }: Nest
       const input = inputRefs.current[updated.length - 1];
       if (input) {
         input.focus();
-        input.select();
+        const range = document.createRange();
+        range.selectNodeContents(input);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
       }
     }, 0);
   };
@@ -499,7 +503,11 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({ value, onChange, t
       const input = inputRefs.current[updated.length - 1];
       if (input) {
         input.focus();
-        input.select();
+        const range = document.createRange();
+        range.selectNodeContents(input);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
       }
     }, 0);
   };
