@@ -16,6 +16,7 @@ import { FileText, Plus, Trash2 } from 'lucide-react';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
+import { Loader } from '@/components/ai-elements/loader';
 
 type WorkflowStatus = 'active' | 'inactive';
 
@@ -147,7 +148,12 @@ export default function WorkflowsPage() {
         </div>
 
         {isLoading ? (
-          <div className="text-center text-muted-foreground text-sm">Loading workflows...</div>
+          <div className="flex-1 flex items-center justify-center py-12">
+            <div className="text-center">
+              <Loader size={24} className="text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading workflows...</p>
+            </div>
+          </div>
         ) : workflows.length === 0 ? (
           <div className="border border-dashed border-border rounded-lg p-10 bg-background">
             <div className="flex flex-col items-center text-center gap-3">

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Loader } from '@/components/ai-elements/loader';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -123,10 +123,15 @@ const loadEventsRef = useRef<() => Promise<void>>(async () => {});
 
   if (events.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center text-muted-foreground">
-          <p className="text-lg font-medium">No events yet</p>
-          <p className="text-sm">Events will appear here when they are received</p>
+      <div className="flex items-center justify-center h-full p-6">
+        <div className="flex flex-col items-center text-center gap-3">
+          <div className="w-10 h-10 rounded-lg border border-border flex items-center justify-center bg-muted">
+            <Activity className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="text-sm font-medium text-foreground">No events yet</div>
+          <div className="text-sm text-muted-foreground max-w-xs">
+            Events will appear here when they are received by this workflow.
+          </div>
         </div>
       </div>
     );
