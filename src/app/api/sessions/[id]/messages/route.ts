@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgentAuthFromRequest } from '@/lib/agent-auth';
+import { getAuthenticationFromRequest } from '@/lib/auth';
 import { opencodeService } from '@/lib/opencode-service';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     // Get auth info from headers
-    const auth = getAgentAuthFromRequest(request);
+    const auth = getAuthenticationFromRequest(request);
 
     console.log('[Messages API] Customer ID:', auth?.customerId);
 

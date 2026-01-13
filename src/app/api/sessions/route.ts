@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgentAuthFromRequest } from '@/lib/agent-auth';
+import { getAuthenticationFromRequest } from '@/lib/auth';
 import { opencodeService } from '@/lib/opencode-service';
 
 export async function GET(request: NextRequest) {
@@ -7,7 +7,9 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get auth info from headers
-    const auth = getAgentAuthFromRequest(request);
+    const auth = getAuthenticationFromRequest(request);
+
+    console.log({ agent: auth });
 
     console.log('[Sessions API] Customer ID:', auth?.customerId);
 
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Get auth info from headers
-    const auth = getAgentAuthFromRequest(request);
+    const auth = getAuthenticationFromRequest(request);
 
     console.log('[Sessions API] Customer ID:', auth?.customerId);
 

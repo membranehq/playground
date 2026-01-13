@@ -20,9 +20,8 @@ const pages = [
   },
   {
     name: 'Workflow Builder',
-    url: '/workflow-builder',
+    url: '/workflows',
     icon: Workflow,
-    disabled: true,
   },
 ];
 

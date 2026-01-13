@@ -1,6 +1,5 @@
 import jwt, { Algorithm } from 'jsonwebtoken';
-
-import { CurrentCustomer } from '@/components/providers/customer-provider';
+import { Authentication } from './auth';
 
 interface TokenData {
   id: string;
@@ -20,12 +19,12 @@ export class IntegrationTokenError extends Error {
   }
 }
 
-export async function generateIntegrationToken(details: CurrentCustomer & WorkspaceAuthDetails): Promise<string> {
-  if (!details.workspaceKey || !details.workspaceSecret) {
+export async function generateIntegrationToken(details: Authentication): Promise<string> {
+  if (!details.workspaceCredentials.workspaceKey || !details.workspaceCredentials.workspaceSecret) {
     throw new IntegrationTokenError('Integration.app credentials not configured');
   }
 
-  if (!details.customerId || !details.customerName) {
+  if (!details.customerId) {
     throw new IntegrationTokenError('Customer details not provided');
   }
 
@@ -40,12 +39,12 @@ export async function generateIntegrationToken(details: CurrentCustomer & Worksp
     };
 
     const options = {
-      issuer: details.workspaceKey,
+      issuer: details.workspaceCredentials.workspaceKey,
       expiresIn: 7200, // 2 hours
       algorithm: 'HS512' as Algorithm,
     };
 
-    return jwt.sign(tokenData, details.workspaceSecret, options);
+    return jwt.sign(tokenData, details.workspaceCredentials.workspaceSecret, options);
   } catch (error) {
     console.error('Error generating integration token:', error);
     throw new IntegrationTokenError('Failed to generate integration token');
