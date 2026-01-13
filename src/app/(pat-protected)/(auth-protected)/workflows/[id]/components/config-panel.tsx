@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WorkflowNode } from './types/workflow';
-import { NodeTypeMetadata, TriggerType } from '@/lib/workflow/lib/node-types';
+import { NodeTypeMetadata, TriggerType } from '@/lib/workflow/node-types';
 import { DataSchema } from '@membranehq/react';
 import { ManualTriggerConfig } from './configs/manual-trigger-config';
 import { EventTriggerConfig } from './configs/event-trigger-config';

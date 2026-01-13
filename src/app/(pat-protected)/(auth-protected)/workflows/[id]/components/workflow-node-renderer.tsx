@@ -17,7 +17,7 @@ import { WorkflowNode, NodeData } from './types/workflow';
 import { TriggerNode } from './nodes/trigger-node';
 import { ActionNode } from './nodes/action-node';
 import { PlusNode } from './nodes/plus-node';
-import { NodeTypeMetadata, TriggerType } from '@/lib/workflow/lib/node-types';
+import { NodeTypeMetadata, TriggerType } from '@/lib/workflow/node-types';
 
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,

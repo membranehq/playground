@@ -1,6 +1,6 @@
 import { BaseNode } from './base-node';
 import { WorkflowNode } from '../types/workflow';
-import { NodeTypeMetadata } from '@/lib/workflow/lib/node-types';
+import { NodeTypeMetadata } from '@/lib/workflow/node-types';
 import { useIntegration, useAction } from '@membranehq/react';
 import Image from 'next/image';
 

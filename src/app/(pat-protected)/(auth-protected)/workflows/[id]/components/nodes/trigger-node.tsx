@@ -1,7 +1,7 @@
 import { ZapIcon } from 'lucide-react';
 import { BaseNode } from './base-node';
 import { WorkflowNode } from '../types/workflow';
-import { TriggerType } from '@/lib/workflow/lib/node-types';
+import { TriggerType } from '@/lib/workflow/node-types';
 import { useIntegration } from '@membranehq/react';
 import Image from 'next/image';
 import { useMemo } from 'react';

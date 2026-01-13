@@ -32,7 +32,7 @@ export function WorkflowEvents({ workflowId, refreshKey }: WorkflowEventsProps) 
   const [events, setEvents] = useState<WorkflowEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
-  const loadEventsRef = useRef<() => Promise<void>>();
+const loadEventsRef = useRef<() => Promise<void>>(async () => {});
 
   const formatRelativeTime = (dateString: string) => {
     const date = new Date(dateString);

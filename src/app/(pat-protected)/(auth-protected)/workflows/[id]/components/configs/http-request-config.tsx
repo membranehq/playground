@@ -1,7 +1,7 @@
 import React from 'react';
 import { DataInput, DataSchema } from '@membranehq/react';
 import { WorkflowNode } from '../types/workflow';
-import { NodeTypeMetadata } from '@/lib/workflow/lib/node-types';
+import { NodeTypeMetadata } from '@/lib/workflow/node-types';
 import { Minimizer } from '@/components/ui/minimizer';
 import { SchemaBuilder, JSONSchema } from '@/components/ui/schema-builder';
 

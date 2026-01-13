@@ -12,7 +12,7 @@ import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
 
 // Create axios-based fetcher factory that includes headers
-const createFetcher = (headers: HeadersInit) => {
+const createFetcher = (headers: Record<string, string>) => {
   return async <T,>(url: string): Promise<T> => {
     try {
       const response = await axios.get<T>(url, { headers });
@@ -47,7 +47,7 @@ type WorkflowContextValue = {
 
 const WorkflowContext = React.createContext<WorkflowContextValue | undefined>(undefined);
 
-async function putJson<T = unknown>(url: string, body: unknown, headers: HeadersInit): Promise<T> {
+async function putJson<T = unknown>(url: string, body: unknown, headers: Record<string, string>): Promise<T> {
   try {
     const response = await axios.put<T>(url, body, { headers });
     return response.data;
@@ -60,7 +60,7 @@ async function putJson<T = unknown>(url: string, body: unknown, headers: Headers
   }
 }
 
-async function patchJson(url: string, body: unknown, headers: HeadersInit) {
+async function patchJson(url: string, body: unknown, headers: Record<string, string>) {
   try {
     const response = await axios.patch(url, body, { headers });
     return response;
@@ -90,6 +90,23 @@ export function WorkflowProvider({ id, children }: { id: string; children: React
   // Create fetcher with headers
   const fetcher = React.useMemo(() => {
     if (!customerId || !workspace) return () => Promise.reject(new Error('Not authenticated'));
+    // Convert HeadersInit to Record<string, string> if headers is an instance of Headers
+    if (headers instanceof Headers) {
+      const headersRecord: Record<string, string> = {};
+      headers.forEach((value, key) => {
+        headersRecord[key] = value;
+      });
+      return createFetcher(headersRecord);
+    }
+    // If headers is a Map or array of entries, convert to object
+    if (Array.isArray(headers)) {
+      const headersRecord = Object.fromEntries(headers);
+      return createFetcher(headersRecord);
+    }
+    if (headers instanceof Map) {
+      const headersRecord = Object.fromEntries(headers.entries());
+      return createFetcher(headersRecord);
+    }
     return createFetcher(headers);
   }, [headers, customerId, workspace]);
 
@@ -147,7 +164,20 @@ export function WorkflowProvider({ id, children }: { id: string; children: React
     key && customerId && workspace ? `${key}/nodes` : null,
     async (_url, { arg }: { arg: WorkflowState['nodes'] }) => {
       if (!key || !customerId || !workspace) return null;
-      const updatedWorkflow = await putJson<WorkflowState>(`${key}/nodes`, { nodes: arg }, headers);
+      // Convert headers to Record<string, string> if needed
+      let headersRecord: Record<string, string> = {};
+      if (headers instanceof Headers) {
+        headers.forEach((value, key) => {
+          headersRecord[key] = value;
+        });
+      } else if (Array.isArray(headers)) {
+        headersRecord = Object.fromEntries(headers);
+      } else if (headers instanceof Map) {
+        headersRecord = Object.fromEntries(headers.entries());
+      } else {
+        headersRecord = headers;
+      }
+      const updatedWorkflow = await putJson<WorkflowState>(`${key}/nodes`, { nodes: arg }, headersRecord);
       return updatedWorkflow;
     }
   );
@@ -272,7 +302,20 @@ export function WorkflowProvider({ id, children }: { id: string; children: React
       // Optimistic update
       mutate((prev) => (prev ? { ...prev, name } : prev), { revalidate: false });
       // Persist
-      await patchJson(key, { name }, headers);
+      // Convert headers to Record<string, string> if needed
+      let headersRecord: Record<string, string> = {};
+      if (headers instanceof Headers) {
+        headers.forEach((value, key) => {
+          headersRecord[key] = value;
+        });
+      } else if (Array.isArray(headers)) {
+        headersRecord = Object.fromEntries(headers);
+      } else if (headers instanceof Map) {
+        headersRecord = Object.fromEntries(headers.entries());
+      } else {
+        headersRecord = headers;
+      }
+      await patchJson(key, { name }, headersRecord);
     },
     [key, mutate, headers, customerId, workspace]
   );
@@ -281,16 +324,42 @@ export function WorkflowProvider({ id, children }: { id: string; children: React
     if (!key || !customerId || !workspace) return;
     // Optimistic update
     mutate((prev) => (prev ? { ...prev, status: 'active' as const } : prev), { revalidate: false });
+    // Convert headers to Record<string, string> if needed
+    let headersRecord: Record<string, string> = {};
+    if (headers instanceof Headers) {
+      headers.forEach((value, key) => {
+        headersRecord[key] = value;
+      });
+    } else if (Array.isArray(headers)) {
+      headersRecord = Object.fromEntries(headers);
+    } else if (headers instanceof Map) {
+      headersRecord = Object.fromEntries(headers.entries());
+    } else {
+      headersRecord = headers;
+    }
     // Persist
-    await patchJson(key, { status: 'active' }, headers);
+    await patchJson(key, { status: 'active' }, headersRecord);
   }, [key, mutate, headers, customerId, workspace]);
 
   const deactivateWorkflow = React.useCallback(async () => {
     if (!key || !customerId || !workspace) return;
     // Optimistic update
     mutate((prev) => (prev ? { ...prev, status: 'inactive' as const } : prev), { revalidate: false });
+    // Convert headers to Record<string, string> if needed
+    let headersRecord: Record<string, string> = {};
+    if (headers instanceof Headers) {
+      headers.forEach((value, key) => {
+        headersRecord[key] = value;
+      });
+    } else if (Array.isArray(headers)) {
+      headersRecord = Object.fromEntries(headers);
+    } else if (headers instanceof Map) {
+      headersRecord = Object.fromEntries(headers.entries());
+    } else {
+      headersRecord = headers;
+    }
     // Persist
-    await patchJson(key, { status: 'inactive' }, headers);
+    await patchJson(key, { status: 'inactive' }, headersRecord);
   }, [key, mutate, headers, customerId, workspace]);
 
   const value = React.useMemo<WorkflowContextValue>(
