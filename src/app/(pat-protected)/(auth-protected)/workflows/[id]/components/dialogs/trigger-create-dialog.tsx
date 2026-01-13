@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { TriggerType } from '@/lib/workflow/lib/node-types';
+import { TriggerType } from '@/lib/workflow/node-types';
 
 interface TriggerCreateDialogProps {
   isOpen: boolean;

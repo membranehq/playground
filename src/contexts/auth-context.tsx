@@ -4,8 +4,6 @@
 // This wraps the playground's auth provider to match the workflow builder's expected interface
 import { useAuth as usePlaygroundAuth } from '@/components/providers/auth-provider'
 import { useEffect, useState } from 'react'
-import { AuthUser, getAuthUserFromReqCookies } from '@/lib/auth-utils'
-import { NextRequest } from 'next/server'
 
 interface User {
   id: string

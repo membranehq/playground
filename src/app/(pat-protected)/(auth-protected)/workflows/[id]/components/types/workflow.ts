@@ -1,6 +1,6 @@
 import { Node, Edge } from '@xyflow/react';
 import { DataSchema } from '@membranehq/sdk';
-import { NodeTypeMetadata, TriggerType } from '@/lib/workflow/lib/node-types';
+import { NodeTypeMetadata, TriggerType } from '@/lib/workflow/node-types';
 
 // Core workflow types
 export interface WorkflowNode {
