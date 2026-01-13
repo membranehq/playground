@@ -253,7 +253,7 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
           />
         }
         rightPane={
-          !viewOnly ? (
+          !viewOnly && workflow?.nodes && workflow.nodes.length > 0 ? (
             <div className="flex flex-col h-full">
               <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
                 <div className="border-b border-border p-4">
