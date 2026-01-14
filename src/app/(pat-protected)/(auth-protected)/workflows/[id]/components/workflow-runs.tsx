@@ -5,7 +5,7 @@ import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
 import { Minimizer } from '@/components/ui/minimizer';
-import { ChevronDown, ChevronRight, Check, X, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Check, X, Loader2, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Loader } from '@/components/ai-elements/loader';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -198,8 +198,16 @@ export function WorkflowRuns({ workflowId, refreshKey, expandedRunId }: Workflow
 
   if (runs.length === 0) {
     return (
-      <div className="p-4">
-        <div className="text-sm text-muted-foreground">No runs yet</div>
+      <div className="flex items-center justify-center h-full p-6">
+        <div className="flex flex-col items-center text-center gap-3">
+          <div className="w-10 h-10 rounded-lg border border-border flex items-center justify-center bg-muted">
+            <History className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="text-sm font-medium text-foreground">No runs yet</div>
+          <div className="text-sm text-muted-foreground max-w-xs">
+            Runs will appear here when you execute this workflow.
+          </div>
+        </div>
       </div>
     );
   }
