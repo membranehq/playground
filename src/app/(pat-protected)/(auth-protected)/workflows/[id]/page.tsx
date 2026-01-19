@@ -191,7 +191,7 @@ function WorkflowDetailInner({ id }: { id: string }) {
                           deactivateWorkflow();
                         }
                       }}
-                      className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:translate-x-4"
+                      className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span[data-state=checked]]:translate-x-4 [&>span[data-state=unchecked]]:translate-x-0"
                     />
                   </div>
                 </div>
