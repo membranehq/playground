@@ -17,6 +17,7 @@ interface ConfigPanelProps {
   onUpdateNode: (node: Omit<WorkflowNode, 'id'>) => void;
   nodeTypes: Record<string, NodeTypeMetadata>;
   triggerTypes: Record<string, TriggerType>;
+  saveError?: { message: string; details?: string } | null;
 }
 
 const DEFAULT_NODE_TYPE = 'action';
@@ -59,7 +60,7 @@ const constructVariableSchema = (nodes: WorkflowNode[], currentNodeId?: string):
   };
 };
 
-export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerTypes }: ConfigPanelProps) {
+export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerTypes, saveError }: ConfigPanelProps) {
   const { workflow } = useWorkflow();
   const [formData, setFormData] = useState<WorkflowNode | undefined>();
   const [variableSchema, setVariableSchema] = useState<DataSchema>({ type: 'object', properties: {} });
@@ -182,6 +183,7 @@ export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerType
             }}
             variableSchema={variableSchema}
             triggerTypeConfig={selectedTriggerTypeConfig}
+            saveError={saveError}
           />
         )}
 

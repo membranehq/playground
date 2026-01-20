@@ -14,7 +14,10 @@ export async function calculateNodeOutputSchema(
   node: WorkflowNode,
   membraneAccessToken: string,
 ): Promise<DataSchema> {
-  const membrane = new IntegrationAppClient({ token: membraneAccessToken });
+  const membrane = new IntegrationAppClient({
+    token: membraneAccessToken,
+    apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app'
+  });
 
   try {
     // For trigger nodes

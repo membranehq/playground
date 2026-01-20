@@ -18,6 +18,7 @@ interface EventTriggerConfigProps {
   onChange: (value: Omit<WorkflowNode, 'id'>) => void;
   variableSchema?: DataSchema;
   triggerTypeConfig?: TriggerType;
+  saveError?: { message: string; details?: string } | null;
 }
 
 interface JsonSchemaProperty {
@@ -39,7 +40,7 @@ function getEventIngestUrl(workflowId: string) {
   return `${hostname}/api/workflows/ingest-event?workflowId=${workflowId}`;
 }
 
-export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps) {
+export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerConfigProps) {
   const selectedIntegrationKey = value.config?.integrationKey as string;
   const selectedDataCollection = value.config?.dataCollection as string;
   const selectedEventType = value.config?.eventType as string;
@@ -84,6 +85,9 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
   const [outputSchema, setOutputSchema] = useState<unknown>(null);
   const [isLoadingSchema, setIsLoadingSchema] = useState(false);
   const [schemaError, setSchemaError] = useState<string | null>(null);
+
+  // State for flow instance creation error
+  const [flowInstanceError, setFlowInstanceError] = useState<string | null>(null);
 
   const generateSampleValue = (property: JsonSchemaProperty): unknown => {
     const type = property.type || 'string';
@@ -254,6 +258,14 @@ export function EventTriggerConfig({ value, onChange }: EventTriggerConfigProps)
 
   return (
     <div className="space-y-2 pt-4">
+      {/* Flow Instance Error Banner */}
+      {saveError && (
+        <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-sm text-red-700">
+          <div className="font-semibold">{saveError.message}</div>
+          {saveError.details && <div className="mt-1 text-xs">{saveError.details}</div>}
+        </div>
+      )}
+
       <div className="space-y-4">
         {/* Trigger Type Selector */}
         <div className="space-y-2">

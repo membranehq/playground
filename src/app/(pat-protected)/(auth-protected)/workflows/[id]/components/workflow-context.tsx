@@ -53,7 +53,15 @@ async function putJson<T = unknown>(url: string, body: unknown, headers: Record<
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const message = error.response?.data || error.message || `Failed request: ${error.response?.status}`;
+      const errorData = error.response?.data;
+      // If the error response has a structured format with details, preserve it
+      if (errorData && typeof errorData === 'object' && 'error' in errorData) {
+        const err = new Error(errorData.error as string) as Error & { details?: string; nodeId?: string };
+        if ('details' in errorData) err.details = errorData.details as string;
+        if ('nodeId' in errorData) err.nodeId = errorData.nodeId as string;
+        throw err;
+      }
+      const message = errorData || error.message || `Failed request: ${error.response?.status}`;
       throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
     }
     throw error;
