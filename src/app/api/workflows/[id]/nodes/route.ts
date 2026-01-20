@@ -193,7 +193,11 @@ async function createEventTriggerFlowInstance(
   const eventType = config.eventType as string;
   const connectorEventKey = config.connectorEventKey as string | undefined;
 
-  const membrane = new IntegrationAppClient({ token: membraneAccessToken });
+  const apiUri = process.env.MEMBRANE_API_URI || process.env.NEXT_PUBLIC_INTEGRATION_APP_API_URL || 'https://api.integration.app';
+  const membrane = new IntegrationAppClient({
+    token: membraneAccessToken,
+    apiUri
+  });
 
   const flowInstanceId = await createFlowInstance(
     membrane,
@@ -269,7 +273,10 @@ async function updateEventTriggerFlowInstance(
     throw new Error('Flow instance ID not found in node config. Cannot update flow instance.');
   }
 
-  const membrane = new IntegrationAppClient({ token: membraneAccessToken });
+  const membrane = new IntegrationAppClient({
+    token: membraneAccessToken,
+    apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app'
+  });
   const oldIntegrationKey = oldConfig.integrationKey as string;
   const newIntegrationKey = newConfig.integrationKey as string;
   const dataCollection = newConfig.dataCollection as string;
@@ -357,30 +364,50 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
         // Create new flow instance if we don't have one or config was incomplete
         if (!existingFlowInstanceId) {
-          updatedFirstNode = await createEventTriggerFlowInstance(
-            firstNode,
-            id,
-            membraneAccessToken,
-            req,
-          ).catch((error) => {
+          try {
+            updatedFirstNode = await createEventTriggerFlowInstance(
+              firstNode,
+              id,
+              membraneAccessToken,
+              req,
+            );
+            flowInstanceWasCreatedOrUpdated = true;
+          } catch (error) {
             console.error(`Failed to create flow instance for node ${firstNode.id}:`, error);
-            return firstNode;
-          });
-          flowInstanceWasCreatedOrUpdated = true;
+            const errorMessage = error instanceof Error ? error.message : 'Failed to create flow instance';
+            return NextResponse.json(
+              {
+                error: 'Failed to create flow instance',
+                details: errorMessage,
+                nodeId: firstNode.id
+              },
+              { status: 400 }
+            );
+          }
         }
         // Update existing flow instance if configuration changed
         else if (hasEventTriggerConfigChanged(existingFirstNode, firstNode)) {
-          updatedFirstNode = await updateEventTriggerFlowInstance(
-            existingFirstNode,
-            firstNode,
-            id,
-            membraneAccessToken,
-            req,
-          ).catch((error) => {
+          try {
+            updatedFirstNode = await updateEventTriggerFlowInstance(
+              existingFirstNode,
+              firstNode,
+              id,
+              membraneAccessToken,
+              req,
+            );
+            flowInstanceWasCreatedOrUpdated = true;
+          } catch (error) {
             console.error(`Failed to update flow instance for node ${firstNode.id}:`, error);
-            return firstNode;
-          });
-          flowInstanceWasCreatedOrUpdated = true;
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update flow instance';
+            return NextResponse.json(
+              {
+                error: 'Failed to update flow instance',
+                details: errorMessage,
+                nodeId: firstNode.id
+              },
+              { status: 400 }
+            );
+          }
         }
 
         nodesToSave = [updatedFirstNode, ...nodes.slice(1)];

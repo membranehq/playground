@@ -210,6 +210,7 @@ export async function executeMembraneActionNode(
 
     const membraneClient = new IntegrationAppClient({
       token: membraneToken,
+      apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app'
     });
 
     try {

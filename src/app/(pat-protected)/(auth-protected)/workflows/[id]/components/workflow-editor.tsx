@@ -138,9 +138,14 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
     [workflow?.nodes, setSelectedNodeId, viewOnly, onNodeClick]
   );
 
+  const [nodeSaveError, setNodeSaveError] = React.useState<{ message: string; details?: string } | null>(null);
+
   const handleNodeUpdate = useCallback(
     (nodeData: Omit<WorkflowNode, 'id'>) => {
       if (!workflow || !selectedNode) return;
+
+      // Clear previous error
+      setNodeSaveError(null);
 
       // Use the latest workflow nodes when updating
       const updatedNodes = workflow.nodes.map((node) =>
@@ -149,6 +154,11 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
       // Use optimistic update for instant feedback, but API will return calculated fields
       void saveNodes(updatedNodes, { optimistic: true }).catch((err) => {
         console.error('Failed to update node:', err);
+        const error = err as Error & { details?: string };
+        setNodeSaveError({
+          message: error.message || 'Failed to save node configuration',
+          details: error.details,
+        });
       });
     },
     [selectedNode, workflow, saveNodes]
@@ -279,6 +289,7 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
                       onUpdateNode={handleNodeUpdate}
                       nodeTypes={nodeTypeDefinitions}
                       triggerTypes={triggerTypes}
+                      saveError={nodeSaveError}
                     />
                   ) : (
                     <div className="p-4 text-sm text-muted-foreground">

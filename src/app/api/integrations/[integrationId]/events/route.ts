@@ -21,12 +21,15 @@ export async function GET(
 
     // Generate integration token for Membrane API calls
     const membraneAccessToken = await generateIntegrationToken(auth);
-    const membrane = new IntegrationAppClient({ token: membraneAccessToken });
+    const membrane = new IntegrationAppClient({
+      token: membraneAccessToken,
+      apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app'
+    });
 
     // Get the integration to verify it exists and get its key
     // Note: We need to find the integration by ID, but the SDK might not have a direct method
     // We'll fetch events directly from the Membrane API
-    const apiUrl = process.env.NEXT_PUBLIC_INTEGRATION_APP_API_URL || 'https://api.integration.app';
+    const apiUrl = process.env.MEMBRANE_API_URI || 'https://api.integration.app';
     const eventsUrl = `${apiUrl}/integrations/${integrationId}/events`;
 
     const response = await fetch(eventsUrl, {
