@@ -1,5 +1,5 @@
 import type { ElementType } from 'react';
-import { GlobeIcon, Package, MousePointerClickIcon, BoltIcon, Sparkles } from 'lucide-react';
+import { GlobeIcon, Package, MousePointerClickIcon, BoltIcon, Sparkles, GitBranch } from 'lucide-react';
 
 // Define trigger types
 export interface TriggerType {
@@ -17,7 +17,7 @@ export interface TriggerType {
 
 // Define node type metadata
 export interface NodeTypeMetadata {
-  type: 'http' | 'action' | 'ai';
+  type: 'http' | 'action' | 'ai' | 'gate';
   name: string;
   description: string;
   category: string;
@@ -118,6 +118,34 @@ export const NODE_TYPES: Record<string, NodeTypeMetadata> = {
         },
       },
       required: ['prompt'],
+    },
+  },
+
+  gate: {
+    type: 'gate',
+    name: 'Gate',
+    description: 'Control workflow flow based on conditions',
+    category: 'logic',
+    icon: GitBranch,
+    color: 'orange',
+    configurationSchema: {
+      type: 'object',
+      properties: {
+        field: {
+          type: 'string',
+          description: 'Field path from previous step output',
+        },
+        operator: {
+          type: 'string',
+          enum: ['equals', 'not_equals'],
+          description: 'Comparison operator',
+        },
+        value: {
+          type: 'string',
+          description: 'Value to compare against',
+        },
+      },
+      required: ['field', 'operator', 'value'],
     },
   },
 };

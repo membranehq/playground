@@ -107,6 +107,10 @@ export const executeWorkflow = inngest.createFunction(
         const totalNodes = nodes.length;
         const executionTime = Date.now() - startTime;
 
+        // Check if this is a gate node that failed
+        const isGateNode = node.nodeType === 'gate';
+        const isGateFailed = isGateNode && !nodeResult.success;
+
         await WorkflowRun.findByIdAndUpdate(runId, {
           results: updatedResults.map((r) => ({
             nodeId: r.nodeId,
@@ -127,22 +131,44 @@ export const executeWorkflow = inngest.createFunction(
             failedNodes,
             successRate: totalNodes > 0 ? (successfulNodes / totalNodes) * 100 : 0,
           },
-          // Update status if this node failed
+          // Update status based on node type and result
           ...(nodeResult.success
             ? {}
-            : {
-                status: 'failed' as const,
-                completedAt: new Date(),
-                executionTime,
-                error: nodeResult.error?.message || 'Workflow execution failed',
-              }),
+            : isGateFailed
+              ? {
+                  // Gate condition not met - complete workflow gracefully
+                  status: 'completed' as const,
+                  completedAt: new Date(),
+                  executionTime,
+                }
+              : {
+                  // Regular node failed - mark as failed
+                  status: 'failed' as const,
+                  completedAt: new Date(),
+                  executionTime,
+                  error: nodeResult.error?.message || 'Workflow execution failed',
+                }),
         });
 
         return nodeResult;
       });
 
-      // Stop execution if node failed - the step above already marked it as failed
+      // Check if this is a gate node that failed
+      const isGateNode = node.nodeType === 'gate';
+      const isGateFailed = isGateNode && !result.success;
+
+      // Stop execution if node failed
       if (!result.success) {
+        // For gate nodes, return success with a message indicating gate stopped the workflow
+        if (isGateFailed) {
+          return {
+            success: true,
+            runId,
+            message: 'Workflow stopped at gate condition',
+            gateNodeId: node.id,
+          };
+        }
+        // For other nodes, return failure
         return { success: false, runId };
       }
     }

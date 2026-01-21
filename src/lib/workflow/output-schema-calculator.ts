@@ -33,6 +33,7 @@ export async function calculateNodeOutputSchema(
 
         // Handle connector event triggers
         if (isConnectorEvent && config.integrationKey && config.connectorEventKey) {
+
           const integration = await membrane.integration(config.integrationKey as string).get();
 
           if (!integration.connectorId) {
@@ -41,7 +42,8 @@ export async function calculateNodeOutputSchema(
 
           const connectorId = integration.connectorId;
           const eventKey = config.connectorEventKey as string;
-          const apiUrl = `https://api.getmembrane.com/connectors/${connectorId}/events/${eventKey}`;
+          const membraneApiUri = process.env.MEMBRANE_API_URI || 'https://api.integration.app';
+          const apiUrl = `${membraneApiUri}/connectors/${connectorId}/events/${eventKey}`;
 
           const response = await fetch(apiUrl, {
             headers: {
@@ -55,6 +57,7 @@ export async function calculateNodeOutputSchema(
           }
 
           const eventData = await response.json();
+
           return (eventData.schema || { type: 'object', properties: {} }) as DataSchema;
         }
 
@@ -64,7 +67,31 @@ export async function calculateNodeOutputSchema(
             .connection(config.integrationKey as string)
             .dataCollection(config.dataCollection as string)
             .get();
-          return collection.fieldsSchema as DataSchema;
+
+          // Wrap the schema to match the actual runtime data structure
+          // Membrane wraps the collection fields in a 'fields' object and adds metadata fields
+          return {
+            type: 'object',
+            properties: {
+              fields: collection.fieldsSchema as DataSchema,
+              id: {
+                type: 'string',
+                description: 'Record ID',
+              },
+              name: {
+                type: 'string',
+                description: 'Record name',
+              },
+              createdTime: {
+                type: 'string',
+                description: 'Record creation time',
+              },
+              updatedTime: {
+                type: 'string',
+                description: 'Record update time',
+              },
+            },
+          } as DataSchema;
         }
       }
 
@@ -122,6 +149,31 @@ export async function calculateNodeOutputSchema(
             },
           };
         }
+      }
+
+      if (node.nodeType === 'gate') {
+        // Gate nodes output information about the condition evaluation
+        return {
+          type: 'object',
+          properties: {
+            conditionMet: {
+              type: 'boolean',
+              description: 'Whether the gate condition was met',
+            },
+            fieldValue: {
+              type: 'string',
+              description: 'The actual value of the field that was evaluated',
+            },
+            expectedValue: {
+              type: 'string',
+              description: 'The expected value for comparison',
+            },
+            operator: {
+              type: 'string',
+              description: 'The comparison operator used',
+            },
+          },
+        };
       }
 
       if (node.nodeType === 'action' && node.config?.actionId) {

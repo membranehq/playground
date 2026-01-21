@@ -7,6 +7,7 @@ import { EventTriggerConfig } from './configs/event-trigger-config';
 import { MembraneActionConfig } from './configs/membrane-action-config';
 import { HttpRequestConfig } from './configs/http-request-config';
 import { AIConfig } from './configs/ai-config';
+import { GateConfig } from './configs/gate-config';
 import { useWorkflow } from './workflow-context';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Label } from '@/components/ui/label';
@@ -210,6 +211,17 @@ export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerType
 
         {selectedNode.type === 'action' && selectedNodeType === 'ai' && selectedNodeTypeConfig && (
           <AIConfig
+            variableSchema={variableSchema}
+            value={formData}
+            nodeTypeConfig={selectedNodeTypeConfig}
+            onChange={(configuration) => {
+              setFormData((prev) => (prev ? { ...configuration, id: prev.id } : undefined));
+            }}
+          />
+        )}
+
+        {selectedNode.type === 'action' && selectedNodeType === 'gate' && selectedNodeTypeConfig && (
+          <GateConfig
             variableSchema={variableSchema}
             value={formData}
             nodeTypeConfig={selectedNodeTypeConfig}

@@ -199,10 +199,6 @@ export async function executeMembraneActionNode(
   resolvedInputs: Record<string, unknown>,
   membraneToken: string,
 ): Promise<NodeExecutionResult> {
-  console.log({ node });
-
-  console.log({ action: node.config?.actionId });
-
   try {
     if (!node.config?.actionId) {
       throw new Error('Action node requires actionId in config');
@@ -403,6 +399,91 @@ export async function executeAIActionNode(
 }
 
 /**
+ * Executes a gate node by evaluating a condition
+ */
+export async function executeGateNode(
+  node: WorkflowNode,
+  resolvedInputs: Record<string, unknown>,
+  previousResults: EnhancedNodeExecutionResult[],
+): Promise<NodeExecutionResult> {
+  try {
+    // Extract condition configuration
+    const condition = node.config?.condition as {
+      field?: { $var: string } | string;
+      operator?: 'equals' | 'not_equals';
+      value?: string;
+    } | undefined;
+
+    if (!condition) {
+      throw new Error('Gate node requires condition configuration');
+    }
+
+    if (!condition.field || !condition.operator || condition.value === undefined) {
+      throw new Error('Gate node requires field, operator, and value in condition');
+    }
+
+    // Resolve the field value from previous results
+    let fieldPath: string;
+    if (typeof condition.field === 'object' && condition.field.$var) {
+      fieldPath = condition.field.$var;
+    } else if (typeof condition.field === 'string') {
+      fieldPath = condition.field;
+    } else {
+      throw new Error('Invalid field configuration in gate node');
+    }
+
+    const fieldValue = resolveVariablePath(fieldPath, previousResults);
+    const expectedValue = condition.value;
+    const operator = condition.operator;
+
+    // Perform comparison based on operator
+    let conditionMet = false;
+    switch (operator) {
+      case 'equals':
+        conditionMet = fieldValue === expectedValue;
+        break;
+      case 'not_equals':
+        conditionMet = fieldValue !== expectedValue;
+        break;
+      default:
+        throw new Error(`Unsupported gate operator: ${operator}`);
+    }
+
+    // Return result with pass/fail status
+    return {
+      id: `${node.id}-${Date.now()}`,
+      nodeId: node.id,
+      success: conditionMet,
+      input: { fieldValue, expectedValue, operator },
+      output: {
+        conditionMet,
+        fieldValue,
+        expectedValue,
+        operator,
+      },
+      error: conditionMet
+        ? undefined
+        : {
+            message: `Gate condition not met: ${fieldValue} ${operator === 'equals' ? '!==' : '==='} ${expectedValue}`,
+            code: 'GATE_CONDITION_FAILED',
+          },
+    };
+  } catch (error) {
+    return {
+      id: `${node.id}-${Date.now()}`,
+      nodeId: node.id,
+      success: false,
+      input: resolvedInputs,
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'GATE_EXECUTION_ERROR',
+        details: error,
+      },
+    };
+  }
+}
+
+/**
  * Enhanced node result with name for better variable resolution
  */
 export interface EnhancedNodeExecutionResult extends NodeExecutionResult {
@@ -437,6 +518,9 @@ export async function executeWorkflowNode(
           break;
         case 'ai':
           result = await executeAIActionNode(node, resolvedInputs, previousResults);
+          break;
+        case 'gate':
+          result = await executeGateNode(node, resolvedInputs, previousResults);
           break;
         default:
           throw new Error(`Unsupported action node type: ${node.nodeType}`);
