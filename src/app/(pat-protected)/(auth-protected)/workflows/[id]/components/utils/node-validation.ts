@@ -52,6 +52,30 @@ export function isNodeConfigured(node: WorkflowNode): boolean {
     return !!(inputMapping?.prompt && inputMapping.prompt.trim() !== '');
   }
 
+  // Gate node - requires field, operator, and value
+  if (node.nodeType === 'gate') {
+    const config = node.config || {};
+    const condition = config.condition as {
+      field?: { $var: string } | string;
+      operator?: 'equals' | 'not_equals';
+      value?: string;
+    } | undefined;
+
+    if (!condition) return false;
+
+    // Check if field is configured (either as string or variable reference)
+    const hasField = !!(
+      (typeof condition.field === 'object' && condition.field.$var) ||
+      (typeof condition.field === 'string' && condition.field.trim() !== '')
+    );
+
+    // Check if operator and value are configured
+    const hasOperator = !!condition.operator;
+    const hasValue = condition.value !== undefined && condition.value !== '';
+
+    return hasField && hasOperator && hasValue;
+  }
+
   // Default: assume configured if we don't know the type
   return true;
 }

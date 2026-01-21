@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { GlobeIcon, Sparkles, Plug } from 'lucide-react';
+import { GlobeIcon, Sparkles, Plug, GitBranch } from 'lucide-react';
 import { useIntegrations } from '@membranehq/react';
 import type { Integration } from '@membranehq/sdk';
 
@@ -27,6 +27,11 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
 
   const handleAISelect = () => {
     onCreate('ai', {});
+    onClose();
+  };
+
+  const handleGateSelect = () => {
+    onCreate('gate', {});
     onClose();
   };
 
@@ -103,6 +108,21 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
                     <div>
                       <div className="text-sm font-medium">AI</div>
                       <div className="text-xs text-muted-foreground">Process data with AI</div>
+                    </div>
+                  </button>
+
+                  {/* Gate option */}
+                  <button
+                    type="button"
+                    onClick={handleGateSelect}
+                    className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
+                  >
+                    <div className="w-12 h-12 flex items-center justify-center bg-orange-100 rounded">
+                      <GitBranch className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Gate</div>
+                      <div className="text-xs text-muted-foreground">Control flow with conditions</div>
                     </div>
                   </button>
                 </div>

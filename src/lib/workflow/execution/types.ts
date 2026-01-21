@@ -1,6 +1,6 @@
 export type NodeType = 'trigger' | 'action';
 export type TriggerType = 'manual' | 'event';
-export type ActionNodeType = 'http' | 'action' | 'ai';
+export type ActionNodeType = 'http' | 'action' | 'ai' | 'gate';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
 /**
@@ -128,6 +128,13 @@ export interface WorkflowNode {
       url?: string;
       type?: 'sse' | 'http';
       headers?: Record<string, string>;
+    };
+
+    // Gate node config
+    condition?: {
+      field?: { $var: string } | string;
+      operator?: 'equals' | 'not_equals';
+      value?: string;
     };
   };
 }
