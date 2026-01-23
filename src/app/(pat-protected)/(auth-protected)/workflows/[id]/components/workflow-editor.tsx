@@ -15,7 +15,12 @@ import { WorkflowNodeRenderer } from './workflow-node-renderer';
 import { WorkflowRuns } from './workflow-runs';
 import { WorkflowEvents } from './workflow-events';
 import { ResizableSplitLayout } from '@/components/ui/resizable-split-layout';
+import { ResizablePanelLayout } from '@/components/resizable-panel-layout';
+import { MembraneAgentSidebar } from '@/components/membrane-agent-sidebar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useCustomer } from '@/components/providers/customer-provider';
+import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
+import { getAgentHeaders } from '@/lib/agent-api';
 
 interface WorkflowEditorProps {
   workflowId: string;
@@ -57,11 +62,19 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
   const tabParam = searchParams.get('tab') as 'runs' | 'events' | 'properties' | null;
   const runIdParam = searchParams.get('runId');
 
+  const { customerId, customerName } = useCustomer();
+  const { workspace } = useCurrentWorkspace();
+
   const [activeTab, setActiveTab] = useState<'runs' | 'events' | 'properties'>(
     tabParam && ['runs', 'events', 'properties'].includes(tabParam) ? tabParam : 'properties'
   );
   const [runsRefreshKey, setRunsRefreshKey] = useState(0);
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
+
+  // State for Membrane agent panel
+  const [membraneAgentSessionId, setMembraneAgentSessionId] = useState<string | null>(null);
+  const [membraneAgentInitialMessage, setMembraneAgentInitialMessage] = useState<string | null>(null);
+  const [isCreatingMembraneSession, setIsCreatingMembraneSession] = useState(false);
 
   // Expose method to switch to runs tab and refresh runs
   useImperativeHandle(ref, () => ({
@@ -244,70 +257,123 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
     setTriggerCreateDialogOpen(true);
   }, [viewOnly]);
 
+  // Handle opening Membrane agent panel
+  const handleOpenMembraneAgent = useCallback(async (enrichedMessage: string) => {
+    if (!customerId || !workspace || isCreatingMembraneSession) {
+      return;
+    }
+
+    setIsCreatingMembraneSession(true);
+    try {
+      // Create a new Membrane agent session with the initial message
+      const sessionResponse = await fetch('/api/membrane-sessions', {
+        method: 'POST',
+        headers: getAgentHeaders(customerId, customerName),
+        body: JSON.stringify({ message: enrichedMessage }),
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error('Failed to create Membrane agent session');
+      }
+
+      const { sessionId } = await sessionResponse.json();
+
+      // Open the Membrane agent sidebar with the session and initial message
+      setMembraneAgentInitialMessage(enrichedMessage);
+      setMembraneAgentSessionId(sessionId);
+    } catch (error) {
+      console.error('Error creating Membrane agent session:', error);
+    } finally {
+      setIsCreatingMembraneSession(false);
+    }
+  }, [customerId, customerName, workspace, isCreatingMembraneSession]);
+
   return (
     <>
-      <ResizableSplitLayout
-        header={header}
-        leftPane={
-          <WorkflowNodeRenderer
-            nodes={workflow?.nodes ?? []}
-            nodeTypes={nodeTypeDefinitions}
-            triggerTypes={triggerTypes}
-            selectedNodeId={selectedNodeId}
-            onNodeClick={handleNodeClick}
-            onDeleteNode={handleDeleteNode}
-            onPlusNodeClick={handlePlusNodeClick}
-            onTriggerPlaceholderClick={handleTriggerPlaceholderClick}
-            viewOnly={viewOnly}
-            runResults={runResults}
-          />
+      <ResizablePanelLayout
+        sidebar={
+          membraneAgentSessionId ? (
+            <MembraneAgentSidebar
+              sessionId={membraneAgentSessionId}
+              onClose={() => {
+                setMembraneAgentSessionId(null);
+                setMembraneAgentInitialMessage(null);
+              }}
+              initialMessage={membraneAgentInitialMessage || undefined}
+            />
+          ) : null
         }
-        rightPane={
-          !viewOnly && workflow?.nodes && workflow.nodes.length > 0 ? (
-            <div className="flex flex-col h-full">
-              <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
-                <div className="border-b border-border p-4">
-                  <TabsList className="w-full rounded-t-xl rounded-b-xl">
-                    <TabsTrigger value="properties" disabled={!selectedNode} className="flex-1">
-                      <Settings className="h-4 w-4" />
-                      Properties
-                    </TabsTrigger>
-                    <TabsTrigger value="runs" className="flex-1">
-                      <History className="h-4 w-4" />
-                      Runs
-                    </TabsTrigger>
-                    <TabsTrigger value="events" className="flex-1">
-                      <Activity className="h-4 w-4" />
-                      Events
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-                <TabsContent value="properties" className="flex-1 overflow-hidden m-0">
-                  {selectedNode ? (
-                    <ConfigPanel
-                      selectedNode={selectedNode}
-                      onUpdateNode={handleNodeUpdate}
-                      nodeTypes={nodeTypeDefinitions}
-                      triggerTypes={triggerTypes}
-                      saveError={nodeSaveError}
-                    />
-                  ) : (
-                    <div className="p-4 text-sm text-muted-foreground">
-                      Select a node to edit its properties
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="runs" className="flex-1 overflow-hidden m-0">
-                  <WorkflowRuns workflowId={workflowId} refreshKey={runsRefreshKey} expandedRunId={runIdParam || undefined} />
-                </TabsContent>
-                <TabsContent value="events" className="flex-1 overflow-hidden m-0">
-                  <WorkflowEvents workflowId={workflowId} refreshKey={eventsRefreshKey} />
-                </TabsContent>
-              </Tabs>
-            </div>
-          ) : undefined
-        }
-      />
+        defaultSidebarWidth={400}
+        minSidebarWidth={300}
+        maxSidebarWidth={600}
+      >
+        <ResizableSplitLayout
+          header={header}
+          rightWidth={membraneAgentSessionId ? 320 : 420}
+          minRightWidth={280}
+          maxRightWidth={600}
+          leftPane={
+            <WorkflowNodeRenderer
+              nodes={workflow?.nodes ?? []}
+              nodeTypes={nodeTypeDefinitions}
+              triggerTypes={triggerTypes}
+              selectedNodeId={selectedNodeId}
+              onNodeClick={handleNodeClick}
+              onDeleteNode={handleDeleteNode}
+              onPlusNodeClick={handlePlusNodeClick}
+              onTriggerPlaceholderClick={handleTriggerPlaceholderClick}
+              viewOnly={viewOnly}
+              runResults={runResults}
+            />
+          }
+          rightPane={
+            !viewOnly && workflow?.nodes && workflow.nodes.length > 0 ? (
+              <div className="flex flex-col h-full">
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
+                  <div className="border-b border-border p-4">
+                    <TabsList className="w-full rounded-t-xl rounded-b-xl">
+                      <TabsTrigger value="properties" disabled={!selectedNode} className="flex-1">
+                        <Settings className="h-4 w-4" />
+                        Properties
+                      </TabsTrigger>
+                      <TabsTrigger value="runs" className="flex-1">
+                        <History className="h-4 w-4" />
+                        Runs
+                      </TabsTrigger>
+                      <TabsTrigger value="events" className="flex-1">
+                        <Activity className="h-4 w-4" />
+                        Events
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <TabsContent value="properties" className="flex-1 overflow-hidden m-0">
+                    {selectedNode ? (
+                      <ConfigPanel
+                        selectedNode={selectedNode}
+                        onUpdateNode={handleNodeUpdate}
+                        nodeTypes={nodeTypeDefinitions}
+                        triggerTypes={triggerTypes}
+                        saveError={nodeSaveError}
+                        onOpenMembraneAgent={handleOpenMembraneAgent}
+                      />
+                    ) : (
+                      <div className="p-4 text-sm text-muted-foreground">
+                        Select a node to edit its properties
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="runs" className="flex-1 overflow-hidden m-0">
+                    <WorkflowRuns workflowId={workflowId} refreshKey={runsRefreshKey} expandedRunId={runIdParam || undefined} />
+                  </TabsContent>
+                  <TabsContent value="events" className="flex-1 overflow-hidden m-0">
+                    <WorkflowEvents workflowId={workflowId} refreshKey={eventsRefreshKey} />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            ) : undefined
+          }
+        />
+      </ResizablePanelLayout>
 
       {!viewOnly && (
         <>

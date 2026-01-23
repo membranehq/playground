@@ -3,22 +3,25 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { Minimizer } from '@/components/ui/minimizer';
 import { SelectAppAndConnect } from '@/components/ui/select-app-and-connect';
-import { Action, DataInput, DataSchema, useAction, useActions } from '@membranehq/react';
+import { Action, DataInput, DataSchema, useAction, useActions, useIntegration } from '@membranehq/react';
 import Image from 'next/image';
 import { WorkflowNode } from '../types/workflow';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, WandSparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface MembraneActionConfigProps {
   value: Omit<WorkflowNode, 'id'>;
   onChange: (value: Omit<WorkflowNode, 'id'>) => void;
   variableSchema: DataSchema;
+  onOpenMembraneAgent?: (enrichedMessage: string) => void;
 }
 
-export function MembraneActionConfig({ value, onChange, variableSchema }: MembraneActionConfigProps) {
+export function MembraneActionConfig({ value, onChange, variableSchema, onOpenMembraneAgent }: MembraneActionConfigProps) {
   const selectedActionId = value.config?.actionId;
   const selectedIntegrationKey = value.config?.integrationKey as string;
 
@@ -26,7 +29,12 @@ export function MembraneActionConfig({ value, onChange, variableSchema }: Membra
   const [isConnected, setIsConnected] = useState(false);
   const [actionSelectOpen, setActionSelectOpen] = useState(false);
 
+  // State for "Add new action" dialog
+  const [addActionDialogOpen, setAddActionDialogOpen] = useState(false);
+  const [actionDescription, setActionDescription] = useState('');
+
   const { loading: isLoadingSelectedAction, action: selectedActionData } = useAction(selectedActionId as string);
+  const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey);
 
   const actionsForSelectedIntegration = useActions({
     integrationKey: selectedIntegrationKey,
@@ -137,6 +145,19 @@ export function MembraneActionConfig({ value, onChange, variableSchema }: Membra
                             />
                           </CommandItem>
                         ))}
+                        <CommandSeparator />
+                        <CommandItem
+                          value="add-new-action"
+                          onSelect={() => {
+                            setActionSelectOpen(false);
+                            setAddActionDialogOpen(true);
+                          }}
+                        >
+                          <div className="flex items-center gap-2 flex-1">
+                            <WandSparkles className="w-5 h-5 text-purple-600" />
+                            <span className="text-sm font-medium text-purple-600">Add new action</span>
+                          </div>
+                        </CommandItem>
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -197,6 +218,68 @@ export function MembraneActionConfig({ value, onChange, variableSchema }: Membra
           )}
         </div>
       )}
+
+      {/* Add New Action Dialog */}
+      <Dialog open={addActionDialogOpen} onOpenChange={setAddActionDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Action</DialogTitle>
+            <DialogDescription>
+              Describe what you want this action to do, and we'll generate it for you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="action-description">Action Description</Label>
+              <Textarea
+                id="action-description"
+                placeholder="e.g., Create a new task in the project management system with a title, description, and due date"
+                value={actionDescription}
+                onChange={(e) => setActionDescription(e.target.value)}
+                className="min-h-[120px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddActionDialogOpen(false);
+                setActionDescription('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                // Enrich the user's message with integration metadata
+                const enrichedMessage = `I need to create a new action for the ${selectedIntegrationKey} integration.
+
+Integration Key: ${selectedIntegrationKey}
+Integration ID: ${selectedIntegration?.id || 'Not available'}
+
+User's description of what the action should do:
+${actionDescription}
+
+Please help me create this action.`;
+
+                // Call the callback to open Membrane agent panel
+                onOpenMembraneAgent?.(enrichedMessage);
+
+                // Close dialog and clear description
+                setAddActionDialogOpen(false);
+                setActionDescription('');
+              }}
+              disabled={!actionDescription.trim()}
+            >
+              <WandSparkles className="w-4 h-4 mr-2" />
+              Generate new action
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

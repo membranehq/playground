@@ -166,6 +166,41 @@ export async function fetchMembraneAgentMessages(sessionId: string): Promise<Mem
 }
 
 /**
+ * Create a new Membrane Agent session.
+ *
+ * @param initialMessage - Optional initial message to send to the session
+ * @returns Promise with the created session ID
+ */
+export async function createMembraneAgentSession(initialMessage?: string): Promise<string> {
+  const { token, apiUri } = await getMembraneConfig();
+
+  const url = new URL(`${apiUri}/agent/sessions`);
+
+  const body: any = {};
+  if (initialMessage) {
+    body.prompt = initialMessage;
+  }
+
+  const response = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create Membrane Agent session: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  // The API should return the session ID
+  return data.id || data.sessionId;
+}
+
+/**
  * Clear the cached token (useful for logout or error recovery)
  */
 export function clearMembraneTokenCache(): void {

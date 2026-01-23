@@ -79,7 +79,10 @@ export function ResizablePanelLayout({
           />
 
           {/* Sidebar panel */}
-          <div style={{ width: sidebarWidth }} className="flex-shrink-0 overflow-hidden">
+          <div
+            style={{ width: sidebarWidth }}
+            className={`flex-shrink-0 overflow-hidden ${!isDragging ? 'transition-all duration-300' : ''}`}
+          >
             {sidebar}
           </div>
         </>
