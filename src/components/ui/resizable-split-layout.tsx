@@ -7,6 +7,7 @@ interface ResizableSplitLayoutProps {
   header?: React.ReactNode;
   leftPane: React.ReactNode;
   rightPane?: React.ReactNode;
+  rightWidth?: number; // Controlled width
   defaultRightWidth?: number;
   minRightWidth?: number;
   maxRightWidth?: number;
@@ -17,14 +18,25 @@ export function ResizableSplitLayout({
   header,
   leftPane,
   rightPane,
+  rightWidth: controlledRightWidth,
   defaultRightWidth = 420,
   minRightWidth = 300,
   maxRightWidth = 800,
   className,
 }: ResizableSplitLayoutProps) {
-  const [rightWidth, setRightWidth] = useState(defaultRightWidth);
+  const [internalRightWidth, setInternalRightWidth] = useState(defaultRightWidth);
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Use controlled width if provided, otherwise use internal state
+  const rightWidth = controlledRightWidth ?? internalRightWidth;
+
+  // Update internal width when controlled width changes
+  useEffect(() => {
+    if (controlledRightWidth !== undefined) {
+      setInternalRightWidth(controlledRightWidth);
+    }
+  }, [controlledRightWidth]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -39,7 +51,7 @@ export function ResizableSplitLayout({
       const newWidth = containerRect.right - e.clientX;
 
       if (newWidth >= minRightWidth && newWidth <= maxRightWidth) {
-        setRightWidth(newWidth);
+        setInternalRightWidth(newWidth);
       }
     },
     [isResizing, minRightWidth, maxRightWidth]
@@ -97,7 +109,10 @@ export function ResizableSplitLayout({
             <div className="flex items-stretch py-4 pr-4 min-h-0">
               <div
                 style={{ width: rightWidth }}
-                className="bg-white dark:bg-gray-950 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden min-h-0"
+                className={cn(
+                  "bg-white dark:bg-gray-950 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden min-h-0",
+                  !isResizing && "transition-all duration-300"
+                )}
               >
                 <div className="flex-1 overflow-y-auto min-h-0">{rightPane}</div>
               </div>

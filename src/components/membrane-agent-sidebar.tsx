@@ -9,14 +9,28 @@ import { fetchMembraneAgentMessages, type MembraneAgentMessage as MessageType } 
 interface MembraneAgentSidebarProps {
   sessionId: string;
   onClose: () => void;
+  initialMessage?: string;
 }
 
 /**
  * Sidebar component that displays Membrane Agent session messages.
  * Uses the shared session status hook and refreshes messages when status changes.
  */
-export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSidebarProps) {
-  const [messages, setMessages] = useState<MessageType[]>([]);
+export function MembraneAgentSidebar({ sessionId, onClose, initialMessage }: MembraneAgentSidebarProps) {
+  const [messages, setMessages] = useState<MessageType[]>(() => {
+    // If we have an initial message, show it immediately as a user message
+    if (initialMessage) {
+      return [
+        {
+          id: 'initial-message',
+          role: 'user' as const,
+          content: initialMessage,
+          parts: [{ type: 'text', text: initialMessage }],
+        },
+      ];
+    }
+    return [];
+  });
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [messagesError, setMessagesError] = useState<string | null>(null);
 
@@ -45,7 +59,11 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
       try {
         setMessagesError(null);
         const response = await fetchMembraneAgentMessages(sessionId);
-        setMessages(response.messages);
+        // If we have real messages from the API, use those
+        // Otherwise keep showing the initial message
+        if (response.messages.length > 0) {
+          setMessages(response.messages);
+        }
       } catch (err) {
         console.error('[MembraneAgentSidebar] Error fetching messages:', err);
         setMessagesError(err instanceof Error ? err.message : 'Failed to fetch messages');
@@ -64,7 +82,10 @@ export function MembraneAgentSidebar({ sessionId, onClose }: MembraneAgentSideba
     const interval = setInterval(async () => {
       try {
         const response = await fetchMembraneAgentMessages(sessionId);
-        setMessages(response.messages);
+        // Only update if we got messages from the API
+        if (response.messages.length > 0) {
+          setMessages(response.messages);
+        }
       } catch (err) {
         // Silently handle rate limit errors - we'll retry on next interval
         if (!(err instanceof Error && err.message.includes('429'))) {
