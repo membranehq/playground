@@ -68,31 +68,9 @@ function buildFlowInstanceNodes({
       name: triggerNodeName,
       type: triggerType,
       config: triggerNodeConfig,
-      links: [isConnectorEvent ? { key: 'send-update-to-my-app' } : { key: 'find-data-record-by-id' }],
+      links: [{ key: 'send-update-to-my-app' }],
     },
   };
-
-  // Add find-data-record-by-id node only for data record events
-  if (!isConnectorEvent) {
-    nodes['find-data-record-by-id'] = {
-      type: 'find-data-record-by-id',
-      name: 'Find Data Record By Id',
-      links: [{ key: 'send-update-to-my-app' }],
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore - state and dependencies are custom properties for this flow instance
-      state: 'READY',
-      dependencies: [],
-      config: {
-        id: {
-          $var: `$.input.${triggerNodeKey}.record.id`,
-        },
-        dataSource: {
-          collectionKey: dataCollection,
-        },
-      },
-      isCustomized: true,
-    };
-  }
 
   // Add the API request node
   nodes['send-update-to-my-app'] = {
@@ -102,7 +80,7 @@ function buildFlowInstanceNodes({
       request: {
         body: {
           data: {
-            $var: `$.input.${triggerNodeKey}${isConnectorEvent ? '' : '.record'}`,
+            $var: `$.input.${triggerNodeKey}`,
           },
           headers: {
             [WORKFLOW_EVENT_VERIFICATION_HASH_HEADER]: generateVerificationHashForWorkflowEvent(workflowId),
