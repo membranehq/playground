@@ -77,6 +77,7 @@ export function MembraneActionConfig({
           });
         }}
         onConnectionStateChange={setIsConnected}
+        onOpenMembraneAgent={onOpenMembraneAgent}
       />
 
       {/* Only show actions if user is connected */}
@@ -88,8 +89,14 @@ export function MembraneActionConfig({
               <Skeleton className="h-10 w-full" />
             </div>
           ) : actionsForSelectedIntegration.items.length === 0 ? (
-            <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
-              There are no actions available for this integration
+            <div className="space-y-3">
+              <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
+                There are no actions available for this integration
+              </div>
+              <Button variant="outline" className="w-full gap-2" onClick={() => setAddActionDialogOpen(true)}>
+                <WandSparkles className="w-4 h-4 text-purple-600" />
+                <span className="text-purple-600 font-medium">Add new action</span>
+              </Button>
             </div>
           ) : (
             <div className="space-y-2">

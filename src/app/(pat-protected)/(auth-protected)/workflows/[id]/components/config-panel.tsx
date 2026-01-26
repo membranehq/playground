@@ -197,6 +197,7 @@ export function ConfigPanel({
             variableSchema={variableSchema}
             triggerTypeConfig={selectedTriggerTypeConfig}
             saveError={saveError}
+            onOpenMembraneAgent={onOpenMembraneAgent}
           />
         )}
 

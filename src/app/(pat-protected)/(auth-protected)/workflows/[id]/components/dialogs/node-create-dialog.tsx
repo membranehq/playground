@@ -1,26 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { GlobeIcon, Sparkles, Plug, GitBranch, ArrowLeft, Plus, Search, Loader2 } from 'lucide-react';
+import { GlobeIcon, Sparkles, Plug, GitBranch, ArrowLeft, Plus, Search, Loader2, WandSparkles } from 'lucide-react';
 import { useIntegrations, useIntegrationApp } from '@membranehq/react';
 import type { Integration, App } from '@membranehq/sdk';
 import { useExternalApps } from '@/hooks/use-external-apps';
 import { useDebounce } from '@/hooks/use-debounce';
 
+export type ViewMode = 'actions' | 'apps' | 'search' | 'build';
+
 interface NodeCreateDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (selectedType: string, config?: Record<string, unknown>) => void;
+  initialViewMode?: ViewMode;
+  onOpenMembraneAgent?: (message: string) => void;
 }
 
-type ViewMode = 'actions' | 'apps' | 'search';
-
-export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialogProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('actions');
+export function NodeCreateDialog({
+  isOpen,
+  onClose,
+  onCreate,
+  initialViewMode = 'actions',
+  onOpenMembraneAgent,
+}: NodeCreateDialogProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatingIntegration, setIsCreatingIntegration] = useState(false);
+  const [appName, setAppName] = useState('');
+  const [appUrl, setAppUrl] = useState('');
+
+  // Set initial view mode when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setViewMode(initialViewMode);
+    }
+  }, [isOpen, initialViewMode]);
   const debouncedSearch = useDebounce(searchQuery, 300);
   const { integrations, refresh: refreshIntegrations } = useIntegrations();
   const integrationApp = useIntegrationApp();
@@ -40,6 +58,8 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
     setViewMode('actions');
     setSearchQuery('');
     setIsCreatingIntegration(false);
+    setAppName('');
+    setAppUrl('');
     onClose();
   };
 
@@ -49,7 +69,9 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
   };
 
   const handleAppIntegrationSelect = () => {
-    setViewMode('apps');
+    // Create action node without app selected
+    onCreate('action', {});
+    handleClose();
   };
 
   const handleBackToActions = () => {
@@ -106,8 +128,26 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
   };
 
   const handleBuildIntegration = () => {
-    // TODO: Handle build integration for app name
-    console.log('Build integration for:', searchQuery.trim());
+    setAppName(searchQuery.trim());
+    setAppUrl('');
+    setViewMode('build');
+  };
+
+  const handleBackToSearch = () => {
+    setViewMode('search');
+  };
+
+  const handleGenerate = () => {
+    if (!onOpenMembraneAgent) return;
+
+    const enrichedMessage = `I need to create a new app integration.
+
+App Name: ${appName.trim()}
+App URL: ${appUrl.trim() || 'Not provided'}
+
+Please help me build this integration so I can use it in my workflow.`;
+
+    onOpenMembraneAgent(enrichedMessage);
     handleClose();
   };
 
@@ -159,10 +199,18 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
               </div>
             </div>
           )}
+          {viewMode === 'build' && (
+            <div className="p-6 pb-4 border-b flex-shrink-0">
+              <Button variant="ghost" size="sm" onClick={handleBackToSearch} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Search
+              </Button>
+            </div>
+          )}
 
           {/* Scrollable Content */}
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-6">
               {viewMode === 'actions' ? (
                 /* Actions View */
                 <div className="space-y-4">
@@ -278,7 +326,7 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : viewMode === 'search' ? (
                 /* Search View */
                 <div className="space-y-4">
                   {isLoadingExternalApps ? (
@@ -337,7 +385,40 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
                     </div>
                   )}
                 </div>
-              )}
+              ) : viewMode === 'build' ? (
+                /* Build View */
+                <div className="space-y-6">
+                  <h3 className="text-sm font-semibold text-gray-900">Build Integration</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="app-name">App Name</Label>
+                      <Input
+                        id="app-name"
+                        placeholder="Enter app name"
+                        value={appName}
+                        onChange={(e) => setAppName(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="app-url">App URL (optional)</Label>
+                      <Input
+                        id="app-url"
+                        placeholder="https://example.com"
+                        value={appUrl}
+                        onChange={(e) => setAppUrl(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleGenerate} disabled={!appName.trim()} className="gap-2">
+                      <WandSparkles className="h-4 w-4" />
+                      Generate
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Clicking Generate will launch an AI Agent session that will build the integration for you.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </ScrollArea>
         </div>

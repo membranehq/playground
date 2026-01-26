@@ -19,6 +19,7 @@ interface EventTriggerConfigProps {
   variableSchema?: DataSchema;
   triggerTypeConfig?: TriggerType;
   saveError?: { message: string; details?: string } | null;
+  onOpenMembraneAgent?: (message: string) => void;
 }
 
 interface JsonSchemaProperty {
@@ -40,7 +41,7 @@ function getEventIngestUrl(workflowId: string) {
   return `${hostname}/api/workflows/ingest-event?workflowId=${workflowId}`;
 }
 
-export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerConfigProps) {
+export function EventTriggerConfig({ value, onChange, saveError, onOpenMembraneAgent }: EventTriggerConfigProps) {
   const selectedIntegrationKey = value.config?.integrationKey as string;
   const selectedDataCollection = value.config?.dataCollection as string;
   const selectedEventType = value.config?.eventType as string;
@@ -151,9 +152,9 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
         // Transform events to match expected format
         const formattedEvents = Array.isArray(events)
           ? events.map((event: { key?: string; name?: string }) => ({
-            key: event.key || '',
-            name: event.name || event.key || '',
-          }))
+              key: event.key || '',
+              name: event.name || event.key || '',
+            }))
           : [];
 
         setConnectorEvents(formattedEvents);
@@ -185,9 +186,9 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
         // Transform the collections to match our expected format
         const formattedCollections = Array.isArray(collections)
           ? collections.map((collection: { key?: string; name?: string }) => ({
-            key: collection.key || collection.name || '',
-            name: collection.name || collection.key || '',
-          }))
+              key: collection.key || collection.name || '',
+              name: collection.name || collection.key || '',
+            }))
           : [];
         setDataCollections(formattedCollections);
       } catch (error) {
@@ -275,9 +276,7 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
             onValueChange={(newTriggerType) => {
               // If switching away from event, clear all config
               // If staying on event, keep current config
-              const newConfig = newTriggerType === 'event'
-                ? value.config || {}
-                : {};
+              const newConfig = newTriggerType === 'event' ? value.config || {} : {};
 
               onChange({
                 ...value,
@@ -316,6 +315,7 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
             });
           }}
           onConnectionStateChange={setIsConnected}
+          onOpenMembraneAgent={onOpenMembraneAgent}
         />
 
         {/* Event Configuration - Only show if connected */}
@@ -331,7 +331,8 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
                 <div className="p-4 border rounded-lg text-sm text-red-600 text-center">
                   {connectorEventsError || dataCollectionError}
                 </div>
-              ) : connectorEvents.filter((e) => e.key !== 'any-webhook-event').length === 0 && dataCollections.length === 0 ? (
+              ) : connectorEvents.filter((e) => e.key !== 'any-webhook-event').length === 0 &&
+                dataCollections.length === 0 ? (
                 <div className="p-4 border rounded-lg text-sm text-muted-foreground text-center">
                   No events available for this integration
                 </div>
@@ -409,7 +410,7 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
                                     {collection.name}: {eventType.label}
                                   </span>
                                 </SelectItem>
-                              ))
+                              )),
                             )}
                           </SelectGroup>
                         ) : (
@@ -424,7 +425,7 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
                                   {collection.name}: {eventType.label}
                                 </span>
                               </SelectItem>
-                            ))
+                            )),
                           )
                         )}
                       </>
@@ -472,5 +473,3 @@ export function EventTriggerConfig({ value, onChange, saveError }: EventTriggerC
 }
 
 export default EventTriggerConfig;
-
-
