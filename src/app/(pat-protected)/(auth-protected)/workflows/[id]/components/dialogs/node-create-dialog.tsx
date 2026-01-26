@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { GlobeIcon, Sparkles, Plug, GitBranch } from 'lucide-react';
-import { useIntegrations } from '@membranehq/react';
-import type { Integration } from '@membranehq/sdk';
+import { Button } from '@/components/ui/button';
+import { GlobeIcon, Sparkles, Plug, GitBranch, ArrowLeft, Plus, Search, Loader2 } from 'lucide-react';
+import { useIntegrations, useIntegrationApp } from '@membranehq/react';
+import type { Integration, App } from '@membranehq/sdk';
+import { useExternalApps } from '@/hooks/use-external-apps';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface NodeCreateDialogProps {
   isOpen: boolean;
@@ -11,157 +15,329 @@ interface NodeCreateDialogProps {
   onCreate: (selectedType: string, config?: Record<string, unknown>) => void;
 }
 
+type ViewMode = 'actions' | 'apps' | 'search';
+
 export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialogProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const { integrations } = useIntegrations();
+  const [viewMode, setViewMode] = useState<ViewMode>('actions');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isCreatingIntegration, setIsCreatingIntegration] = useState(false);
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const { integrations, refresh: refreshIntegrations } = useIntegrations();
+  const integrationApp = useIntegrationApp();
+
+  const {
+    apps: externalApps,
+    isLoading: isLoadingExternalApps,
+    error: externalAppsError,
+  } = useExternalApps({
+    search: debouncedSearch,
+    limit: 50,
+    enabled: viewMode === 'search',
+  });
+
+  // Reset view when dialog closes
+  const handleClose = () => {
+    setViewMode('actions');
+    setSearchQuery('');
+    setIsCreatingIntegration(false);
+    onClose();
+  };
 
   const handleIntegrationSelect = (integration: Integration) => {
     onCreate('action', { integrationKey: integration.key });
-    onClose();
+    handleClose();
+  };
+
+  const handleAppIntegrationSelect = () => {
+    setViewMode('apps');
+  };
+
+  const handleBackToActions = () => {
+    setViewMode('actions');
   };
 
   const handleHttpRequestSelect = () => {
     onCreate('http', {});
-    onClose();
+    handleClose();
   };
 
   const handleAISelect = () => {
     onCreate('ai', {});
-    onClose();
+    handleClose();
   };
 
   const handleGateSelect = () => {
     onCreate('gate', {});
-    onClose();
+    handleClose();
   };
 
-  const filteredIntegrations = integrations
-    .filter((integration) => integration.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => {
-      // Connected integrations first
-      if (a.connection && !b.connection) return -1;
-      if (!a.connection && b.connection) return 1;
-      return 0;
-    });
+  const handleAddNewApp = () => {
+    setViewMode('search');
+  };
+
+  const handleBackToApps = () => {
+    setSearchQuery('');
+    setViewMode('apps');
+  };
+
+  const handleExternalAppSelect = async (app: App) => {
+    setIsCreatingIntegration(true);
+
+    try {
+      // Create integration from external app
+      const newIntegration = await integrationApp.integrations.create({
+        name: app.name,
+        logoUri: app.logoUri,
+        appUuid: app.uuid,
+        connectorId: app.defaultConnectorId,
+        key: app.key,
+      });
+
+      // Refresh integrations list
+      await refreshIntegrations();
+
+      // Create the node with the new integration
+      onCreate('action', { integrationKey: newIntegration.key });
+      handleClose();
+    } catch (error) {
+      console.error('Failed to create integration:', error);
+      setIsCreatingIntegration(false);
+    }
+  };
+
+  const handleBuildIntegration = () => {
+    // TODO: Handle build integration for app name
+    console.log('Build integration for:', searchQuery.trim());
+    handleClose();
+  };
+
+  const sortedIntegrations = integrations.sort((a, b) => {
+    // Connected integrations first
+    if (a.connection && !b.connection) return -1;
+    if (!a.connection && b.connection) return 1;
+    return 0;
+  });
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl h-[600px] p-0 overflow-hidden" hideClose>
-        <div className="flex flex-col h-full overflow-hidden">
-          {/* Fixed Search Bar */}
-          <div className="p-6 pb-4 border-b flex-shrink-0">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search apps..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-              />
-              <svg
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+        {/* Loading overlay when creating integration */}
+        {isCreatingIntegration && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-50">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Creating integration...</p>
             </div>
           </div>
+        )}
+
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* Header with Back Button (shown in apps and search views) */}
+          {viewMode === 'apps' && (
+            <div className="p-6 pb-4 border-b flex-shrink-0">
+              <Button variant="ghost" size="sm" onClick={handleBackToActions} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Actions
+              </Button>
+            </div>
+          )}
+          {viewMode === 'search' && (
+            <div className="p-6 pb-4 border-b flex-shrink-0 space-y-4">
+              <Button variant="ghost" size="sm" onClick={handleBackToApps} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Apps
+              </Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search apps..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
 
           {/* Scrollable Content */}
           <ScrollArea className="flex-1">
-            <div className="p-6 pt-4 space-y-6">
-              {/* Others Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900">Actions</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* HTTP Request option */}
-                  <button
-                    type="button"
-                    onClick={handleHttpRequestSelect}
-                    className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
-                  >
-                    <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded">
-                      <GlobeIcon className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">HTTP Request</div>
-                      <div className="text-xs text-muted-foreground">Make API calls</div>
-                    </div>
-                  </button>
-
-                  {/* AI option */}
-                  <button
-                    type="button"
-                    onClick={handleAISelect}
-                    className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
-                  >
-                    <div className="w-12 h-12 flex items-center justify-center bg-purple-100 rounded">
-                      <Sparkles className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">AI</div>
-                      <div className="text-xs text-muted-foreground">Process data with AI</div>
-                    </div>
-                  </button>
-
-                  {/* Gate option */}
-                  <button
-                    type="button"
-                    onClick={handleGateSelect}
-                    className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
-                  >
-                    <div className="w-12 h-12 flex items-center justify-center bg-orange-100 rounded">
-                      <GitBranch className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">Gate</div>
-                      <div className="text-xs text-muted-foreground">Control flow with conditions</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Apps Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900">Apps</h3>
-                <div className="grid grid-cols-6 gap-3">
-                  {filteredIntegrations.map((integration) => (
+            <div className="p-6 space-y-6">
+              {viewMode === 'actions' ? (
+                /* Actions View */
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900">Actions</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* App Integration option */}
                     <button
-                      key={integration.key}
-                      onClick={() => handleIntegrationSelect(integration)}
-                      className="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                      type="button"
+                      onClick={handleAppIntegrationSelect}
+                      className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
                     >
-                      <div className="w-12 h-12 mb-2 relative">
-                        {integration.logoUri ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={integration.logoUri}
-                            alt={`${integration.name} logo`}
-                            className="w-full h-full object-contain rounded"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-100 rounded flex items-center justify-center text-lg font-medium text-gray-600">
-                            {integration.name[0]}
-                          </div>
-                        )}
-                        {integration.connection && (
-                          <div className="absolute -top-0.5 -left-0.5 bg-green-500 rounded-full p-1">
-                            <Plug className="w-2.5 h-2.5 text-white" />
-                          </div>
-                        )}
+                      <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded">
+                        <Plug className="h-6 w-6 text-green-600" />
                       </div>
-                      <span className="text-xs text-center text-gray-700 truncate w-full">{integration.name}</span>
+                      <div>
+                        <div className="text-sm font-medium">App Integration</div>
+                        <div className="text-xs text-muted-foreground">Connect to apps</div>
+                      </div>
                     </button>
-                  ))}
+
+                    {/* HTTP Request option */}
+                    <button
+                      type="button"
+                      onClick={handleHttpRequestSelect}
+                      className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
+                    >
+                      <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded">
+                        <GlobeIcon className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">HTTP Request</div>
+                        <div className="text-xs text-muted-foreground">Make API calls</div>
+                      </div>
+                    </button>
+
+                    {/* AI option */}
+                    <button
+                      type="button"
+                      onClick={handleAISelect}
+                      className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
+                    >
+                      <div className="w-12 h-12 flex items-center justify-center bg-purple-100 rounded">
+                        <Sparkles className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">AI</div>
+                        <div className="text-xs text-muted-foreground">Process data with AI</div>
+                      </div>
+                    </button>
+
+                    {/* Gate option */}
+                    <button
+                      type="button"
+                      onClick={handleGateSelect}
+                      className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 text-left w-full cursor-pointer"
+                    >
+                      <div className="w-12 h-12 flex items-center justify-center bg-orange-100 rounded">
+                        <GitBranch className="h-6 w-6 text-orange-600" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">Gate</div>
+                        <div className="text-xs text-muted-foreground">Control flow with conditions</div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : viewMode === 'apps' ? (
+                /* Apps View */
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900">Apps</h3>
+                  <div className="grid grid-cols-6 gap-3">
+                    {/* Add new app button - always first */}
+                    <button
+                      onClick={handleAddNewApp}
+                      className="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border-2 border-dashed border-gray-300 hover:border-purple-400"
+                    >
+                      <div className="w-12 h-12 mb-2 flex items-center justify-center bg-purple-100 rounded">
+                        <Plus className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <span className="text-xs text-center text-purple-600 font-medium truncate w-full">
+                        Add new app
+                      </span>
+                    </button>
+
+                    {/* Existing integrations */}
+                    {sortedIntegrations.map((integration) => (
+                      <button
+                        key={integration.key}
+                        onClick={() => handleIntegrationSelect(integration)}
+                        className="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        <div className="w-12 h-12 mb-2 relative">
+                          {integration.logoUri ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={integration.logoUri}
+                              alt={`${integration.name} logo`}
+                              className="w-full h-full object-contain rounded"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-100 rounded flex items-center justify-center text-lg font-medium text-gray-600">
+                              {integration.name[0]}
+                            </div>
+                          )}
+                          {integration.connection && (
+                            <div className="absolute -top-0.5 -left-0.5 bg-green-500 rounded-full p-1">
+                              <Plug className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-center text-gray-700 truncate w-full">{integration.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Search View */
+                <div className="space-y-4">
+                  {isLoadingExternalApps ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : externalAppsError ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <p className="text-sm text-destructive">Failed to load apps</p>
+                      <p className="text-xs text-muted-foreground mt-1">Please try again</p>
+                    </div>
+                  ) : externalApps.length === 0 && !searchQuery.trim() ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <p className="text-sm text-muted-foreground">Start typing to search apps</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-6 gap-3">
+                      {externalApps.map((app) => (
+                        <button
+                          key={app.key}
+                          onClick={() => handleExternalAppSelect(app)}
+                          className="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <div className="w-12 h-12 mb-2 relative">
+                            {app.logoUri ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={app.logoUri}
+                                alt={`${app.name} logo`}
+                                className="w-full h-full object-contain rounded"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-100 rounded flex items-center justify-center text-lg font-medium text-gray-600">
+                                {app.name[0]}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-center text-gray-700 truncate w-full">{app.name}</span>
+                        </button>
+                      ))}
+
+                      {/* Build integration option - shown at the end when there's a search query */}
+                      {searchQuery.trim() && (
+                        <button
+                          onClick={handleBuildIntegration}
+                          className="flex flex-col items-center p-3 rounded-lg hover:bg-purple-50 transition-colors cursor-pointer border-2 border-dashed border-purple-300 hover:border-purple-400"
+                        >
+                          <div className="w-12 h-12 mb-2 flex items-center justify-center bg-purple-100 rounded">
+                            <Sparkles className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <span className="text-xs text-center text-purple-600 font-medium w-full">
+                            Build integration for &ldquo;{searchQuery.trim()}&rdquo;
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -169,5 +345,3 @@ export function NodeCreateDialog({ isOpen, onClose, onCreate }: NodeCreateDialog
     </Dialog>
   );
 }
-
-

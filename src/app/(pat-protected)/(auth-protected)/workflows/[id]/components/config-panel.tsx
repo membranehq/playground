@@ -31,9 +31,9 @@ const DEFAULT_NODE_TYPE = 'action';
 const constructVariableSchema = (nodes: WorkflowNode[], currentNodeId?: string): DataSchema => {
   const nodesBeforeCurrent = currentNodeId
     ? nodes.slice(
-      0,
-      nodes.findIndex((node) => node.id === currentNodeId)
-    )
+        0,
+        nodes.findIndex((node) => node.id === currentNodeId),
+      )
     : nodes;
 
   if (nodesBeforeCurrent.length === 0) {
@@ -62,7 +62,14 @@ const constructVariableSchema = (nodes: WorkflowNode[], currentNodeId?: string):
   };
 };
 
-export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerTypes, saveError, onOpenMembraneAgent }: ConfigPanelProps) {
+export function ConfigPanel({
+  selectedNode,
+  onUpdateNode,
+  nodeTypes,
+  triggerTypes,
+  saveError,
+  onOpenMembraneAgent,
+}: ConfigPanelProps) {
   const { workflow } = useWorkflow();
   const [formData, setFormData] = useState<WorkflowNode | undefined>();
   const [variableSchema, setVariableSchema] = useState<DataSchema>({ type: 'object', properties: {} });
@@ -115,6 +122,10 @@ export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerType
     // Skip if the node name is empty
     if (!debouncedFormData.name.trim()) return;
 
+    // IMPORTANT: Skip if the debounced data is for a different node than currently selected
+    // This prevents stale data from being saved when switching nodes quickly
+    if (selectedNode && debouncedFormData.id !== selectedNode.id) return;
+
     // Extract only the user-editable fields (exclude calculated fields)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ready, outputSchema, ...updateData } = debouncedFormData;
@@ -135,7 +146,7 @@ export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerType
     lastSavedData.current = currentDataString;
 
     onUpdateNode(updateData);
-  }, [debouncedFormData, onUpdateNode]);
+  }, [debouncedFormData, onUpdateNode, selectedNode]);
 
   const selectedNodeType = formData?.nodeType || selectedNode?.nodeType || DEFAULT_NODE_TYPE;
   const selectedNodeTypeConfig = nodeTypes[selectedNodeType];
@@ -236,5 +247,3 @@ export function ConfigPanel({ selectedNode, onUpdateNode, nodeTypes, triggerType
     </div>
   );
 }
-
-

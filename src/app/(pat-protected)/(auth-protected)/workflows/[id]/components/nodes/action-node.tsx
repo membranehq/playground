@@ -25,10 +25,15 @@ interface ActionNodeProps {
 
 export function ActionNode({ data, selected }: ActionNodeProps) {
   // Get integration key and action ID from node config for membrane actions
-  const integrationKey = data.node.config?.integrationKey as string;
-  const actionId = data.node.config?.actionId as string;
-  const { integration } = useIntegration(integrationKey);
-  const { action } = useAction(actionId);
+  const integrationKey = data.node.config?.integrationKey as string | undefined;
+  const actionId = data.node.config?.actionId as string | undefined;
+
+  // Fetch integration and action data
+  const { integration: fetchedIntegration } = useIntegration(integrationKey || '');
+  const { action } = useAction(actionId || '');
+
+  // Validate that the returned integration matches the requested key to avoid stale cache issues
+  const integration = integrationKey && fetchedIntegration?.key === integrationKey ? fetchedIntegration : undefined;
 
   // Get node type metadata for icon and styling
   const getNodeTypeInfo = () => {
@@ -109,5 +114,3 @@ export function ActionNode({ data, selected }: ActionNodeProps) {
     />
   );
 }
-
-
