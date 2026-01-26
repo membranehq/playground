@@ -54,10 +54,10 @@ export function ActionNode({ data, selected }: ActionNodeProps) {
       };
     }
 
-    // Fallback for nodes without specific type metadata
+    // Fallback for nodes without specific type metadata (no app selected)
     return {
-      title: data.label || 'Select action',
-      logoTitle: 'Action node',
+      title: data.label || 'App',
+      logoTitle: 'App',
       color: 'blue',
     };
   };

@@ -94,7 +94,7 @@ export const NODE_TYPES: Record<string, NodeTypeMetadata> = {
 
   action: {
     type: 'action',
-    name: 'Action',
+    name: 'App',
     description: 'Perform action',
     category: 'action',
     icon: Package,
@@ -149,5 +149,3 @@ export const NODE_TYPES: Record<string, NodeTypeMetadata> = {
     },
   },
 };
-
-

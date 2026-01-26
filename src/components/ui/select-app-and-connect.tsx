@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useIntegration, useIntegrations } from '@membranehq/react';
 import Image from 'next/image';
 import { useIntegrationConnection } from '@/hooks/use-integration-connection';
-import { WandSparkles } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Plus } from 'lucide-react';
+import { NodeCreateDialog } from '@/app/(pat-protected)/(auth-protected)/workflows/[id]/components/dialogs/node-create-dialog';
 
 interface SelectAppAndConnectProps {
   selectedIntegrationKey?: string;
@@ -18,6 +18,8 @@ interface SelectAppAndConnectProps {
   showLabel?: boolean;
   label?: string;
   clearFieldsOnIntegrationChange?: string[];
+  onAddAppIntegration?: (integrationKey: string) => void;
+  onOpenMembraneAgent?: (message: string) => void;
 }
 
 export function SelectAppAndConnect({
@@ -28,6 +30,8 @@ export function SelectAppAndConnect({
   className = '',
   showLabel = true,
   label = 'App',
+  onAddAppIntegration,
+  onOpenMembraneAgent,
 }: SelectAppAndConnectProps) {
   const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey as string);
   const { integrations } = useIntegrations();
@@ -116,7 +120,7 @@ export function SelectAppAndConnect({
           <SelectSeparator />
           <SelectItem value="add-new-app">
             <div className="flex items-center gap-2">
-              <WandSparkles className="w-5 h-5 text-purple-600" />
+              <Plus className="w-5 h-5 text-purple-600" />
               <span className="text-sm font-medium text-purple-600">Add app integration</span>
             </div>
           </SelectItem>
@@ -152,7 +156,13 @@ export function SelectAppAndConnect({
                 )}
                 <span className="text-sm font-medium text-foreground">Connected to {selectedIntegration.name}</span>
               </div>
-              <Button onClick={handleConnect} disabled={isConnecting} variant="outline" size="xs" className="rounded-full">
+              <Button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                variant="outline"
+                size="xs"
+                className="rounded-full"
+              >
                 {isConnecting ? 'Reconnecting...' : 'Reconnect'}
               </Button>
             </div>
@@ -174,7 +184,13 @@ export function SelectAppAndConnect({
                 )}
                 <span className="text-sm font-medium text-foreground">Connect {selectedIntegration.name}</span>
               </div>
-              <Button onClick={handleConnect} disabled={isConnecting} variant="default" size="xs" className="rounded-full">
+              <Button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                variant="default"
+                size="xs"
+                className="rounded-full"
+              >
                 {isConnecting ? 'Connecting...' : 'Connect'}
               </Button>
             </div>
@@ -182,35 +198,21 @@ export function SelectAppAndConnect({
         </div>
       )}
 
-      {/* Add App Integration Dialog */}
-      <Dialog open={addAppDialogOpen} onOpenChange={setAddAppDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add App Integration</DialogTitle>
-            <DialogDescription>
-              Configure a new app integration.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Dialog content will be added later */}
-          <div className="space-y-4 py-4">
-            {/* Placeholder for future content */}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setAddAppDialogOpen(false);
-              }}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Add App Integration Dialog - opens directly to search view */}
+      <NodeCreateDialog
+        isOpen={addAppDialogOpen}
+        onClose={() => setAddAppDialogOpen(false)}
+        onCreate={(type, config) => {
+          if (type === 'action' && config?.integrationKey) {
+            // When a new integration is created, update the current node's integration
+            onIntegrationChange(config.integrationKey as string);
+            onAddAppIntegration?.(config.integrationKey as string);
+          }
+          setAddAppDialogOpen(false);
+        }}
+        initialViewMode="search"
+        onOpenMembraneAgent={onOpenMembraneAgent}
+      />
     </div>
   );
 }
-
-
