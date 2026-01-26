@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useIntegration, useIntegrations } from '@membranehq/react';
 import Image from 'next/image';
 import { useIntegrationConnection } from '@/hooks/use-integration-connection';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { WandSparkles } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface SelectAppAndConnectProps {
   selectedIntegrationKey?: string;
@@ -32,7 +31,7 @@ export function SelectAppAndConnect({
 }: SelectAppAndConnectProps) {
   const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey as string);
   const { integrations } = useIntegrations();
-  const [open, setOpen] = useState(false);
+  const [addAppDialogOpen, setAddAppDialogOpen] = useState(false);
 
   // Integration connection hook
   const {
@@ -56,96 +55,73 @@ export function SelectAppAndConnect({
     onConnectionChange?.();
   };
 
-  const handleSelect = (integrationKey: string) => {
-    onIntegrationChange(integrationKey);
-    setOpen(false);
-  };
-
   return (
     <div className={`space-y-4 ${className}`}>
       {/* App Selection Section */}
       {showLabel && <Label required>{label}</Label>}
 
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          {selectedIntegrationKey && selectedIntegration ? (
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={open}
-              className="w-full justify-between px-3 h-10"
-            >
-              <div className="flex items-center gap-3">
-                {selectedIntegration.logoUri ? (
+      <Select
+        value={selectedIntegrationKey || ''}
+        onValueChange={(value) => {
+          if (value === 'add-new-app') {
+            setAddAppDialogOpen(true);
+          } else {
+            onIntegrationChange(value);
+          }
+        }}
+      >
+        <SelectTrigger className="w-full h-10">
+          {selectedIntegration ? (
+            <div className="flex items-center gap-2">
+              {selectedIntegration.logoUri ? (
+                <Image
+                  width={20}
+                  height={20}
+                  src={selectedIntegration.logoUri}
+                  alt={`${selectedIntegration.name} logo`}
+                  className="w-5 h-5 rounded"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center text-xs font-medium text-muted-foreground">
+                  {selectedIntegration.name[0]}
+                </div>
+              )}
+              <span className="text-sm">{selectedIntegration.name}</span>
+            </div>
+          ) : (
+            <SelectValue placeholder="Select an app" />
+          )}
+        </SelectTrigger>
+        <SelectContent>
+          {integrations.map((integration) => (
+            <SelectItem key={integration.key} value={integration.key || ''}>
+              <div className="flex items-center gap-2">
+                {integration.logoUri ? (
                   <Image
                     width={20}
                     height={20}
-                    src={selectedIntegration.logoUri}
-                    alt={`${selectedIntegration.name} logo`}
+                    src={integration.logoUri}
+                    alt={`${integration.name} logo`}
                     className="w-5 h-5 rounded"
                   />
                 ) : (
                   <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center text-xs font-medium text-muted-foreground">
-                    {selectedIntegration.name[0]}
+                    {integration.name[0]}
                   </div>
                 )}
-                <span className="text-sm font-medium text-foreground">{selectedIntegration.name}</span>
+                <span className="text-sm">{integration.name}</span>
               </div>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={open}
-              className="w-full justify-between px-3 h-10"
-            >
-              <span className="text-sm font-medium text-muted-foreground">Select an app</span>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          )}
-        </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search integrations..." />
-            <CommandList>
-              <CommandEmpty>No integration found.</CommandEmpty>
-              <CommandGroup>
-                {integrations.map((integration) => (
-                  <CommandItem
-                    key={integration.key}
-                    value={integration.name}
-                    onSelect={() => handleSelect(integration.key || '')}
-                  >
-                    <div className="flex items-center gap-2 flex-1">
-                      {integration.logoUri ? (
-                        <Image
-                          width={20}
-                          height={20}
-                          src={integration.logoUri}
-                          alt={`${integration.name} logo`}
-                          className="w-5 h-5 rounded"
-                        />
-                      ) : (
-                        <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center text-xs font-medium text-muted-foreground">
-                          {integration.name[0]}
-                        </div>
-                      )}
-                      <span className="text-sm">{integration.name}</span>
-                    </div>
-                    <Check
-                      className={cn(
-                        'ml-2 h-4 w-4',
-                        selectedIntegrationKey === integration.key ? 'opacity-100' : 'opacity-0'
-                      )}
-                    />
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+            </SelectItem>
+          ))}
+          <SelectSeparator />
+          <SelectItem value="add-new-app">
+            <div className="flex items-center gap-2">
+              <WandSparkles className="w-5 h-5 text-purple-600" />
+              <span className="text-sm font-medium text-purple-600">Add app integration</span>
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
 
       {/* Connection Status Section */}
       {selectedIntegrationKey && selectedIntegration && (
@@ -205,6 +181,34 @@ export function SelectAppAndConnect({
           )}
         </div>
       )}
+
+      {/* Add App Integration Dialog */}
+      <Dialog open={addAppDialogOpen} onOpenChange={setAddAppDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add App Integration</DialogTitle>
+            <DialogDescription>
+              Configure a new app integration.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Dialog content will be added later */}
+          <div className="space-y-4 py-4">
+            {/* Placeholder for future content */}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddAppDialogOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -114,6 +114,7 @@ export interface WorkflowNode {
     outputSchema?: Record<string, unknown>;
     integrationKey?: string;
     actionId?: string;
+    actionKey?: string;
     inputMapping?: Record<string, unknown>;
 
     // Manual trigger config

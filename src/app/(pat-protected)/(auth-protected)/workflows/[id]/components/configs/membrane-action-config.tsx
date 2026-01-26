@@ -3,7 +3,15 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
 import { Minimizer } from '@/components/ui/minimizer';
 import { SelectAppAndConnect } from '@/components/ui/select-app-and-connect';
 import { Action, DataInput, DataSchema, useAction, useActions, useIntegration } from '@membranehq/react';
@@ -11,7 +19,14 @@ import Image from 'next/image';
 import { WorkflowNode } from '../types/workflow';
 import { Check, ChevronsUpDown, WandSparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 
 interface MembraneActionConfigProps {
@@ -21,7 +36,12 @@ interface MembraneActionConfigProps {
   onOpenMembraneAgent?: (enrichedMessage: string) => void;
 }
 
-export function MembraneActionConfig({ value, onChange, variableSchema, onOpenMembraneAgent }: MembraneActionConfigProps) {
+export function MembraneActionConfig({
+  value,
+  onChange,
+  variableSchema,
+  onOpenMembraneAgent,
+}: MembraneActionConfigProps) {
   const selectedActionId = value.config?.actionId;
   const selectedIntegrationKey = value.config?.integrationKey as string;
 
@@ -84,7 +104,7 @@ export function MembraneActionConfig({ value, onChange, variableSchema, onOpenMe
                     <div className="flex items-center gap-3">
                       {(() => {
                         const selectedActionData = actionsForSelectedIntegration.items.find(
-                          (a: Action) => a.id === selectedActionId
+                          (a: Action) => a.id === selectedActionId,
                         );
                         return selectedActionData?.integration?.logoUri ? (
                           <Image
@@ -115,7 +135,6 @@ export function MembraneActionConfig({ value, onChange, variableSchema, onOpenMe
                             key={action.id}
                             value={action.name}
                             onSelect={() => {
-                              // Get the action name to set as the node name
                               const actionName = action?.name || 'Action';
                               onChange({
                                 ...value,
@@ -140,7 +159,7 @@ export function MembraneActionConfig({ value, onChange, variableSchema, onOpenMe
                             <Check
                               className={cn(
                                 'ml-2 h-4 w-4',
-                                selectedActionId === action.id ? 'opacity-100' : 'opacity-0'
+                                selectedActionId === action.id ? 'opacity-100' : 'opacity-0',
                               )}
                             />
                           </CommandItem>
@@ -285,5 +304,3 @@ Please help me create this action.`;
 }
 
 export default MembraneActionConfig;
-
-

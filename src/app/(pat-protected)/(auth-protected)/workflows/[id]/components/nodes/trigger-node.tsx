@@ -29,13 +29,13 @@ interface TriggerNodeProps {
 
 export function TriggerNode({ data, selected }: TriggerNodeProps) {
   // Get integration key from node config for membrane triggers
-  const integrationKey = data.node?.config?.integrationKey as string;
+  const integrationKey = data.node?.config?.integrationKey as string | undefined;
 
-  // Memoize the integration key to prevent unnecessary re-renders
-  const memoizedIntegrationKey = useMemo(() => integrationKey, [integrationKey]);
+  // Only call useIntegration if we have a valid integration key
+  const { integration: fetchedIntegration } = useIntegration(integrationKey || '');
 
-  // Use the memoized integration key to ensure stable integration data
-  const { integration } = useIntegration(memoizedIntegrationKey);
+  // Validate that the returned integration matches the requested key to avoid stale cache issues
+  const integration = integrationKey && fetchedIntegration?.key === integrationKey ? fetchedIntegration : undefined;
 
   // Determine trigger type and display info - memoized to prevent unnecessary re-renders
   const triggerInfo = useMemo(() => {
@@ -45,7 +45,7 @@ export function TriggerNode({ data, selected }: TriggerNodeProps) {
         const collectionName = data.node.config.dataCollection as string;
         const eventType = data.node.config.eventType as string;
         const collectionNameLabel = collectionName.charAt(0).toUpperCase() + collectionName.slice(1); // Capitalize first letter
-        
+
         // Extract base event type from full value (e.g., 'created' from 'data-record-created-trigger')
         let baseEventType = eventType;
         const match = eventType.match(/^data-record-(created|updated|deleted)-trigger$/);
@@ -88,7 +88,7 @@ export function TriggerNode({ data, selected }: TriggerNodeProps) {
   // Determine which icon to show - memoized to prevent unnecessary re-renders
   const icon = useMemo(() => {
     // For membrane triggers with integration, show integration logo
-    if (memoizedIntegrationKey && integration) {
+    if (integrationKey && integration) {
       if (integration.logoUri) {
         return (
           <Image
@@ -115,7 +115,7 @@ export function TriggerNode({ data, selected }: TriggerNodeProps) {
     }
 
     return null;
-  }, [memoizedIntegrationKey, integration, data]);
+  }, [integrationKey, integration, data]);
 
   if (data.isEmpty) {
     return (
@@ -153,5 +153,3 @@ export function TriggerNode({ data, selected }: TriggerNodeProps) {
     />
   );
 }
-
-

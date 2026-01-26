@@ -200,20 +200,21 @@ export async function executeMembraneActionNode(
   membraneToken: string,
 ): Promise<NodeExecutionResult> {
   try {
-    if (!node.config?.actionId) {
+    const actionId = node.config?.actionId;
+
+    if (!actionId) {
       throw new Error('Action node requires actionId in config');
     }
 
     const membraneClient = new IntegrationAppClient({
       token: membraneToken,
-      apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app'
+      apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app',
     });
 
     try {
-      const result = await membraneClient
-        .connection(node.config.integrationKey!)
-        .action(node.config.actionId)
-        .run(resolvedInputs);
+      // Use the action accessor directly with the action ID
+      // This is the correct pattern - the SDK handles connection resolution internally
+      const result = await membraneClient.action(actionId).run(resolvedInputs);
 
       return {
         id: `${node.id}-${Date.now()}`,
@@ -277,7 +278,7 @@ export async function executeAIActionNode(
     }
 
     // Initialize the AI model
-    const model =  anthropic("claude-sonnet-4-5")
+    const model = anthropic('claude-sonnet-4-5');
 
     // Prepare context from previous results
     const context = previousResults.map((result) => ({
@@ -333,7 +334,7 @@ export async function executeAIActionNode(
       // Build the full prompt with context for structured output
       const fullPrompt = `${prompt}
         Available data from previous steps:
-        ${JSON.stringify(context, null, 2)} 
+        ${JSON.stringify(context, null, 2)}
         Please provide the response according to the specified schema.
     `;
 
@@ -408,11 +409,13 @@ export async function executeGateNode(
 ): Promise<NodeExecutionResult> {
   try {
     // Extract condition configuration
-    const condition = node.config?.condition as {
-      field?: { $var: string } | string;
-      operator?: 'equals' | 'not_equals';
-      value?: string;
-    } | undefined;
+    const condition = node.config?.condition as
+      | {
+          field?: { $var: string } | string;
+          operator?: 'equals' | 'not_equals';
+          value?: string;
+        }
+      | undefined;
 
     if (!condition) {
       throw new Error('Gate node requires condition configuration');
