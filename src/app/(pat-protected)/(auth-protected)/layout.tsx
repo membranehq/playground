@@ -12,7 +12,7 @@ import { FloatingPortalBoundary } from '@membranehq/react';
 import { PageHeaderProvider, usePageHeader } from '@/components/page-header-context';
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const { headerActions } = usePageHeader();
+  const { headerActions, headerLeft } = usePageHeader();
 
   return (
     <SidebarInset className={cn('overflow-hidden flex flex-col', CONTENT_HEIGHT)}>
@@ -20,7 +20,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <Breadcrumbs />
+          {headerLeft || <Breadcrumbs />}
         </div>
         {headerActions && <div className="flex items-center gap-4 px-4">{headerActions}</div>}
       </header>

@@ -3,9 +3,11 @@
 import { Wrench, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { Streamdown } from 'streamdown';
 import type { MembraneAgentMessage as MessageType } from '@/lib/membrane-agent-api';
+import { ConnectionRequest } from './connection-request';
 
 interface MembraneAgentMessageProps {
   message: MessageType;
+  onConnectionComplete?: (integrationKey: string, connectionId: string) => void;
 }
 
 interface ToolSummary {
@@ -14,22 +16,40 @@ interface ToolSummary {
   title?: string;
 }
 
+interface ConnectionRequestPart {
+  integrationKey: string;
+}
+
 /**
  * Simplified message renderer for Membrane Agent sidebar.
- * Shows text content and tool summaries (name + status only).
+ * Shows text content, tool summaries, and connection requests.
  */
-export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
+export function MembraneAgentMessage({ message, onConnectionComplete }: MembraneAgentMessageProps) {
   const isUser = message.role === 'user';
 
-  // Extract tool summaries (name + status only)
+  // Extract connection request parts
+  const connectionRequests: ConnectionRequestPart[] =
+    message.parts
+      ?.filter(
+        (p: any) => p.type === 'tool' && p.tool === 'request-test-connection' && p.state?.input?.integrationSelector,
+      )
+      .map((p: any) => ({
+        integrationKey: p.state.input.integrationSelector,
+      })) || [];
+
+  // Extract tool summaries (excluding connection requests)
   const toolSummaries: ToolSummary[] =
     message.parts
-      ?.filter((p: any) => p.type === 'tool')
+      ?.filter((p: any) => p.type === 'tool' && p.tool !== 'request-test-connection')
       .map((p: any) => ({
         name: p.tool,
         status: p.state?.status || 'pending',
         title: p.state?.title,
       })) || [];
+
+  const hasContent = !!message.content;
+  const hasTools = toolSummaries.length > 0;
+  const hasConnectionRequests = connectionRequests.length > 0;
 
   return (
     <div className={`p-3 rounded-xl text-sm ${isUser ? 'bg-neutral-200' : 'bg-white border border-neutral-200'}`}>
@@ -37,16 +57,31 @@ export function MembraneAgentMessage({ message }: MembraneAgentMessageProps) {
       {message.content && <Streamdown className="streamdown text-neutral-800">{message.content}</Streamdown>}
 
       {/* Tool summaries */}
-      {toolSummaries.length > 0 && (
-        <div className={`space-y-1.5 ${message.content ? 'mt-2' : ''}`}>
+      {hasTools && (
+        <div className={`space-y-1.5 ${hasContent ? 'mt-2' : ''}`}>
           {toolSummaries.map((tool, index) => (
             <ToolSummaryItem key={index} tool={tool} />
           ))}
         </div>
       )}
 
-      {/* If no content and no tools, show placeholder */}
-      {!message.content && toolSummaries.length === 0 && <p className="text-neutral-400 italic">(Empty message)</p>}
+      {/* Connection requests */}
+      {hasConnectionRequests && (
+        <div className={`space-y-2 ${hasContent || hasTools ? 'mt-3' : ''}`}>
+          {connectionRequests.map((req, index) => (
+            <ConnectionRequest
+              key={index}
+              integrationKey={req.integrationKey}
+              onConnect={(connectionId) => {
+                onConnectionComplete?.(req.integrationKey, connectionId);
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* If no content and no tools and no connection requests, show placeholder */}
+      {!hasContent && !hasTools && !hasConnectionRequests && <p className="text-neutral-400 italic">(Empty message)</p>}
     </div>
   );
 }

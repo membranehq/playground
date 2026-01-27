@@ -10,13 +10,21 @@ interface MembraneAgentSidebarProps {
   sessionId: string;
   onClose: () => void;
   initialMessage?: string;
+  onConnectionComplete?: (integrationKey: string, connectionId: string) => void;
+  onSessionComplete?: () => void;
 }
 
 /**
  * Sidebar component that displays Membrane Agent session messages.
  * Uses the shared session status hook and refreshes messages when status changes.
  */
-export function MembraneAgentSidebar({ sessionId, onClose, initialMessage }: MembraneAgentSidebarProps) {
+export function MembraneAgentSidebar({
+  sessionId,
+  onClose,
+  initialMessage,
+  onConnectionComplete,
+  onSessionComplete,
+}: MembraneAgentSidebarProps) {
   const [messages, setMessages] = useState<MessageType[]>(() => {
     // If we have an initial message, show it immediately as a user message
     if (initialMessage) {
@@ -39,6 +47,17 @@ export function MembraneAgentSidebar({ sessionId, onClose, initialMessage }: Mem
 
   // Use shared hook for session status
   const { state: sessionState, isLoading: statusLoading, error: statusError } = useMembraneSessionStatus(sessionId);
+
+  // Track if we've already called onSessionComplete to avoid multiple calls
+  const hasCalledSessionComplete = useRef(false);
+
+  // Call onSessionComplete when session transitions to idle (done)
+  useEffect(() => {
+    if (sessionState === 'idle' && !hasCalledSessionComplete.current) {
+      hasCalledSessionComplete.current = true;
+      onSessionComplete?.();
+    }
+  }, [sessionState, onSessionComplete]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -153,9 +172,16 @@ export function MembraneAgentSidebar({ sessionId, onClose, initialMessage }: Mem
           </div>
         ) : (
           <>
-            {messages.map((msg) => (
-              <MembraneAgentMessage key={msg.id} message={msg} />
-            ))}
+            {messages
+              .filter((msg) => {
+                // Filter out empty messages (no content and no tool parts)
+                const hasContent = !!msg.content;
+                const hasToolParts = msg.parts?.some((p: any) => p.type === 'tool');
+                return hasContent || hasToolParts;
+              })
+              .map((msg) => (
+                <MembraneAgentMessage key={msg.id} message={msg} onConnectionComplete={onConnectionComplete} />
+              ))}
           </>
         )}
       </div>

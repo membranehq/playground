@@ -3,54 +3,42 @@
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useState, useRef, useMemo } from 'react';
 import * as React from 'react';
-import { Plus, Play, MoreVertical, Settings, Edit } from 'lucide-react';
+import { Play, ChevronLeft, Check, X, Bot } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DataInput, DataSchema } from '@membranehq/react';
-import { PageHeaderActions } from '@/components/page-header-context';
+import { PageHeaderActions, PageHeaderLeft } from '@/components/page-header-context';
 import { WorkflowEditor, WorkflowEditorRef } from './components/workflow-editor';
 import { WorkflowProvider, useWorkflow } from './components/workflow-context';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
+import { useWorkflowSessions } from '@/hooks/use-workflow-sessions';
 
 function WorkflowDetailInner({ id }: { id: string }) {
   const { workflow, isLoading, activateWorkflow, deactivateWorkflow, saveWorkflowName } = useWorkflow();
   const router = useRouter();
   const { customerId, customerName } = useCustomer();
   const { workspace } = useCurrentWorkspace();
-  const [isCreating, setIsCreating] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [editNameDialogOpen, setEditNameDialogOpen] = useState(false);
-  const [workflowName, setWorkflowName] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
   const [triggerInput, setTriggerInput] = useState<Record<string, unknown>>({});
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [sessionsPopoverOpen, setSessionsPopoverOpen] = useState(false);
   const workflowEditorRef = useRef<WorkflowEditorRef>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const manualTriggerNode = workflow?.nodes.find(
-    (node) => node.type === 'trigger' && node.triggerType === 'manual'
-  );
+  // Fetch workflow sessions
+  const { sessions, isLoading: sessionsLoading } = useWorkflowSessions(id);
 
-  const hasManualTrigger = !!manualTriggerNode;
+  const triggerNode = workflow?.nodes.find((node) => node.type === 'trigger');
+  const hasManualTrigger = triggerNode?.triggerType === 'manual';
+  const hasEventTrigger = triggerNode?.triggerType === 'event';
+  const manualTriggerNode = hasManualTrigger ? triggerNode : null;
 
   // Check if the manual trigger has input - must be called before early returns
   const hasInput = useMemo(() => {
@@ -68,48 +56,31 @@ function WorkflowDetailInner({ id }: { id: string }) {
     return inputSchema;
   }, [manualTriggerNode, hasInput]);
 
-  // Update workflow name when workflow changes
+  // Focus the input when entering edit mode
   React.useEffect(() => {
-    if (workflow) {
-      setWorkflowName(workflow.name);
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
     }
-  }, [workflow]);
+  }, [isEditingName]);
 
-  const onCreate = async () => {
-    if (!customerId || !workspace) return;
-
-    setIsCreating(true);
-    try {
-      const response = await fetch('/api/workflows', {
-        method: 'POST',
-        headers: getAgentHeaders(customerId, customerName),
-        body: JSON.stringify({
-          name: 'Untitled Workflow',
-          description: '',
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        router.push(`/workflows/${data.id || data._id}`);
-      }
-    } catch (error) {
-      console.error('Error creating workflow:', error);
-      setIsCreating(false);
+  const handleStartEditing = () => {
+    if (workflow) {
+      setEditedName(workflow.name);
+      setIsEditingName(true);
     }
   };
 
-  const handleEditNameClick = () => {
-    if (workflow) {
-      setWorkflowName(workflow.name);
-      setEditNameDialogOpen(true);
-    }
+  const handleCancelEditing = () => {
+    setIsEditingName(false);
+    setEditedName('');
   };
 
-  const handleSaveName = async () => {
-    if (!workflowName.trim()) return;
-    await saveWorkflowName(workflowName.trim());
-    setEditNameDialogOpen(false);
+  const handleSaveNameInline = async () => {
+    if (!editedName.trim()) return;
+    await saveWorkflowName(editedName.trim());
+    setIsEditingName(false);
+    setEditedName('');
   };
 
   if (isLoading) {
@@ -163,47 +134,115 @@ function WorkflowDetailInner({ id }: { id: string }) {
 
   return (
     <>
+      {/* Left side: Back button and editable workflow name */}
+      <PageHeaderLeft>
+        <div className="flex items-center gap-3">
+          {/* Back to workflows button */}
+          <Button variant="ghost" size="sm" onClick={() => router.push('/workflows')} className="gap-1 px-2">
+            <ChevronLeft className="w-4 h-4" />
+            Workflows
+          </Button>
+
+          {/* Editable workflow name */}
+          {isEditingName ? (
+            <div className="flex items-center gap-2">
+              <Input
+                ref={nameInputRef}
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveNameInline();
+                  } else if (e.key === 'Escape') {
+                    handleCancelEditing();
+                  }
+                }}
+                className="h-8 w-64 text-sm font-medium"
+                placeholder="Workflow name"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleSaveNameInline}
+                disabled={!editedName.trim()}
+                className="h-8 w-8 p-0"
+              >
+                <Check className="w-4 h-4 text-green-600" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleCancelEditing} className="h-8 w-8 p-0">
+                <X className="w-4 h-4 text-gray-500" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={handleStartEditing}
+              className="text-sm font-medium text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer"
+              title="Click to edit workflow name"
+            >
+              {workflow.name}
+            </button>
+          )}
+        </div>
+      </PageHeaderLeft>
+
       <PageHeaderActions>
         <div className="flex items-center gap-3">
-          {/* Workflow options dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {/* Agent sessions dropdown */}
+          <Popover open={sessionsPopoverOpen} onOpenChange={setSessionsPopoverOpen}>
+            <PopoverTrigger asChild>
               <Button size="sm" variant="ghost">
-                <MoreVertical className="w-4 h-4" />
+                <Bot className="w-4 h-4 mr-2" />
+                Agent sessions
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEditNameClick}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit workflow name
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm">Active</span>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Switch
-                      checked={workflow.status === 'active'}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          activateWorkflow();
-                        } else {
-                          deactivateWorkflow();
-                        }
-                      }}
-                      className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span[data-state=checked]]:translate-x-4 [&>span[data-state=unchecked]]:translate-x-0"
-                    />
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end" side="bottom">
+              <div className="space-y-2">
+                <h3 className="font-medium text-sm">Agent Sessions</h3>
+                {sessionsLoading ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">Loading...</div>
+                ) : sessions.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">No sessions yet</div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto space-y-1">
+                    {sessions.map((session) => (
+                      <button
+                        key={session._id}
+                        onClick={() => {
+                          workflowEditorRef.current?.openSession(session.sessionId);
+                          setSessionsPopoverOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                      >
+                        <div className="text-sm font-medium truncate">{session.label}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(session.createdAt).toLocaleString()}
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {/* New Workflow button */}
-          <Button onClick={onCreate} disabled={isCreating} size="sm" variant="ghost">
-            <Plus className="w-4 h-4 mr-2" />
-            {isCreating ? 'Creating...' : 'New Workflow'}
-          </Button>
-          {/* Run button - only show when there's a manual trigger */}
+            </PopoverContent>
+          </Popover>
+
+          {/* Active/Inactive toggle - only show for event triggers */}
+          {hasEventTrigger && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Active</span>
+              <Switch
+                checked={workflow.status === 'active'}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    activateWorkflow();
+                  } else {
+                    deactivateWorkflow();
+                  }
+                }}
+                className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span[data-state=checked]]:translate-x-4 [&>span[data-state=unchecked]]:translate-x-0"
+              />
+            </div>
+          )}
+          {/* Run button - only show for manual triggers */}
           {hasManualTrigger && (
             <>
               {hasInput && triggerInputSchema ? (
@@ -212,7 +251,7 @@ function WorkflowDetailInner({ id }: { id: string }) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      disabled={workflow?.status !== 'active' || isRunning}
+                      disabled={isRunning}
                       onClick={(e) => {
                         e.stopPropagation();
                       }}
@@ -221,12 +260,7 @@ function WorkflowDetailInner({ id }: { id: string }) {
                       {isRunning ? 'Running...' : 'Run'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent
-                    className="w-96"
-                    align="end"
-                    side="bottom"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <PopoverContent className="w-96" align="end" side="bottom" onClick={(e) => e.stopPropagation()}>
                     <div className="space-y-6">
                       {/* Header */}
                       <div className="border-b border-gray-100 pb-3">
@@ -256,7 +290,7 @@ function WorkflowDetailInner({ id }: { id: string }) {
                             e.stopPropagation();
                             handleRunWorkflow(triggerInput);
                           }}
-                          disabled={isRunning || workflow?.status !== 'active'}
+                          disabled={isRunning}
                           className="text-white px-4 rounded-full"
                         >
                           <div className="flex items-center gap-2">
@@ -273,12 +307,7 @@ function WorkflowDetailInner({ id }: { id: string }) {
                   </PopoverContent>
                 </Popover>
               ) : (
-                <Button
-                  onClick={() => handleRunWorkflow()}
-                  size="sm"
-                  variant="ghost"
-                  disabled={workflow?.status !== 'active' || isRunning}
-                >
+                <Button onClick={() => handleRunWorkflow()} size="sm" variant="ghost" disabled={isRunning}>
                   <Play className="w-4 h-4 mr-2" />
                   {isRunning ? 'Running...' : 'Run'}
                 </Button>
@@ -287,43 +316,6 @@ function WorkflowDetailInner({ id }: { id: string }) {
           )}
         </div>
       </PageHeaderActions>
-
-      {/* Edit workflow name dialog */}
-      <Dialog open={editNameDialogOpen} onOpenChange={setEditNameDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit workflow name</DialogTitle>
-            <DialogDescription>Enter a new name for this workflow.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="workflow-name">Name</Label>
-              <Input
-                id="workflow-name"
-                value={workflowName}
-                onChange={(e) => setWorkflowName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSaveName();
-                  } else if (e.key === 'Escape') {
-                    setEditNameDialogOpen(false);
-                  }
-                }}
-                placeholder="Workflow name"
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditNameDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveName} disabled={!workflowName.trim()}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <WorkflowEditor ref={workflowEditorRef} workflowId={id} />
     </>

@@ -201,9 +201,11 @@ export async function executeMembraneActionNode(
 ): Promise<NodeExecutionResult> {
   try {
     const actionId = node.config?.actionId;
+    const actionKey = node.config?.actionKey;
+    const connectionId = node.config?.connectionId;
 
-    if (!actionId) {
-      throw new Error('Action node requires actionId in config');
+    if (!actionId && !actionKey) {
+      throw new Error('Action node requires actionId or actionKey in config');
     }
 
     const membraneClient = new IntegrationAppClient({
@@ -212,9 +214,11 @@ export async function executeMembraneActionNode(
     });
 
     try {
-      // Use the action accessor directly with the action ID
-      // This is the correct pattern - the SDK handles connection resolution internally
-      const result = await membraneClient.action(actionId).run(resolvedInputs);
+      // Pass connectionId as the second argument (options) to specify which connection to use
+      // SDK signature: run(input?: RunInput, options?: { integrationKey?: string; connectionId?: string })
+      const runOptions = connectionId ? { connectionId: connectionId as string } : undefined;
+
+      const result = await membraneClient.action(actionId as string).run(resolvedInputs, runOptions);
 
       return {
         id: `${node.id}-${Date.now()}`,

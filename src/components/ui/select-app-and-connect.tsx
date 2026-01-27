@@ -12,14 +12,15 @@ import { NodeCreateDialog } from '@/app/(pat-protected)/(auth-protected)/workflo
 interface SelectAppAndConnectProps {
   selectedIntegrationKey?: string;
   onIntegrationChange: (integrationKey: string) => void;
-  onConnectionChange?: () => void;
-  onConnectionStateChange?: (isConnected: boolean) => void;
+  onConnectionChange?: (connectionId: string | null) => void;
+  onConnectionStateChange?: (isConnected: boolean, connectionId?: string) => void;
   className?: string;
   showLabel?: boolean;
   label?: string;
   clearFieldsOnIntegrationChange?: string[];
   onAddAppIntegration?: (integrationKey: string) => void;
   onOpenMembraneAgent?: (message: string) => void;
+  refreshKey?: number;
 }
 
 export function SelectAppAndConnect({
@@ -32,9 +33,17 @@ export function SelectAppAndConnect({
   label = 'App',
   onAddAppIntegration,
   onOpenMembraneAgent,
+  refreshKey,
 }: SelectAppAndConnectProps) {
   const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey as string);
-  const { integrations } = useIntegrations();
+  const { integrations, refresh: refreshIntegrations } = useIntegrations();
+
+  // Refresh integrations when refreshKey changes (e.g., after Membrane agent session completes)
+  React.useEffect(() => {
+    if (refreshKey && refreshIntegrations) {
+      refreshIntegrations();
+    }
+  }, [refreshKey, refreshIntegrations]);
   const [addAppDialogOpen, setAddAppDialogOpen] = useState(false);
 
   // Integration connection hook
@@ -48,15 +57,17 @@ export function SelectAppAndConnect({
   });
 
   const isConnected = !!connection;
+  const connectionId = connection?.id;
 
   // Notify parent component about connection state changes
   React.useEffect(() => {
-    onConnectionStateChange?.(isConnected);
-  }, [isConnected, onConnectionStateChange]);
+    onConnectionStateChange?.(isConnected, connectionId);
+  }, [isConnected, connectionId, onConnectionStateChange]);
 
-  const handleConnect = () => {
-    connect();
-    onConnectionChange?.();
+  const handleConnect = async () => {
+    await connect();
+    // After connecting, the connection state will be updated via useEffect
+    // The connectionId will be passed via onConnectionStateChange
   };
 
   return (

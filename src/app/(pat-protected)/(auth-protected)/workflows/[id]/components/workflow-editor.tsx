@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Node } from '@xyflow/react';
-import { Settings, History, Activity } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import { WorkflowNode } from './types/workflow';
@@ -13,11 +13,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConfigPanel } from './config-panel';
 import { WorkflowNodeRenderer } from './workflow-node-renderer';
 import { WorkflowRuns } from './workflow-runs';
-import { WorkflowEvents } from './workflow-events';
 import { ResizableSplitLayout } from '@/components/ui/resizable-split-layout';
 import { ResizablePanelLayout } from '@/components/resizable-panel-layout';
 import { MembraneAgentSidebar } from '@/components/membrane-agent-sidebar';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useCustomer } from '@/components/providers/customer-provider';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { getAgentHeaders } from '@/lib/agent-api';
@@ -43,6 +41,7 @@ interface WorkflowEditorProps {
 export interface WorkflowEditorRef {
   switchToRunsTab: () => void;
   refreshRuns: () => void;
+  openSession: (sessionId: string) => void;
 }
 
 export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>(
@@ -59,70 +58,38 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
 
     const searchParams = useSearchParams();
     const router = useRouter();
-    const tabParam = searchParams.get('tab') as 'runs' | 'events' | 'properties' | null;
     const runIdParam = searchParams.get('runId');
 
     const { customerId, customerName } = useCustomer();
     const { workspace } = useCurrentWorkspace();
 
-    const [activeTab, setActiveTab] = useState<'runs' | 'events' | 'properties'>(
-      tabParam && ['runs', 'events', 'properties'].includes(tabParam) ? tabParam : 'properties',
-    );
     const [runsRefreshKey, setRunsRefreshKey] = useState(0);
-    const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
+    const [isRunsPanelExpanded, setIsRunsPanelExpanded] = useState(false);
+    const [integrationsRefreshKey, setIntegrationsRefreshKey] = useState(0);
 
     // State for Membrane agent panel
     const [membraneAgentSessionId, setMembraneAgentSessionId] = useState<string | null>(null);
     const [membraneAgentInitialMessage, setMembraneAgentInitialMessage] = useState<string | null>(null);
     const [isCreatingMembraneSession, setIsCreatingMembraneSession] = useState(false);
 
-    // Expose method to switch to runs tab and refresh runs
+    // Callback when Membrane agent session completes - refresh integrations/actions
+    const handleSessionComplete = useCallback(() => {
+      setIntegrationsRefreshKey((prev) => prev + 1);
+    }, []);
+
+    // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       switchToRunsTab: () => {
-        setActiveTab('runs');
+        setIsRunsPanelExpanded(true);
       },
       refreshRuns: () => {
         setRunsRefreshKey((prev) => prev + 1);
       },
-    }));
-
-    // Sync activeTab with URL params on mount and when params change
-    useEffect(() => {
-      if (tabParam && ['runs', 'events', 'properties'].includes(tabParam)) {
-        setActiveTab(tabParam);
-      }
-    }, [tabParam]);
-
-    // Switch to properties tab when a node is selected (unless URL param says otherwise)
-    useEffect(() => {
-      if (selectedNodeId && !tabParam) {
-        setActiveTab('properties');
-      }
-    }, [selectedNodeId, tabParam]);
-
-    // Handle tab change and update URL
-    const handleTabChange = useCallback(
-      (value: string) => {
-        const newTab = value as 'properties' | 'runs' | 'events';
-        setActiveTab(newTab);
-
-        // Update URL with tab param, preserving runId if switching to runs tab
-        const params = new URLSearchParams(searchParams.toString());
-        if (newTab === 'runs' && runIdParam) {
-          params.set('tab', 'runs');
-          params.set('runId', runIdParam);
-        } else if (newTab === 'runs') {
-          params.set('tab', 'runs');
-          params.delete('runId'); // Remove runId if no specific run to show
-        } else {
-          params.set('tab', newTab);
-          params.delete('runId'); // Remove runId when switching away from runs
-        }
-
-        router.push(`/workflows/${workflowId}?${params.toString()}`, { scroll: false });
+      openSession: (sessionId: string) => {
+        setMembraneAgentSessionId(sessionId);
+        setMembraneAgentInitialMessage(null);
       },
-      [workflowId, router, searchParams, runIdParam],
-    );
+    }));
 
     const selectedNode = selectedNodeId ? ((workflow?.nodes ?? []).find((n) => n.id === selectedNodeId) ?? null) : null;
 
@@ -267,8 +234,8 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
 
         setIsCreatingMembraneSession(true);
         try {
-          // Create a new Membrane agent session with the initial message
-          const sessionResponse = await fetch('/api/membrane-sessions', {
+          // Create a new Membrane agent session with the initial message and persist to workflow
+          const sessionResponse = await fetch(`/api/workflows/${workflowId}/sessions`, {
             method: 'POST',
             headers: getAgentHeaders(customerId, customerName),
             body: JSON.stringify({ message: enrichedMessage }),
@@ -289,7 +256,7 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
           setIsCreatingMembraneSession(false);
         }
       },
-      [customerId, customerName, workspace, isCreatingMembraneSession],
+      [customerId, customerName, workspace, workflowId, isCreatingMembraneSession],
     );
 
     return (
@@ -304,6 +271,7 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
                   setMembraneAgentInitialMessage(null);
                 }}
                 initialMessage={membraneAgentInitialMessage || undefined}
+                onSessionComplete={handleSessionComplete}
               />
             ) : null
           }
@@ -313,7 +281,7 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
         >
           <ResizableSplitLayout
             header={header}
-            rightWidth={membraneAgentSessionId ? 320 : 420}
+            rightWidth={membraneAgentSessionId ? 380 : 420}
             minRightWidth={280}
             maxRightWidth={600}
             leftPane={
@@ -332,25 +300,13 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
             }
             rightPane={
               !viewOnly && workflow?.nodes && workflow.nodes.length > 0 ? (
-                <div className="flex flex-col h-full">
-                  <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
-                    <div className="border-b border-border p-4">
-                      <TabsList className="w-full rounded-t-xl rounded-b-xl">
-                        <TabsTrigger value="properties" disabled={!selectedNode} className="flex-1">
-                          <Settings className="h-4 w-4" />
-                          Properties
-                        </TabsTrigger>
-                        <TabsTrigger value="runs" className="flex-1">
-                          <History className="h-4 w-4" />
-                          Runs
-                        </TabsTrigger>
-                        <TabsTrigger value="events" className="flex-1">
-                          <Activity className="h-4 w-4" />
-                          Events
-                        </TabsTrigger>
-                      </TabsList>
+                <div className="flex flex-col h-full gap-3 p-3">
+                  {/* Properties Panel - Top */}
+                  <div className="flex flex-col flex-1 min-h-0 overflow-hidden rounded-lg border border-border bg-background">
+                    <div className="px-4 py-3 border-b border-border bg-muted/30">
+                      <h3 className="text-sm font-medium">Selected node properties</h3>
                     </div>
-                    <TabsContent value="properties" className="flex-1 overflow-hidden m-0">
+                    <div className="flex-1 overflow-y-auto">
                       {selectedNode ? (
                         <ConfigPanel
                           selectedNode={selectedNode}
@@ -359,22 +315,44 @@ export const WorkflowEditor = forwardRef<WorkflowEditorRef, WorkflowEditorProps>
                           triggerTypes={triggerTypes}
                           saveError={nodeSaveError}
                           onOpenMembraneAgent={handleOpenMembraneAgent}
+                          integrationsRefreshKey={integrationsRefreshKey}
                         />
                       ) : (
-                        <div className="p-4 text-sm text-muted-foreground">Select a node to edit its properties</div>
+                        <div className="p-6 flex items-center justify-center h-full">
+                          <div className="text-center text-muted-foreground">
+                            <p className="text-sm font-medium">No node selected</p>
+                            <p className="text-xs">Click on a node to configure it</p>
+                          </div>
+                        </div>
                       )}
-                    </TabsContent>
-                    <TabsContent value="runs" className="flex-1 overflow-hidden m-0">
-                      <WorkflowRuns
-                        workflowId={workflowId}
-                        refreshKey={runsRefreshKey}
-                        expandedRunId={runIdParam || undefined}
-                      />
-                    </TabsContent>
-                    <TabsContent value="events" className="flex-1 overflow-hidden m-0">
-                      <WorkflowEvents workflowId={workflowId} refreshKey={eventsRefreshKey} />
-                    </TabsContent>
-                  </Tabs>
+                    </div>
+                  </div>
+
+                  {/* Runs Panel - Bottom */}
+                  <div
+                    className={`flex flex-col rounded-lg border border-border bg-background ${isRunsPanelExpanded ? 'h-[45%] min-h-[200px]' : ''}`}
+                  >
+                    <button
+                      onClick={() => setIsRunsPanelExpanded(!isRunsPanelExpanded)}
+                      className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between w-full hover:bg-muted/50 transition-colors"
+                    >
+                      <h3 className="text-sm font-medium">Workflow runs</h3>
+                      {isRunsPanelExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                    {isRunsPanelExpanded && (
+                      <div className="flex-1 overflow-hidden">
+                        <WorkflowRuns
+                          workflowId={workflowId}
+                          refreshKey={runsRefreshKey}
+                          expandedRunId={runIdParam || undefined}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : undefined
             }

@@ -20,6 +20,7 @@ interface ConfigPanelProps {
   triggerTypes: Record<string, TriggerType>;
   saveError?: { message: string; details?: string } | null;
   onOpenMembraneAgent?: (enrichedMessage: string) => void;
+  integrationsRefreshKey?: number;
 }
 
 const DEFAULT_NODE_TYPE = 'action';
@@ -69,6 +70,7 @@ export function ConfigPanel({
   triggerTypes,
   saveError,
   onOpenMembraneAgent,
+  integrationsRefreshKey,
 }: ConfigPanelProps) {
   const { workflow } = useWorkflow();
   const [formData, setFormData] = useState<WorkflowNode | undefined>();
@@ -209,6 +211,7 @@ export function ConfigPanel({
               setFormData((prev) => (prev ? { ...configuration, id: prev.id } : undefined));
             }}
             onOpenMembraneAgent={onOpenMembraneAgent}
+            refreshKey={integrationsRefreshKey}
           />
         )}
 
