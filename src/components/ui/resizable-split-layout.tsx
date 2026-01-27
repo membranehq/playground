@@ -54,7 +54,7 @@ export function ResizableSplitLayout({
         setInternalRightWidth(newWidth);
       }
     },
-    [isResizing, minRightWidth, maxRightWidth]
+    [isResizing, minRightWidth, maxRightWidth],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -87,9 +87,9 @@ export function ResizableSplitLayout({
       )}
 
       {/* Main content area */}
-      <div ref={containerRef} className="flex flex-1 overflow-hidden">
+      <div ref={containerRef} className="flex flex-1 overflow-hidden min-h-0">
         {/* Left pane */}
-        <div className="flex-1 overflow-hidden">{leftPane}</div>
+        <div className="flex-1 overflow-hidden min-h-0">{leftPane}</div>
 
         {/* Right pane with resize handle */}
         {rightPane && (
@@ -98,7 +98,7 @@ export function ResizableSplitLayout({
             <div
               className={cn(
                 'w-1 bg-transparent hover:bg-blue-500/30 dark:hover:bg-blue-600/30 cursor-col-resize transition-colors relative group',
-                isResizing && 'bg-blue-500/50 dark:bg-blue-600/50'
+                isResizing && 'bg-blue-500/50 dark:bg-blue-600/50',
               )}
               onMouseDown={handleMouseDown}
             >
@@ -106,16 +106,14 @@ export function ResizableSplitLayout({
             </div>
 
             {/* Right pane */}
-            <div className="flex items-stretch py-4 pr-4 min-h-0">
-              <div
-                style={{ width: rightWidth }}
-                className={cn(
-                  "bg-white dark:bg-gray-950 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden min-h-0",
-                  !isResizing && "transition-all duration-300"
-                )}
-              >
-                <div className="flex-1 overflow-y-auto min-h-0">{rightPane}</div>
-              </div>
+            <div
+              style={{ width: rightWidth }}
+              className={cn(
+                'flex flex-col h-full overflow-hidden min-h-0',
+                !isResizing && 'transition-all duration-300',
+              )}
+            >
+              <div className="flex-1 overflow-y-auto min-h-0">{rightPane}</div>
             </div>
           </>
         )}
@@ -123,5 +121,3 @@ export function ResizableSplitLayout({
     </div>
   );
 }
-
-

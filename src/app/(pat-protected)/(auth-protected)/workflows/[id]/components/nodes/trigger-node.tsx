@@ -28,10 +28,11 @@ interface TriggerNodeProps {
 }
 
 export function TriggerNode({ data, selected }: TriggerNodeProps) {
-  // Get integration key from node config for membrane triggers
-  const integrationKey = data.node?.config?.integrationKey as string | undefined;
+  // Get integration key from node config for membrane triggers (only for event triggers, not manual)
+  const isEventTrigger = data.node?.triggerType === 'event';
+  const integrationKey = isEventTrigger ? (data.node?.config?.integrationKey as string | undefined) : undefined;
 
-  // Only call useIntegration if we have a valid integration key
+  // Only call useIntegration if we have a valid integration key (skip for manual triggers)
   const { integration: fetchedIntegration } = useIntegration(integrationKey || '');
 
   // Validate that the returned integration matches the requested key to avoid stale cache issues

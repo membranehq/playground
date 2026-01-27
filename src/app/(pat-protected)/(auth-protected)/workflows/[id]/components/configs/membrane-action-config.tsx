@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -34,6 +34,7 @@ interface MembraneActionConfigProps {
   onChange: (value: Omit<WorkflowNode, 'id'>) => void;
   variableSchema: DataSchema;
   onOpenMembraneAgent?: (enrichedMessage: string) => void;
+  refreshKey?: number;
 }
 
 export function MembraneActionConfig({
@@ -41,6 +42,7 @@ export function MembraneActionConfig({
   onChange,
   variableSchema,
   onOpenMembraneAgent,
+  refreshKey,
 }: MembraneActionConfigProps) {
   const selectedActionId = value.config?.actionId;
   const selectedIntegrationKey = value.config?.integrationKey as string;
@@ -48,6 +50,30 @@ export function MembraneActionConfig({
   // State for connection status from AppConnectionSelector
   const [isConnected, setIsConnected] = useState(false);
   const [actionSelectOpen, setActionSelectOpen] = useState(false);
+
+  // Use ref to track the latest value to avoid stale closures
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  // Handle connection state change and store connectionId
+  const handleConnectionStateChange = useCallback(
+    (connected: boolean, connectionId?: string) => {
+      setIsConnected(connected);
+      // Store connectionId in config when connection state changes
+      if (connected && connectionId && valueRef.current.config?.connectionId !== connectionId) {
+        onChange({
+          ...valueRef.current,
+          config: {
+            ...valueRef.current.config,
+            connectionId,
+          },
+        });
+      }
+    },
+    [onChange],
+  );
 
   // State for "Add new action" dialog
   const [addActionDialogOpen, setAddActionDialogOpen] = useState(false);
@@ -60,6 +86,13 @@ export function MembraneActionConfig({
     integrationKey: selectedIntegrationKey,
   });
 
+  // Refresh actions when refreshKey changes (e.g., after Membrane agent session completes)
+  useEffect(() => {
+    if (refreshKey && actionsForSelectedIntegration.refresh) {
+      actionsForSelectedIntegration.refresh();
+    }
+  }, [refreshKey]);
+
   return (
     <>
       {/* App Selection and Connection Section */}
@@ -71,13 +104,15 @@ export function MembraneActionConfig({
             config: {
               ...value.config,
               integrationKey,
+              connectionId: undefined,
               actionId: undefined,
               inputMapping: undefined,
             },
           });
         }}
-        onConnectionStateChange={setIsConnected}
+        onConnectionStateChange={handleConnectionStateChange}
         onOpenMembraneAgent={onOpenMembraneAgent}
+        refreshKey={refreshKey}
       />
 
       {/* Only show actions if user is connected */}
@@ -146,7 +181,7 @@ export function MembraneActionConfig({
                               onChange({
                                 ...value,
                                 name: actionName,
-                                config: { ...value.config, actionId: action.id },
+                                config: { ...value.config, actionId: action.id, actionKey: action.key },
                               });
                               setActionSelectOpen(false);
                             }}
@@ -289,7 +324,9 @@ Integration ID: ${selectedIntegration?.id || 'Not available'}
 User's description of what the action should do:
 ${actionDescription}
 
-Please help me create this action.`;
+Please help me create this action.
+
+IMPORTANT: Do not ask user to create/test a connection. Connection must be created at this point. Find and use an existing one.`;
 
                 // Call the callback to open Membrane agent panel
                 onOpenMembraneAgent?.(enrichedMessage);
