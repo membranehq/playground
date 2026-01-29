@@ -1733,63 +1733,6 @@ export function MembraneAgentSidebar({
 
 ## Quick Reference
 
-### File Structure Checklist
-
-```
-your-app/
-├── app/
-│   ├── api/
-│   │   ├── membrane-token/
-│   │   │   └── route.ts              # JWT token generation
-│   │   ├── workflows/
-│   │   │   ├── route.ts              # List/create workflows
-│   │   │   └── [id]/
-│   │   │       ├── route.ts          # Get/update/delete workflow
-│   │   │       ├── run/
-│   │   │       │   └── route.ts      # Execute workflow
-│   │   │       └── ingest-event/
-│   │   │           └── route.ts      # Webhook endpoint
-│   │   └── agent/
-│   │       └── sessions/
-│   │           ├── route.ts          # Create session
-│   │           └── [id]/
-│   │               └── messages/
-│   │                   └── route.ts  # Session messages
-│   └── workflows/
-│       └── [id]/
-│           └── page.tsx              # Workflow editor page
-├── components/
-│   └── workflow/
-│       ├── workflow-editor.tsx       # Main canvas
-│       ├── config-panel.tsx          # Node configuration
-│       ├── nodes/
-│       │   ├── trigger-node.tsx
-│       │   └── action-node.tsx
-│       ├── config/
-│       │   ├── manual-trigger-config.tsx
-│       │   ├── event-trigger-config.tsx
-│       │   ├── membrane-action-config.tsx
-│       │   ├── http-request-config.tsx
-│       │   ├── ai-config.tsx
-│       │   └── gate-config.tsx
-│       └── input-mapping.tsx         # Variable picker
-├── lib/
-│   ├── workflow/
-│   │   ├── models/
-│   │   │   ├── workflow.ts
-│   │   │   └── workflow-run.ts
-│   │   ├── executor.ts               # Execution engine
-│   │   ├── node-execution.ts         # Per-node executors
-│   │   ├── output-schema-calculator.ts
-│   │   └── variable-resolver.ts
-│   └── membrane/
-│       └── token.ts                  # Token generation
-├── providers/
-│   └── membrane-provider.tsx         # IntegrationAppProvider wrapper
-└── types/
-    └── workflow.ts                   # TypeScript interfaces
-```
-
 ### API Endpoints Summary
 
 | Endpoint | Method | Purpose |
