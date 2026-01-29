@@ -10,14 +10,10 @@ This guide walks you through integrating Membrane into a workflow builder applic
 
 1. [Quick Start: Minimal Integration](#quick-start-minimal-integration)
 2. [Core Integration: App Actions](#core-integration-app-actions)
-3. [Event-Driven Workflows](#event-driven-workflows)
-4. [Advanced Node Types](#advanced-node-types)
-5. [Self-Integration](#self-integration)
-6. [Workflow Execution Engine](#workflow-execution-engine)
-7. [UI Architecture](#ui-architecture)
-8. [Quick Reference](#quick-reference)
-9. [Appendix: Complete Code Patterns](#appendix-complete-code-patterns)
-10. [Common Pitfalls](#common-pitfalls)
+3. [Self-Integration](#self-integration)
+4. [Quick Reference](#quick-reference)
+5. [Appendix: Complete Code Patterns](#appendix-complete-code-patterns)
+6. [Common Pitfalls](#common-pitfalls)
 
 ---
 
