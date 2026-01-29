@@ -2304,17 +2304,6 @@ const newIntegration = await integrationApp.integrations.create({
 });
 ```
 
-### Node Type Specifications
-
-| Type | nodeType | Required Config | Output Schema |
-|------|----------|-----------------|---------------|
-| Manual Trigger | `manual` | `hasInput`, `inputSchema` | Matches inputSchema |
-| Event Trigger | `event` | `integrationKey`, `eventType`, `dataCollection` OR `connectorEventKey` | Event data |
-| App Action | `action` | `integrationKey`, `actionId` | From Membrane action |
-| HTTP Request | `http` | `inputMapping.uri`, `inputMapping.method` | `{statusCode, headers, body}` |
-| AI Processing | `ai` | `prompt` | `outputSchema` or `{text}` |
-| Gate | `gate` | `condition.field`, `condition.operator`, `condition.value` | `{conditionMet, fieldValue, ...}` |
-
 ---
 
 ## Appendix: Complete Code Patterns
