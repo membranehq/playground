@@ -1,0 +1,3518 @@
+# Integrating Membrane into Your Workflow Builder
+
+This guide walks you through integrating Membrane into a workflow builder application. By the end, your users will be able to connect 200+ apps, use pre-built actions in workflows, and even create custom integrations for any app on-demand.
+
+**Prerequisites**: Membrane account ([documentation](https://docs.getmembrane.com/docs/Overview)), familiarity with React/TypeScript, understanding of workflow builder concepts (nodes, edges, triggers, actions).
+
+---
+
+## Table of Contents
+
+1. [Quick Start: Minimal Integration](#quick-start-minimal-integration)
+2. [Core Integration: App Actions](#core-integration-app-actions)
+3. [Event-Driven Workflows](#event-driven-workflows)
+4. [Advanced Node Types](#advanced-node-types)
+5. [Self-Integration](#self-integration)
+6. [Workflow Execution Engine](#workflow-execution-engine)
+7. [UI Architecture](#ui-architecture)
+8. [Quick Reference](#quick-reference)
+9. [Appendix: Complete Code Patterns](#appendix-complete-code-patterns)
+10. [Common Pitfalls](#common-pitfalls)
+
+---
+
+## Quick Start: Minimal Integration
+
+This section gets you from zero to a working "Trigger → App Action" workflow in ~30 minutes.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     MINIMAL INTEGRATION                         │
+│                                                                 │
+│   ┌──────────┐      ┌──────────────┐      ┌──────────────┐     │
+│   │ Trigger  │ ───► │ Membrane     │ ───► │ External     │     │
+│   │ (Manual) │      │ App Action   │      │ App (Slack,  │     │
+│   └──────────┘      └──────────────┘      │ HubSpot...)  │     │
+│                            │                                    │
+│                            ▼                                    │
+│                    ┌──────────────┐                             │
+│                    │ Membrane SDK │                             │
+│                    │ handles auth │                             │
+│                    │ & API calls  │                             │
+│                    └──────────────┘                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Step 1: Install Dependencies
+
+```bash
+npm install @membranehq/sdk @membranehq/react jsonwebtoken
+```
+
+<details>
+<summary><strong>Agent Spec: Dependencies</strong></summary>
+
+```json
+{
+  "dependencies": {
+    "@membranehq/sdk": "latest",
+    "@membranehq/react": "latest",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0"
+  }
+}
+```
+
+</details>
+
+### Step 2: Environment Variables
+
+```env
+MEMBRANE_API_URI=https://api.membrane.io
+MEMBRANE_UI_URI=https://app.membrane.io
+MEMBRANE_API_URI=https://api.getmembrane.com
+MEMBRANE_UI_URI=https://ui.getmembrane.com
+MEMBRANE_WORKSPACE_KEY=your_workspace_key
+MEMBRANE_WORKSPACE_SECRET=your_workspace_secret
+```
+
+<details>
+<summary><strong>Agent Spec: Environment Variables</strong></summary>
+
+```json
+{
+  "required_env_vars": [
+    {
+      "name": "MEMBRANE_API_URI",
+      "description": "Membrane API base URL",
+      "default": "https://api.membrane.io"
+      "default": "https://api.getmembrane.com"
+    },
+    {
+      "name": "MEMBRANE_UI_URI", 
+      "description": "Membrane UI base URL for embedded components",
+      "default": "https://app.membrane.io"
+      "default": "https://ui.getmembrane.com"
+    },
+    {
+      "name": "MEMBRANE_WORKSPACE_KEY",
+      "description": "Your Membrane workspace key from dashboard"
+    },
+    {
+      "name": "MEMBRANE_WORKSPACE_SECRET",
+      "description": "Your Membrane workspace secret (keep secure, server-side only)"
+    }
+  ]
+}
+```
+
+</details>
+
+### Step 3: Token Generation Endpoint
+
+Create a server-side endpoint that generates JWT tokens for Membrane API authentication.
+
+```typescript
+// /api/membrane-token/route.ts
+
+import jwt from "jsonwebtoken";
+
+export async function GET(request: Request) {
+  // Extract customer/user info from your auth system
+  const customerId = getCustomerIdFromRequest(request);
+  const customerName = getCustomerNameFromRequest(request);
+  
+  const token = jwt.sign(
+    {
+      iss: process.env.MEMBRANE_WORKSPACE_KEY,
+      sub: customerId,           // Your customer's unique ID
+      id: customerId,            // Your customer's unique ID
+      name: customerName,        // Display name
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 7200, // 2 hours
+      isAdmin: false,
+    },
+    process.env.MEMBRANE_WORKSPACE_SECRET!,
+    { algorithm: "HS512" }
+  );
+
+  return Response.json({
+    apiUri: process.env.MEMBRANE_API_URI,
+    uiUri: process.env.MEMBRANE_UI_URI,
+    token,
+  });
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Token Endpoint</strong></summary>
+
+```json
+{
+  "endpoint": "/api/membrane-token",
+  "method": "GET",
+  "auth": "Your application's authentication",
+  "response": {
+    "apiUri": "string - Membrane API URL",
+    "uiUri": "string - Membrane UI URL", 
+    "token": "string - JWT token for Membrane SDK"
+  },
+  "jwt_claims": {
+    "iss": "MEMBRANE_WORKSPACE_KEY",
+    "sub": "customer_id (your user/tenant identifier)",
+    "id": "customer_id (your user/tenant identifier)",
+    "name": "customer display name",
+    "iat": "issued at timestamp",
+    "exp": "expiration (recommended: 2 hours)",
+    "isAdmin": "boolean (usually false for end users)"
+  },
+  "algorithm": "HS512",
+  "caching": "Recommended: cache tokens for (exp - 5 minutes) to reduce generation overhead"
+}
+```
+
+</details>
+
+### Step 4: Add IntegrationAppProvider
+
+Wrap your application (or workflow builder section) with Membrane's provider.
+
+```tsx
+// /providers/membrane-provider.tsx
+
+"use client";
+
+import { IntegrationAppProvider } from "@membranehq/react";
+import { useEffect, useState } from "react";
+
+export function MembraneProvider({ children }: { children: React.ReactNode }) {
+  const [config, setConfig] = useState<{
+    apiUri: string;
+    uiUri: string;
+    token: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/membrane-token")
+      .then((res) => res.json())
+      .then(setConfig);
+  }, []);
+
+  if (!config) return <LoadingSpinner />;
+
+  return (
+    <IntegrationAppProvider
+      apiUri={config.apiUri}
+      uiUri={config.uiUri}
+      token={config.token}
+    >
+      {children}
+    </IntegrationAppProvider>
+  );
+}
+```
+
+```tsx
+// In your layout or app wrapper
+import { MembraneProvider } from "./providers/membrane-provider";
+
+export default function WorkflowBuilderLayout({ children }) {
+  return (
+    <MembraneProvider>
+      {children}
+    </MembraneProvider>
+  );
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Provider Setup</strong></summary>
+
+```json
+{
+  "component": "IntegrationAppProvider",
+  "package": "@membranehq/react",
+  "required_props": {
+    "apiUri": "string - from token endpoint",
+    "uiUri": "string - from token endpoint", 
+    "token": "string - JWT from token endpoint"
+  },
+  "placement": "Wrap workflow builder or entire app",
+  "async_loading": "Token fetch is async; show loading state until ready",
+  "context_provided": [
+    "useIntegrations() - list available integrations",
+    "useConnections() - list user's connected accounts",
+    "useActions() - list actions for an integration",
+    "useIntegrationApp() - access to UI triggers (open connection dialogs, etc.)"
+  ]
+}
+```
+
+</details>
+
+### Step 5: Your First Trigger → Action Workflow
+
+With the provider in place, you can now build a minimal workflow with two nodes:
+
+```
+┌─────────────┐         ┌─────────────────┐
+│   Manual    │────────►│   Slack:        │
+│   Trigger   │         │   Send Message  │
+└─────────────┘         └─────────────────┘
+      │                        │
+      │ User clicks            │ Membrane SDK
+      │ "Run Workflow"         │ executes action
+      ▼                        ▼
+  { input: ... }          Message sent!
+```
+
+The following sections explain how to build the configuration UI and execution logic.
+
+### Step 6: Complete Action Configuration UI
+
+Here's a complete, working component for configuring Membrane actions in your workflow builder. This handles the full flow: app selection → OAuth connection → action selection → input configuration.
+
+```tsx
+// components/membrane/action-config.tsx
+
+"use client";
+
+import {
+  useActions,
+  useConnections,
+  useIntegrationApp,
+  useIntegrations,
+} from "@membranehq/react";
+import { useEffect } from "react";
+
+type MembraneActionConfigProps = {
+  config: Record<string, unknown>;
+  onUpdateConfig: (key: string, value: unknown) => void;
+  disabled?: boolean;
+};
+
+export function MembraneActionConfig({
+  config,
+  onUpdateConfig,
+  disabled = false,
+}: MembraneActionConfigProps) {
+  const integrationApp = useIntegrationApp();
+  const { items: integrations, loading: integrationsLoading } = useIntegrations();
+  const { 
+    items: connections, 
+    loading: connectionsLoading, 
+    refresh: refreshConnections 
+  } = useConnections();
+
+  // Read current config values
+  const selectedIntegrationKey = (config?.membraneIntegrationKey as string) || "";
+  const selectedActionId = (config?.membraneActionId as string) || "";
+  const selectedConnectionId = (config?.membraneConnectionId as string) || "";
+
+  // Fetch actions for selected integration
+  const { items: actions, loading: actionsLoading } = useActions({
+    integrationKey: selectedIntegrationKey || undefined,
+  });
+
+  // Filter connections for selected integration
+  const filteredConnections = connections?.filter(
+    (conn) => conn.integration?.key === selectedIntegrationKey
+  );
+
+  // Handlers
+  const handleIntegrationChange = (integrationKey: string) => {
+    onUpdateConfig("membraneIntegrationKey", integrationKey);
+    // Clear dependent fields when integration changes
+    onUpdateConfig("membraneConnectionId", "");
+    onUpdateConfig("membraneActionId", "");
+  };
+
+  const handleActionChange = (actionId: string) => {
+    onUpdateConfig("membraneActionId", actionId);
+  };
+
+  const handleConnectionChange = (connectionId: string) => {
+    onUpdateConfig("membraneConnectionId", connectionId);
+  };
+
+  // Open OAuth flow for new connection
+  const handleConnectApp = async () => {
+    if (!selectedIntegrationKey || !integrationApp) return;
+
+    try {
+      const connection = await integrationApp
+        .integration(selectedIntegrationKey)
+        .openNewConnection();
+
+      if (connection) {
+        refreshConnections();
+        onUpdateConfig("membraneConnectionId", connection.id);
+      }
+    } catch (error) {
+      console.error("Failed to connect app:", error);
+    }
+  };
+
+  // Reconnect/update existing connection
+  const handleReconnect = async (connectionId: string) => {
+    if (!integrationApp) return;
+
+    try {
+      await integrationApp.connection(connectionId).open();
+      refreshConnections();
+    } catch (error) {
+      console.error("Failed to reconnect:", error);
+    }
+  };
+
+  // Auto-select connection if only one exists for this integration
+  useEffect(() => {
+    if (
+      filteredConnections?.length === 1 &&
+      !selectedConnectionId &&
+      selectedIntegrationKey
+    ) {
+      onUpdateConfig("membraneConnectionId", filteredConnections[0].id);
+    }
+  }, [filteredConnections, selectedConnectionId, selectedIntegrationKey, onUpdateConfig]);
+
+  return (
+    <div className="space-y-4">
+      {/* Step 1: App Selection */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">App</label>
+        <select
+          disabled={disabled || integrationsLoading}
+          onChange={(e) => handleIntegrationChange(e.target.value)}
+          value={selectedIntegrationKey}
+          className="w-full rounded border p-2"
+        >
+          <option value="">
+            {integrationsLoading ? "Loading apps..." : "Select an app"}
+          </option>
+          {integrations?.filter((i) => i.key).map((integration) => (
+            <option key={integration.key} value={integration.key!}>
+              {integration.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Step 2: Connection Selection (only shown after app selected) */}
+      {selectedIntegrationKey && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium">Connection</label>
+            <button
+              type="button"
+              onClick={handleConnectApp}
+              disabled={disabled}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              + New Connection
+            </button>
+          </div>
+          
+          {connectionsLoading ? (
+            <div className="text-sm text-gray-500">Loading connections...</div>
+          ) : filteredConnections && filteredConnections.length > 0 ? (
+            <div className="space-y-2">
+              <select
+                disabled={disabled}
+                onChange={(e) => handleConnectionChange(e.target.value)}
+                value={selectedConnectionId}
+                className="w-full rounded border p-2"
+              >
+                <option value="">Select a connection</option>
+                {filteredConnections.map((connection) => (
+                  <option key={connection.id} value={connection.id}>
+                    {connection.name || `Connection ${connection.id.slice(0, 8)}`}
+                  </option>
+                ))}
+              </select>
+              {selectedConnectionId && (
+                <button
+                  type="button"
+                  onClick={() => handleReconnect(selectedConnectionId)}
+                  disabled={disabled}
+                  className="w-full rounded border p-2 text-sm hover:bg-gray-50"
+                >
+                  Reconnect / Update Credentials
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="rounded border border-dashed p-3 text-center">
+              <p className="text-sm text-gray-500">No connections yet</p>
+              <button
+                type="button"
+                onClick={handleConnectApp}
+                disabled={disabled}
+                className="mt-2 rounded bg-blue-600 px-3 py-1 text-sm text-white"
+              >
+                Connect {integrations?.find((i) => i.key === selectedIntegrationKey)?.name}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 3: Action Selection (only shown after connection selected) */}
+      {selectedIntegrationKey && selectedConnectionId && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Action</label>
+          <select
+            disabled={disabled || actionsLoading}
+            onChange={(e) => handleActionChange(e.target.value)}
+            value={selectedActionId}
+            className="w-full rounded border p-2"
+          >
+            <option value="">
+              {actionsLoading ? "Loading actions..." : "Select an action"}
+            </option>
+            {actions?.filter((a) => a.id).map((action) => (
+              <option key={action.id} value={action.id}>
+                {action.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Step 4: Action Input (only shown after action selected) */}
+      {selectedActionId && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Action Input (JSON)</label>
+          <textarea
+            disabled={disabled}
+            value={(config?.membraneActionInput as string) || "{}"}
+            onChange={(e) => onUpdateConfig("membraneActionInput", e.target.value)}
+            placeholder='{"channel": "#general", "text": "Hello!"}'
+            rows={6}
+            className="w-full rounded border p-2 font-mono text-sm"
+          />
+          <p className="text-xs text-gray-500">
+            Use {"{{NodeName.field}}"} syntax for dynamic values from previous steps.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Action Configuration Component</strong></summary>
+
+```json
+{
+  "component": "MembraneActionConfig",
+  "purpose": "Complete UI for configuring Membrane actions in workflow nodes",
+  "config_fields": {
+    "membraneIntegrationKey": "string - selected app key (e.g., 'slack')",
+    "membraneActionId": "string - selected action ID",
+    "membraneConnectionId": "string - user's OAuth connection ID",
+    "membraneActionInput": "string - JSON input for the action"
+  },
+  "ui_flow": [
+    "1. Select App (from useIntegrations)",
+    "2. Connect or select existing connection (useConnections + openNewConnection)",
+    "3. Select Action (from useActions, filtered by integrationKey)",
+    "4. Configure action input (JSON textarea)"
+  ],
+  "key_behaviors": {
+    "auto_select_connection": "If only one connection exists, auto-select it",
+    "clear_dependent_fields": "When app changes, clear connection and action",
+    "oauth_flow": "integrationApp.integration(key).openNewConnection() opens Membrane's OAuth UI"
+  },
+  "important_notes": [
+    "Filter connections by integration key: conn.integration?.key === selectedIntegrationKey",
+    "The OAuth modal is provided by Membrane - do not rebuild it"
+  ]
+}
+```
+
+</details>
+
+### Step 7: Server-Side Action Execution
+
+When workflows run, execute Membrane actions on the server. Here's a complete step handler:
+When workflows run, execute Membrane actions on the server using the `@membranehq/sdk`. The JWT token must include the **actual user ID** who owns the connection.
+
+Here's a complete step handler:
+
+```typescript
+// plugins/membrane/steps/app-action.ts
+
+import "server-only";
+
+import { IntegrationAppClient } from "@membranehq/sdk";
+import jwt from "jsonwebtoken";
+import { SignJWT } from "jose";  // Use jose instead of jsonwebtoken for edge compatibility
+
+const MEMBRANE_API_URI = process.env.MEMBRANE_API_URI || "https://api.integration.app";
+
+export type MembraneAppActionInput = {
+  membraneIntegrationKey: string;
+  membraneActionId: string;
+  membraneConnectionId: string;
+  membraneActionInput?: string;      // JSON string
+  _context?: {
+    userId?: string;  // REQUIRED: The actual user ID who owns the connection
+  };
+};
+
+type MembraneAppActionResult =
+  | { success: true; result: unknown }
+  | { success: false; error: string };
+
+/**
+ * Generate a Membrane JWT token for server-side execution
+ * Generate a Membrane JWT token for server-side execution using jose
+ */
+function generateMembraneToken(userId: string): string {
+async function generateMembraneToken(userId: string): Promise<string> {
+  const workspaceKey = process.env.MEMBRANE_WORKSPACE_KEY;
+  const workspaceSecret = process.env.MEMBRANE_WORKSPACE_SECRET;
+
+  if (!workspaceKey || !workspaceSecret) {
+    throw new Error("Membrane workspace credentials not configured");
+  }
+
+  return jwt.sign(
+    {
+      iss: workspaceKey,
+      id: userId,
+      name: "Workflow Execution",
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    },
+    workspaceSecret,
+    { algorithm: "HS512" }
+  );
+  const secret = new TextEncoder().encode(workspaceSecret);
+
+  const token = await new SignJWT({
+    iss: workspaceKey,
+    id: userId,
+    name: "Workflow Execution",
+  })
+    .setProtectedHeader({ alg: "HS512" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(secret);
+
+  return token;
+}
+
+/**
+ * Execute a Membrane action
+ * Execute a Membrane action via SDK
+ */
+export async function membraneAppActionStep(
+  input: MembraneAppActionInput
+): Promise<MembraneAppActionResult> {
+  const {
+    membraneIntegrationKey,
+    membraneActionId,
+    membraneConnectionId,
+    membraneActionInput,
+    _context,
+  } = input;
+
+  // Validate required fields
+  if (!membraneIntegrationKey) {
+    return { success: false, error: "Membrane integration key is required" };
+  }
+
+  if (!membraneActionId) {
+    return { success: false, error: "Membrane action ID is required" };
+  }
+
+  if (!membraneConnectionId) {
+    return { success: false, error: "Membrane connection ID is required" };
+  }
+
+  const userId = _context?.userId;
+  if (!userId) {
+    return { success: false, error: "User ID is required for Membrane authentication" };
+  }
+
+  try {
+    // Generate token for this execution
+    const token = generateMembraneToken("workflow-execution");
+    const token = await generateMembraneToken(userId);
+
+    // Parse action input if provided
+    let actionInput: Record<string, unknown> = {};
+    if (membraneActionInput) {
+      try {
+        actionInput = JSON.parse(membraneActionInput);
+      } catch {
+        return { success: false, error: "Invalid JSON in action input" };
+      }
+    }
+
+    // Create Membrane client and execute action
+    const client = new IntegrationAppClient({ token });
+    const client = new IntegrationAppClient({
+      token,
+      apiUri: MEMBRANE_API_URI,
+    });
+
+    const result = await client
+      .connection(membraneConnectionId)
+      .action(membraneActionId)
+      .run(actionInput);
+      .run(actionInput, { connectionId: membraneConnectionId });
+
+    return { success: true, result };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Membrane action failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+```
+
+**Passing User ID Through Workflow Execution:**
+
+Your workflow executor passes the user ID to each step via the execution context:
+
+```typescript
+// Workflow executor input type
+type WorkflowExecutionInput = {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  executionId?: string;
+  workflowId?: string;
+  userId?: string;
+};
+
+// Execute route
+const { user } = await auth();
+executeWorkflow({
+  nodes: workflow.nodes,
+  edges: workflow.edges,
+  executionId: execution.id,
+  workflowId,
+  userId: user.id,
+});
+
+// Step context
+const stepContext = {
+  executionId,
+  nodeId: node.id,
+  userId,
+};
+```
+
+<details>
+<summary><strong>Agent Spec: Server-Side Execution</strong></summary>
+
+```json
+{
+  "function": "membraneAppActionStep",
+  "purpose": "Execute Membrane actions during workflow runs",
+  "input_fields": {
+    "membraneIntegrationKey": "string - the app (e.g., 'slack')",
+    "membraneActionId": "string - the action ID (from useActions)",
+    "membraneConnectionId": "string - the user's connection",
+    "membraneActionInput": "string (optional) - JSON input for the action"
+    "membraneActionInput": "string (optional) - JSON input for the action",
+    "_context.userId": "string - the user ID who owns the connection"
+  },
+  "execution_flow": [
+    "1. Validate required fields",
+    "2. Generate server-side JWT token",
+    "1. Validate required fields including userId",
+    "2. Generate JWT token with user ID",
+    "3. Parse action input JSON",
+    "4. Create IntegrationAppClient with token",
+    "5. Execute: client.connection(id).action(actionId).run(input)",
+    "4. Create IntegrationAppClient with token and apiUri",
+    "5. Execute: client.action(actionId).run(input, { connectionId })",
+    "6. Return result or error"
+  ],
+  "notes": [
+    "Server-side tokens can use a generic userId like 'workflow-execution'"
+  "requirements": [
+    "Use @membranehq/sdk IntegrationAppClient for action execution",
+    "Include actual user ID in JWT token",
+    "Use jose library for JWT generation (edge-compatible)",
+    "Set apiUri to https://api.integration.app"
+  ]
+}
+```
+
+</details>
+
+---
+
+## Core Integration: App Actions
+
+This section covers the primary integration point: letting users add app actions to their workflows.
+
+### Workflow Node Data Model
+
+Define a node structure that supports Membrane actions:
+
+```typescript
+// types/workflow.ts
+
+interface WorkflowNode {
+  id: string;
+  name: string;
+  type: "trigger" | "action";
+  nodeType: "manual" | "event" | "http" | "action" | "ai" | "gate";
+  config: NodeConfig;
+  outputSchema?: JSONSchema;    // What this node outputs
+  ready: boolean;               // All required config provided?
+}
+
+interface ActionNodeConfig {
+  integrationKey?: string;      // e.g., "slack", "hubspot"
+  actionId?: string;            // e.g., "send-message"
+  connectionId?: string;        // User's connected account
+  inputMapping?: Record<string, unknown>;  // Maps previous outputs to action inputs
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Node Data Model</strong></summary>
+
+```json
+{
+  "WorkflowNode": {
+    "id": "string - unique node identifier",
+    "name": "string - display name",
+    "type": "enum: 'trigger' | 'action'",
+    "nodeType": "enum: 'manual' | 'event' | 'http' | 'action' | 'ai' | 'gate'",
+    "config": "object - node-type-specific configuration",
+    "outputSchema": "JSONSchema - describes node output structure",
+    "ready": "boolean - true when all required config is set"
+  },
+  "ActionNodeConfig": {
+    "integrationKey": "string - Membrane integration identifier",
+    "actionId": "string - specific action within integration",
+    "connectionId": "string - user's connection instance ID",
+    "inputMapping": "object - maps variable references to action inputs"
+  },
+  "validation": {
+    "action_node_ready": "integrationKey AND actionId are required"
+  }
+}
+```
+
+</details>
+
+### Discovering and Adding New Apps
+
+Before users can connect apps, they need to discover available apps from Membrane's app catalog. There are two types of apps:
+
+1. **Integrations** (`useIntegrations()`) - Apps already added to your workspace
+2. **External Apps** (`external-apps` API) - Membrane's full app catalog for discovery
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    APP DISCOVERY FLOW                               │
+│                                                                     │
+│   ┌─────────────────┐      ┌─────────────────┐      ┌────────────┐ │
+│   │  Your Workspace │      │  Membrane App   │      │  External  │ │
+│   │  Integrations   │      │  Catalog        │      │  App       │ │
+│   │  (useIntegra-   │      │  (external-apps │      │  Selected  │ │
+│   │   tions)        │      │   API)          │      │            │ │
+│   └────────┬────────┘      └────────┬────────┘      └─────┬──────┘ │
+│            │                        │                      │        │
+│            │ Already added          │ Search & discover    │        │
+│            │ to workspace           │ new apps             │        │
+│            ▼                        ▼                      ▼        │
+│   ┌─────────────────────────────────────────────────────────────┐  │
+│   │              integrationApp.integrations.create()            │  │
+│   │              Creates integration in your workspace           │  │
+│   └─────────────────────────────────────────────────────────────┘  │
+│                                    │                                │
+│                                    ▼                                │
+│                         App available for connection                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Fetching External Apps (App Catalog)
+
+Use the `external-apps` endpoint to search Membrane's full app catalog:
+
+```typescript
+// hooks/use-external-apps.ts
+
+import { useState, useEffect, useCallback } from "react";
+import { useIntegrationApp } from "@membranehq/react";
+import type { App } from "@membranehq/sdk";
+
+interface UseExternalAppsOptions {
+  search?: string;
+  limit?: number;
+  enabled?: boolean;
+}
+
+export function useExternalApps(options: UseExternalAppsOptions = {}) {
+  const { search = "", limit = 50, enabled = true } = options;
+  const integrationApp = useIntegrationApp();
+  const [apps, setApps] = useState<App[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchApps = useCallback(async () => {
+    if (!enabled || !integrationApp) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Fetch from Membrane's app catalog
+      const response = await integrationApp.get("external-apps", {
+        search: search || undefined,
+        limit,
+      });
+      setApps(response.items || []);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error("Failed to fetch apps"));
+      setApps([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [integrationApp, search, limit, enabled]);
+
+  useEffect(() => {
+    fetchApps();
+  }, [fetchApps]);
+
+  return { apps, isLoading, error, refetch: fetchApps };
+}
+```
+
+#### Creating an Integration from an External App
+
+When a user selects an app from the catalog, create an integration in your workspace:
+
+```typescript
+// When user selects an app from the catalog
+const handleExternalAppSelect = async (app: App) => {
+  const integrationApp = useIntegrationApp();
+  
+  // Create integration in your workspace from the external app
+  const newIntegration = await integrationApp.integrations.create({
+    name: app.name,
+    logoUri: app.logoUri,
+    appUuid: app.uuid,
+    connectorId: app.defaultConnectorId,
+    key: app.key,
+  });
+
+  // Refresh your integrations list
+  await refreshIntegrations();
+
+  // Now this app is available for connection
+  return newIntegration;
+};
+```
+
+<details>
+<summary><strong>Agent Spec: External Apps API</strong></summary>
+
+```json
+{
+  "endpoint": "external-apps",
+  "method": "integrationApp.get('external-apps', options)",
+  "options": {
+    "search": "string - search query to filter apps by name",
+    "limit": "number - max results to return (default: 50)"
+  },
+  "response": {
+    "items": "App[] - array of available apps"
+  },
+  "App": {
+    "uuid": "string - unique app identifier",
+    "key": "string - app key for integration creation",
+    "name": "string - display name",
+    "logoUri": "string - app logo URL",
+    "defaultConnectorId": "string - connector to use for this app"
+  },
+  "create_integration": {
+    "method": "integrationApp.integrations.create(params)",
+    "params": {
+      "name": "string - from app.name",
+      "logoUri": "string - from app.logoUri",
+      "appUuid": "string - from app.uuid",
+      "connectorId": "string - from app.defaultConnectorId",
+      "key": "string - from app.key"
+    },
+    "returns": "Integration - the newly created integration"
+  },
+  "flow": [
+    "1. User searches for app using external-apps API",
+    "2. User selects app from results",
+    "3. Call integrationApp.integrations.create() with app data",
+    "4. Refresh integrations list",
+    "5. New integration available for connection"
+  ]
+}
+```
+
+</details>
+
+#### App Search UI Example
+
+```tsx
+// components/app-search.tsx
+
+import { useState } from "react";
+import { useExternalApps } from "@/hooks/use-external-apps";
+import { useDebounce } from "@/hooks/use-debounce";
+
+export function AppSearch({ onSelect }: { onSelect: (app: App) => void }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const { apps, isLoading, error } = useExternalApps({
+    search: debouncedSearch,
+    limit: 50,
+    enabled: true,
+  });
+
+  return (
+    <div className="app-search">
+      <input
+        type="text"
+        placeholder="Search apps..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+
+      {isLoading && <LoadingSpinner />}
+      
+      {error && <ErrorMessage message="Failed to load apps" />}
+
+      <div className="app-grid">
+        {apps.map((app) => (
+          <button
+            key={app.key}
+            onClick={() => onSelect(app)}
+            className="app-card"
+          >
+            <img src={app.logoUri} alt={app.name} />
+            <span>{app.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Connection Selection UI
+
+When a user adds an "App Action" node, they first select which app to use:
+
+```tsx
+// components/workflow/app-selector.tsx
+
+import { useIntegrations, useIntegrationApp } from "@membranehq/react";
+
+export function AppSelector({ 
+  onSelect 
+}: { 
+  onSelect: (integrationKey: string) => void 
+}) {
+  const { items: integrations, loading } = useIntegrations();
+  const integrationApp = useIntegrationApp();
+
+  const handleAppClick = async (integration: Integration) => {
+    // Open Membrane's connection UI
+    const connection = await integrationApp
+      .integration(integration.key)
+      .openNewConnection();
+    
+    if (connection) {
+      onSelect(integration.key);
+    }
+  };
+
+  return (
+    <div className="app-grid">
+      {integrations?.map((integration) => (
+        <button
+          key={integration.key}
+          onClick={() => handleAppClick(integration)}
+          className="app-card"
+        >
+          <img src={integration.logoUri} alt={integration.name} />
+          <span>{integration.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Select an App                            │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
+│  │  Slack  │  │ HubSpot │  │ Notion  │  │ Airtable│  ...   │
+│  │   [S]   │  │   [H]   │  │   [N]   │  │   [A]   │        │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘        │
+│                                                             │
+│  Clicking opens Membrane's OAuth connection flow            │
+│  ─────────────────────────────────────────────────          │
+│  │ This is Membrane UI - don't rebuild it! │                │
+│  ─────────────────────────────────────────────              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+<details>
+<summary><strong>Agent Spec: Connection Flow</strong></summary>
+
+```json
+{
+  "hook": "useIntegrations",
+  "returns": {
+    "items": "Integration[] - available integrations",
+    "loading": "boolean",
+    "error": "Error | null",
+    "refresh": "() => void"
+  },
+  "Integration": {
+    "key": "string - unique identifier (e.g., 'slack')",
+    "name": "string - display name",
+    "logoUri": "string - integration logo URL"
+  },
+  "connection_flow": {
+    "method": "integrationApp.integration(key).openNewConnection()",
+    "behavior": "Opens Membrane modal for OAuth/API key auth",
+    "returns": "Connection object on success, null on cancel",
+    "note": "This UI is provided by Membrane - do not rebuild"
+  }
+}
+```
+
+</details>
+
+### Action Selection
+
+After connecting, show available actions for the selected integration:
+
+```tsx
+// components/workflow/action-selector.tsx
+
+import { useActions } from "@membranehq/react";
+
+export function ActionSelector({
+  integrationKey,
+  onSelect,
+}: {
+  integrationKey: string;
+  onSelect: (actionId: string) => void;
+}) {
+  const { items: actions, loading } = useActions({ integrationKey });
+
+  return (
+    <div className="action-list">
+      {actions?.map((action) => (
+        <button
+          key={action.id}
+          onClick={() => onSelect(action.id)}
+          className="action-item"
+        >
+          <span className="action-name">{action.name}</span>
+          <span className="action-description">{action.description}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Actions API</strong></summary>
+
+```json
+{
+  "hook": "useActions",
+  "params": {
+    "integrationKey": "string - required"
+  },
+  "returns": {
+    "items": "Action[]",
+    "loading": "boolean",
+    "error": "Error | null"
+  },
+  "Action": {
+    "id": "string - action identifier",
+    "key": "string - action key",
+    "name": "string - display name",
+    "description": "string - what the action does",
+    "inputSchema": "JSONSchema - required inputs",
+    "outputSchema": "JSONSchema - action output structure"
+  }
+}
+```
+
+</details>
+
+### Input Mapping: Connecting Data Between Nodes
+
+Workflow power comes from passing data between nodes. Users map outputs from previous steps to action inputs.
+
+```
+┌─────────────┐         ┌─────────────────────────────────────┐
+│   Trigger   │────────►│   Slack: Send Message               │
+│             │         │                                     │
+│ Output:     │         │  Input Mapping:                     │
+│ {           │         │  ┌─────────────────────────────┐    │
+│   message:  │────────►│  │ channel: #general           │    │
+│   "Hello"   │         │  │ text: {{Trigger.message}}   │◄───┼── Variable ref
+│ }           │         │  └─────────────────────────────┘    │
+└─────────────┘         └─────────────────────────────────────┘
+```
+
+```typescript
+// components/workflow/input-mapping.tsx
+
+import { useAction } from "@membranehq/react";
+
+export function InputMappingEditor({
+  actionId,
+  integrationKey,
+  previousNodes,
+  value,
+  onChange,
+}: {
+  actionId: string;
+  integrationKey: string;
+  previousNodes: WorkflowNode[];
+  value: Record<string, unknown>;
+  onChange: (mapping: Record<string, unknown>) => void;
+}) {
+  const { data: action } = useAction({ id: actionId, integrationKey });
+  
+  // Build variable schema from previous nodes
+  const variableSchema = buildVariableSchema(previousNodes);
+
+  if (!action?.inputSchema) return null;
+
+  return (
+    <div className="input-mapping">
+      {Object.entries(action.inputSchema.properties || {}).map(([key, schema]) => (
+        <div key={key} className="input-field">
+          <label>{schema.title || key}</label>
+          <DataInput
+            schema={schema}
+            variableSchema={variableSchema}
+            value={value[key]}
+            onChange={(v) => onChange({ ...value, [key]: v })}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Variable references use this format:
+// { "$var": "$.Previous Steps.Trigger.message" }
+
+function buildVariableSchema(previousNodes: WorkflowNode[]) {
+  return {
+    type: "object",
+    properties: {
+      "Previous Steps": {
+        type: "object",
+        properties: Object.fromEntries(
+          previousNodes.map((node) => [
+            node.name,
+            node.outputSchema || { type: "object" },
+          ])
+        ),
+      },
+    },
+  };
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Variable Reference Format</strong></summary>
+
+```json
+{
+  "variable_reference": {
+    "format": { "$var": "$.Previous Steps.<NodeName>.<path>" },
+    "example": { "$var": "$.Previous Steps.HTTP Request.body.userId" },
+    "path_syntax": "JSONPath-like dot notation"
+  },
+  "variable_schema": {
+    "structure": {
+      "Previous Steps": {
+        "<Node 1 Name>": "<Node 1 outputSchema>",
+        "<Node 2 Name>": "<Node 2 outputSchema>"
+      }
+    },
+    "purpose": "Enables autocomplete and validation in UI"
+  },
+  "resolution": {
+    "timing": "At workflow execution time",
+    "method": "Walk path through accumulated node outputs",
+    "fallback": "null if path doesn't exist"
+  }
+}
+```
+
+</details>
+
+### Executing Actions in Workflow Runs
+
+When a workflow runs, execute the Membrane action with resolved inputs:
+
+```typescript
+// lib/workflow/execute-action.ts
+
+import { IntegrationAppClient } from "@membranehq/sdk";
+
+export async function executeMembraneAction(
+  node: WorkflowNode,
+  previousResults: Record<string, unknown>,
+  membraneToken: string
+): Promise<NodeExecutionResult> {
+  const { integrationKey, actionId, connectionId, inputMapping } = node.config;
+
+  // Resolve variable references from previous step outputs
+  const resolvedInput = resolveVariables(inputMapping, previousResults);
+
+  // Create Membrane client
+  const client = new IntegrationAppClient({ token: membraneToken });
+
+  // Execute the action
+  const result = await client
+    .connection(connectionId)
+    .action(actionId)
+    .run(resolvedInput);
+
+  return {
+    nodeId: node.id,
+    success: true,
+    output: result,
+  };
+}
+
+function resolveVariables(
+  mapping: Record<string, unknown>,
+  context: Record<string, unknown>
+): Record<string, unknown> {
+  const resolved: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(mapping)) {
+    if (isVariableRef(value)) {
+      resolved[key] = resolvePath(value.$var, context);
+    } else if (typeof value === "object" && value !== null) {
+      resolved[key] = resolveVariables(value, context);
+    } else {
+      resolved[key] = value;
+    }
+  }
+  
+  return resolved;
+}
+
+function isVariableRef(value: unknown): value is { $var: string } {
+  return typeof value === "object" && value !== null && "$var" in value;
+}
+
+function resolvePath(path: string, context: Record<string, unknown>): unknown {
+  // path format: "$.Previous Steps.NodeName.field.nested"
+  const parts = path.replace(/^\$\./, "").split(".");
+  let current: unknown = context;
+  
+  for (const part of parts) {
+    if (current === null || current === undefined) return null;
+    current = (current as Record<string, unknown>)[part];
+  }
+  
+  return current;
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Action Execution</strong></summary>
+
+```json
+{
+  "sdk": "@membranehq/sdk",
+  "client": "IntegrationAppClient",
+  "initialization": {
+    "token": "JWT from token endpoint (per-request or cached)"
+  },
+  "execution_chain": [
+    "client.connection(connectionId)",
+    ".action(actionId)", 
+    ".run(resolvedInputs)"
+  ],
+  "variable_resolution": {
+    "input": "inputMapping with $var references",
+    "output": "fully resolved object with actual values",
+    "recursive": "handles nested objects"
+  },
+  "error_handling": {
+    "catch": "SDK throws on API errors",
+    "response": "Include error in NodeExecutionResult"
+  }
+}
+```
+
+</details>
+
+---
+
+## Event-Driven Workflows
+
+Move beyond manual triggers to event-driven automation.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    EVENT-DRIVEN WORKFLOW                            │
+│                                                                     │
+│    External App                Your App                 Actions     │
+│    ───────────                ─────────                ─────────    │
+│                                                                     │
+│   ┌─────────┐    webhook    ┌──────────────┐         ┌─────────┐   │
+│   │ HubSpot │──────────────►│ Event Ingest │────────►│ Slack   │   │
+│   │ Contact │               │ Endpoint     │         │ Notify  │   │
+│   │ Created │               └──────────────┘         └─────────┘   │
+│   └─────────┘                      │                       │        │
+│                                    ▼                       ▼        │
+│                           ┌──────────────┐         ┌─────────┐     │
+│                           │ Start        │         │ Update  │     │
+│                           │ Workflow Run │────────►│ CRM     │     │
+│                           └──────────────┘         └─────────┘     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Event Trigger Node Type
+
+```typescript
+// types/workflow.ts
+
+interface EventTriggerConfig {
+  integrationKey: string;         // Which app triggers the event
+  eventType: "created" | "updated" | "deleted" | "connector-event";
+  eventSource: "data-record" | "connector";
+  
+  // For data record events:
+  dataCollection?: string;        // e.g., "contacts", "deals"
+  
+  // For connector events (webhooks):
+  connectorEventKey?: string;     // Custom event identifier
+}
+```
+
+### Event Trigger Configuration UI
+
+```tsx
+// components/workflow/event-trigger-config.tsx
+
+import { useIntegrations, useIntegration } from "@membranehq/react";
+
+export function EventTriggerConfig({
+  config,
+  onChange,
+}: {
+  config: EventTriggerConfig;
+  onChange: (config: EventTriggerConfig) => void;
+}) {
+  const { items: integrations } = useIntegrations();
+  const { data: integration } = useIntegration({ 
+    key: config.integrationKey 
+  });
+
+  return (
+    <div className="event-trigger-config">
+      {/* Step 1: Select App */}
+      <Select
+        label="App"
+        value={config.integrationKey}
+        onChange={(key) => onChange({ ...config, integrationKey: key })}
+        options={integrations?.map((i) => ({ 
+          value: i.key, 
+          label: i.name 
+        }))}
+      />
+
+      {/* Step 2: Select Event Source */}
+      <Select
+        label="Event Source"
+        value={config.eventSource}
+        onChange={(source) => onChange({ ...config, eventSource: source })}
+        options={[
+          { value: "data-record", label: "Data Record Change" },
+          { value: "connector", label: "Connector Event (Webhook)" },
+        ]}
+      />
+
+      {/* Step 3a: Data Record Events */}
+      {config.eventSource === "data-record" && (
+        <>
+          <Select
+            label="Data Collection"
+            value={config.dataCollection}
+            onChange={(dc) => onChange({ ...config, dataCollection: dc })}
+            options={integration?.dataCollections?.map((dc) => ({
+              value: dc.key,
+              label: dc.name,
+            }))}
+          />
+          <Select
+            label="Event Type"
+            value={config.eventType}
+            onChange={(type) => onChange({ ...config, eventType: type })}
+            options={[
+              { value: "created", label: "Record Created" },
+              { value: "updated", label: "Record Updated" },
+              { value: "deleted", label: "Record Deleted" },
+            ]}
+          />
+        </>
+      )}
+
+      {/* Step 3b: Connector Events */}
+      {config.eventSource === "connector" && (
+        <Select
+          label="Connector Event"
+          value={config.connectorEventKey}
+          onChange={(key) => onChange({ ...config, connectorEventKey: key })}
+          options={integration?.connectorEvents?.map((e) => ({
+            value: e.key,
+            label: e.name,
+          }))}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Event Trigger Types</strong></summary>
+
+```json
+{
+  "event_sources": {
+    "data-record": {
+      "description": "Triggers on CRUD operations in connected apps",
+      "events": ["created", "updated", "deleted"],
+      "requires": "dataCollection (e.g., 'contacts', 'deals')",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "fields": { "type": "object", "description": "Record data" },
+          "createdTime": { "type": "string", "format": "date-time" },
+          "updatedTime": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "connector": {
+      "description": "Custom webhook events from integrations",
+      "requires": "connectorEventKey",
+      "output_schema": "Defined by the connector event"
+    }
+  },
+  "validation": {
+    "event_trigger_ready": "(integrationKey AND eventType) AND ((eventSource='data-record' AND dataCollection) OR (eventSource='connector' AND connectorEventKey))"
+  }
+}
+```
+
+</details>
+
+### Event Ingestion Endpoint
+
+Create an endpoint to receive webhook events and trigger workflow runs:
+
+```typescript
+// /api/workflows/[id]/ingest-event/route.ts
+
+import { inngest } from "@/lib/inngest/client";
+
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const workflowId = params.id;
+  
+  // Verify the request (implement your verification logic)
+  const verificationHash = request.headers.get("x-workflow-id");
+  if (!verifyWebhook(workflowId, verificationHash)) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const eventData = await request.json();
+  
+  // Get workflow and check it's active
+  const workflow = await Workflow.findById(workflowId);
+  if (!workflow || workflow.status !== "active") {
+    return new Response("Workflow not found or inactive", { status: 404 });
+  }
+
+  // Create workflow run
+  const run = await WorkflowRun.create({
+    workflowId,
+    userId: workflow.userId,
+    status: "running",
+    input: eventData,
+    nodesSnapshot: workflow.nodes,
+  });
+
+  // Trigger async execution
+  await inngest.send({
+    name: "workflow/execute",
+    data: {
+      workflowId,
+      runId: run.id,
+      triggerInput: eventData,
+    },
+  });
+
+  // Return immediately (async processing)
+  return new Response(JSON.stringify({ runId: run.id }), {
+    status: 202,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Event Ingestion</strong></summary>
+
+```json
+{
+  "endpoint": "/api/workflows/[id]/ingest-event",
+  "method": "POST",
+  "headers": {
+    "x-workflow-id": "verification hash",
+    "Content-Type": "application/json"
+  },
+  "body": "Event data (passed to workflow as trigger output)",
+  "response": {
+    "status": 202,
+    "body": { "runId": "created run ID" }
+  },
+  "behavior": [
+    "Verify webhook authenticity",
+    "Check workflow exists and is active",
+    "Create WorkflowRun record",
+    "Send to async execution queue (Inngest/similar)",
+    "Return immediately"
+  ],
+  "async_execution": "Workflow runs asynchronously after 202 response"
+}
+```
+
+</details>
+
+### Workflow Activation
+
+Only active workflows should receive events:
+
+```typescript
+// lib/workflow/models/workflow.ts
+
+const workflowSchema = new Schema({
+  // ... other fields
+  status: {
+    type: String,
+    enum: ["active", "inactive"],
+    default: "inactive",
+  },
+});
+
+workflowSchema.methods.activate = function () {
+  this.status = "active";
+  return this.save();
+};
+
+workflowSchema.methods.deactivate = function () {
+  this.status = "inactive";
+  return this.save();
+};
+```
+
+```tsx
+// components/workflow/activation-toggle.tsx
+
+export function ActivationToggle({ workflow, onUpdate }) {
+  const handleToggle = async () => {
+    const endpoint = workflow.status === "active" 
+      ? `/api/workflows/${workflow.id}/deactivate`
+      : `/api/workflows/${workflow.id}/activate`;
+    
+    await fetch(endpoint, { method: "POST" });
+    onUpdate();
+  };
+
+  return (
+    <button onClick={handleToggle}>
+      {workflow.status === "active" ? "Deactivate" : "Activate"}
+    </button>
+  );
+}
+```
+
+---
+
+## Advanced Node Types
+
+Beyond Membrane actions, a full workflow builder needs additional node types.
+
+### Node Type Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        NODE TYPES                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  TRIGGERS                          ACTIONS                          │
+│  ────────                          ───────                          │
+│  ┌──────────────┐                  ┌──────────────┐                 │
+│  │   Manual     │                  │  App Action  │  ◄── Membrane   │
+│  │   Trigger    │                  │  (Membrane)  │                 │
+│  └──────────────┘                  └──────────────┘                 │
+│  ┌──────────────┐                  ┌──────────────┐                 │
+│  │   Event      │                  │  HTTP        │  ◄── Custom     │
+│  │   Trigger    │                  │  Request     │                 │
+│  └──────────────┘                  └──────────────┘                 │
+│                                    ┌──────────────┐                 │
+│                                    │  AI          │  ◄── Custom     │
+│                                    │  Processing  │                 │
+│                                    └──────────────┘                 │
+│                                    ┌──────────────┐                 │
+│                                    │  Gate        │  ◄── Custom     │
+│                                    │  (Condition) │                 │
+│                                    └──────────────┘                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### HTTP Request Node
+
+For calling external APIs and webhooks:
+
+```typescript
+// types/workflow.ts
+
+interface HttpNodeConfig {
+  inputMapping: {
+    uri: string | VariableRef;
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    headers?: Record<string, string | VariableRef>;
+    queryParameters?: Record<string, string | VariableRef>;
+    body?: unknown;
+  };
+}
+
+// Output schema for HTTP nodes
+const httpOutputSchema = {
+  type: "object",
+  properties: {
+    statusCode: { type: "number" },
+    headers: { type: "object" },
+    body: { type: "object" },
+  },
+};
+```
+
+```typescript
+// lib/workflow/execute-http.ts
+
+export async function executeHttpNode(
+  node: WorkflowNode,
+  previousResults: Record<string, unknown>
+): Promise<NodeExecutionResult> {
+  const { uri, method, headers, queryParameters, body } = 
+    resolveVariables(node.config.inputMapping, previousResults);
+
+  const url = new URL(uri);
+  if (queryParameters) {
+    Object.entries(queryParameters).forEach(([k, v]) => 
+      url.searchParams.set(k, String(v))
+    );
+  }
+
+  const response = await fetch(url.toString(), {
+    method,
+    headers: headers as HeadersInit,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  return {
+    nodeId: node.id,
+    success: response.ok,
+    output: {
+      statusCode: response.status,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: await response.json().catch(() => null),
+    },
+  };
+}
+```
+
+<details>
+<summary><strong>Agent Spec: HTTP Node</strong></summary>
+
+```json
+{
+  "nodeType": "http",
+  "config": {
+    "inputMapping": {
+      "uri": "string (required) - supports variable refs",
+      "method": "enum: GET|POST|PUT|PATCH|DELETE (required)",
+      "headers": "object - key/value pairs",
+      "queryParameters": "object - key/value pairs", 
+      "body": "any - request body (for POST/PUT/PATCH)"
+    }
+  },
+  "outputSchema": {
+    "statusCode": "number",
+    "headers": "object",
+    "body": "object | null"
+  },
+  "validation": {
+    "ready": "uri AND method are set"
+  }
+}
+```
+
+</details>
+
+### AI Processing Node
+
+For transforming data with AI:
+
+```typescript
+// types/workflow.ts
+
+interface AINodeConfig {
+  prompt: string;                    // Instructions (can include variable refs)
+  structuredOutput: boolean;         // Return structured data?
+  outputSchema?: JSONSchema;         // Schema for structured output
+  mcp?: {                           // Optional MCP server
+    url: string;
+    type: "sse" | "http";
+    headers?: Record<string, string>;
+  };
+}
+```
+
+```typescript
+// lib/workflow/execute-ai.ts
+
+import Anthropic from "@anthropic-ai/sdk";
+
+export async function executeAINode(
+  node: WorkflowNode,
+  previousResults: Record<string, unknown>
+): Promise<NodeExecutionResult> {
+  const { prompt, structuredOutput, outputSchema } = node.config;
+  
+  // Resolve variables in prompt
+  const resolvedPrompt = resolvePromptVariables(prompt, previousResults);
+
+  const client = new Anthropic();
+  
+  const messages = [{ role: "user", content: resolvedPrompt }];
+
+  let result: unknown;
+
+  if (structuredOutput && outputSchema) {
+    // Use tool_use for structured output
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      tools: [{
+        name: "output",
+        description: "Structured output",
+        input_schema: outputSchema,
+      }],
+      tool_choice: { type: "tool", name: "output" },
+      messages,
+    });
+    
+    const toolUse = response.content.find((c) => c.type === "tool_use");
+    result = toolUse?.input;
+  } else {
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages,
+    });
+    
+    result = { text: response.content[0].text };
+  }
+
+  return {
+    nodeId: node.id,
+    success: true,
+    output: result,
+  };
+}
+```
+
+<details>
+<summary><strong>Agent Spec: AI Node</strong></summary>
+
+```json
+{
+  "nodeType": "ai",
+  "config": {
+    "prompt": "string (required) - instructions, can include {{Variable}} refs",
+    "structuredOutput": "boolean (default: true)",
+    "outputSchema": "JSONSchema - required if structuredOutput=true",
+    "mcp": {
+      "url": "string - MCP server URL",
+      "type": "enum: sse | http",
+      "headers": "object - auth headers for MCP"
+    }
+  },
+  "outputSchema": {
+    "if_structured": "matches config.outputSchema",
+    "if_unstructured": { "text": "string" }
+  },
+  "validation": {
+    "ready": "prompt is non-empty"
+  },
+  "variable_syntax_in_prompt": "{{Previous Steps.NodeName.field}}"
+}
+```
+
+</details>
+
+### Gate Node (Conditional Logic)
+
+For branching workflow execution:
+
+```typescript
+// types/workflow.ts
+
+interface GateNodeConfig {
+  condition: {
+    field: string;                    // Variable path to check
+    operator: "equals" | "not_equals";
+    value: unknown;                   // Expected value
+  };
+}
+```
+
+```typescript
+// lib/workflow/execute-gate.ts
+
+export async function executeGateNode(
+  node: WorkflowNode,
+  previousResults: Record<string, unknown>
+): Promise<NodeExecutionResult> {
+  const { condition } = node.config;
+  
+  const fieldValue = resolvePath(condition.field, previousResults);
+  
+  let conditionMet: boolean;
+  switch (condition.operator) {
+    case "equals":
+      conditionMet = fieldValue === condition.value;
+      break;
+    case "not_equals":
+      conditionMet = fieldValue !== condition.value;
+      break;
+    default:
+      conditionMet = false;
+  }
+
+  // If condition not met, workflow stops here
+  if (!conditionMet) {
+    return {
+      nodeId: node.id,
+      success: false,
+      message: "Gate condition not met - workflow stopped",
+      output: { conditionMet, fieldValue, expectedValue: condition.value },
+    };
+  }
+
+  return {
+    nodeId: node.id,
+    success: true,
+    output: {
+      conditionMet: true,
+      fieldValue,
+      expectedValue: condition.value,
+      operator: condition.operator,
+    },
+  };
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Gate Node</strong></summary>
+
+```json
+{
+  "nodeType": "gate",
+  "config": {
+    "condition": {
+      "field": "string - variable path (e.g., '$.Previous Steps.HTTP.body.status')",
+      "operator": "enum: equals | not_equals",
+      "value": "any - expected value"
+    }
+  },
+  "outputSchema": {
+    "conditionMet": "boolean",
+    "fieldValue": "any - actual value found",
+    "expectedValue": "any - configured expected value",
+    "operator": "string"
+  },
+  "behavior": {
+    "condition_met": "Continue to next node",
+    "condition_not_met": "Stop workflow execution (success: false)"
+  },
+  "validation": {
+    "ready": "field AND operator AND value are set"
+  }
+}
+```
+
+</details>
+
+### Output Schema Calculation
+
+Automatically calculate output schemas for variable mapping:
+
+```typescript
+// lib/workflow/output-schema-calculator.ts
+
+export function calculateNodeOutputSchema(
+  node: WorkflowNode,
+  integrationData?: IntegrationData
+): JSONSchema | undefined {
+  switch (node.nodeType) {
+    case "manual":
+      return node.config.inputSchema || { type: "object" };
+      
+    case "event":
+      return buildEventOutputSchema(node.config);
+      
+    case "http":
+      return {
+        type: "object",
+        properties: {
+          statusCode: { type: "number" },
+          headers: { type: "object" },
+          body: node.config.outputSchema || { type: "object" },
+        },
+      };
+      
+    case "action":
+      // Fetch from Membrane action definition
+      return integrationData?.actions
+        ?.find((a) => a.id === node.config.actionId)
+        ?.outputSchema;
+        
+    case "ai":
+      return node.config.structuredOutput
+        ? node.config.outputSchema
+        : { type: "object", properties: { text: { type: "string" } } };
+        
+    case "gate":
+      return {
+        type: "object",
+        properties: {
+          conditionMet: { type: "boolean" },
+          fieldValue: {},
+          expectedValue: {},
+          operator: { type: "string" },
+        },
+      };
+      
+    default:
+      return { type: "object" };
+  }
+}
+
+export function calculateWorkflowOutputSchemas(
+  nodes: WorkflowNode[],
+  integrationData?: IntegrationData
+): WorkflowNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    outputSchema: calculateNodeOutputSchema(node, integrationData),
+  }));
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Output Schema Calculation</strong></summary>
+
+```json
+{
+  "purpose": "Calculate output schemas for all nodes to enable variable autocomplete",
+  "when_to_calculate": "On workflow save, before storing to database",
+  "per_node_type": {
+    "manual": "Use config.inputSchema or empty object",
+    "event": "Build from event type (data record fields or connector schema)",
+    "http": "Wrap user-defined body schema in HTTP response structure",
+    "action": "Fetch from Membrane action.outputSchema",
+    "ai": "Use config.outputSchema if structured, else { text: string }",
+    "gate": "Fixed schema with conditionMet, fieldValue, expectedValue, operator"
+  },
+  "usage": "Pass calculated schemas to input mapping UI for autocomplete"
+}
+```
+
+</details>
+
+---
+
+## Self-Integration
+
+The Self-Integration feature lets users connect **any app** - even ones without pre-built Membrane integrations - by using AI to build custom connectors on-demand.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      SELF-INTEGRATION FLOW                          │
+│                                                                     │
+│   User wants to connect "Acme CRM" (no pre-built integration)       │
+│                                                                     │
+│   ┌─────────────────┐      ┌─────────────────┐      ┌────────────┐ │
+│   │  "Connect Any   │      │   AI Agent      │      │  Custom    │ │
+│   │   App" Button   │─────►│   Session       │─────►│  Connector │ │
+│   │                 │      │                 │      │  Created!  │ │
+│   └─────────────────┘      └─────────────────┘      └────────────┘ │
+│          │                        │                       │         │
+│          │                        │                       │         │
+│          ▼                        ▼                       ▼         │
+│   User enters:              AI analyzes app         Available in   │
+│   - App name                API docs and            workflow       │
+│   - App URL                 builds connector        builder        │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Why Self-Integration Matters
+
+1. **No integration gaps**: Users aren't limited to pre-built connectors
+2. **Zero wait time**: No need to request and wait for new integrations
+3. **Custom apps**: Works with internal tools and niche SaaS products
+4. **AI-powered**: Automatically reads API docs and builds the connector
+
+### Implementation: "Connect Any App" UI
+
+```tsx
+// components/integrations/connect-any-app.tsx
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export function ConnectAnyApp() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [appName, setAppName] = useState("");
+  const [appUrl, setAppUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleBuildIntegration = async () => {
+    setIsLoading(true);
+    
+    // Create AI agent session
+    const response = await fetch("/api/agent/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    
+    const { sessionId } = await response.json();
+    
+    // Redirect to agent with pre-filled prompt
+    const prompt = `Build a connector and integration for this app: ${appName} (${appUrl}). 
+    
+    Please:
+    1. Analyze the app's API documentation
+    2. Create a connector with authentication
+    3. Add common actions (CRUD operations)
+    4. Test the integration`;
+    
+    router.push(
+      `/agent/sessions/${sessionId}?message=${encodeURIComponent(prompt)}`
+    );
+  };
+
+  return (
+    <>
+      <button 
+        onClick={() => setIsOpen(true)}
+        className="connect-any-app-button"
+      >
+        + Connect Any App
+      </button>
+
+      {isOpen && (
+        <Dialog onClose={() => setIsOpen(false)}>
+          <h2>Connect Any App</h2>
+          <p>
+            Don't see your app in the list? Our AI can build a custom 
+            integration for any app with an API.
+          </p>
+          
+          <input
+            placeholder="App name (e.g., Acme CRM)"
+            value={appName}
+            onChange={(e) => setAppName(e.target.value)}
+          />
+          
+          <input
+            placeholder="App URL (e.g., https://acmecrm.com)"
+            value={appUrl}
+            onChange={(e) => setAppUrl(e.target.value)}
+          />
+          
+          <button 
+            onClick={handleBuildIntegration}
+            disabled={!appName || !appUrl || isLoading}
+          >
+            {isLoading ? "Starting AI Agent..." : "Build Integration"}
+          </button>
+        </Dialog>
+      )}
+    </>
+  );
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Self-Integration UI</strong></summary>
+
+```json
+{
+  "component": "ConnectAnyApp",
+  "trigger": "Button in integrations list or empty state",
+  "inputs": {
+    "appName": "string - display name for the app",
+    "appUrl": "string - app website or API docs URL"
+  },
+  "flow": [
+    "1. User clicks 'Connect Any App'",
+    "2. Dialog collects app name and URL",
+    "3. Create AI agent session via POST /api/agent/sessions",
+    "4. Redirect to /agent/sessions/{id}?message={prompt}",
+    "5. AI agent builds connector interactively",
+    "6. On completion, new integration appears in list"
+  ],
+  "prompt_template": "Build a connector and integration for this app: {appName} ({appUrl})..."
+}
+```
+
+</details>
+
+### AI Agent Session Backend
+
+```typescript
+// /api/agent/sessions/route.ts
+
+export async function POST(request: Request) {
+  const customerId = getCustomerIdFromRequest(request);
+  
+  // Create session with your AI agent service (e.g., OpenCode)
+  const session = await createAgentSession({
+    customerId,
+    type: "membrane-integration-builder",
+  });
+
+  return Response.json({ 
+    sessionId: session.id 
+  });
+}
+```
+
+```typescript
+// /api/agent/sessions/[id]/messages/route.ts
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const messages = await getAgentSessionMessages(params.id);
+  return Response.json({ messages });
+}
+```
+
+### Agent Session UI
+
+```tsx
+// app/agent/sessions/[id]/page.tsx
+
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+
+export default function AgentSessionPage({ 
+  params 
+}: { 
+  params: { id: string } 
+}) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [status, setStatus] = useState<"idle" | "busy">("idle");
+  const searchParams = useSearchParams();
+  const initialMessageSent = useRef(false);
+
+  // Send initial message from URL param
+  useEffect(() => {
+    const message = searchParams.get("message");
+    if (message && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      sendMessage(message);
+    }
+  }, [searchParams]);
+
+  // Poll for new messages
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const res = await fetch(`/api/agent/sessions/${params.id}/messages`);
+      const data = await res.json();
+      setMessages(data.messages);
+      setStatus(data.status);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [params.id]);
+
+  const sendMessage = async (text: string) => {
+    await fetch(`/api/agent/sessions/${params.id}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: text }),
+    });
+    setInput("");
+  };
+
+  return (
+    <div className="agent-session">
+      <div className="messages">
+        {messages.map((msg, i) => (
+          <div key={i} className={`message ${msg.role}`}>
+            {msg.content}
+          </div>
+        ))}
+        {status === "busy" && <LoadingIndicator />}
+      </div>
+      
+      <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask the AI agent..."
+          disabled={status === "busy"}
+        />
+        <button type="submit" disabled={status === "busy"}>
+          Send
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Agent Session Implementation</strong></summary>
+
+```json
+{
+  "endpoints": {
+    "POST /api/agent/sessions": {
+      "purpose": "Create new AI agent session",
+      "response": { "sessionId": "string" }
+    },
+    "GET /api/agent/sessions/[id]/messages": {
+      "purpose": "Get session messages and status",
+      "response": {
+        "messages": [{ "role": "user|assistant", "content": "string" }],
+        "status": "idle | busy"
+      }
+    },
+    "POST /api/agent/sessions/[id]/messages": {
+      "purpose": "Send message to agent",
+      "body": { "content": "string" }
+    }
+  },
+  "ui_components": {
+    "AgentSessionPage": {
+      "features": [
+        "Initial message from URL param",
+        "Polling for new messages (1s interval)",
+        "Loading indicator when agent is busy",
+        "Input form for follow-up messages"
+      ]
+    }
+  },
+  "integration_with_membrane": {
+    "ai_agent_capabilities": [
+      "Read API documentation from URL",
+      "Generate connector specification",
+      "Create authentication configuration",
+      "Define actions with input/output schemas",
+      "Register integration with Membrane"
+    ]
+  }
+}
+```
+
+</details>
+
+### Membrane Agent Sidebar (In-Workflow)
+
+For building integrations directly from the workflow editor:
+
+```tsx
+// components/workflow/membrane-agent-sidebar.tsx
+
+export function MembraneAgentSidebar({
+  integrationKey,
+  onSessionComplete,
+}: {
+  integrationKey?: string;
+  onSessionComplete: () => void;
+}) {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  const startSession = async (prompt: string) => {
+    const res = await fetch("/api/agent/sessions", {
+      method: "POST",
+      body: JSON.stringify({ 
+        type: "membrane-action-builder",
+        context: { integrationKey },
+      }),
+    });
+    const { sessionId } = await res.json();
+    setSessionId(sessionId);
+    
+    // Send initial prompt
+    await fetch(`/api/agent/sessions/${sessionId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content: prompt }),
+    });
+  };
+
+  // ... polling and message display similar to above
+
+  return (
+    <div className="membrane-agent-sidebar">
+      <h3>AI Integration Builder</h3>
+      
+      {!sessionId ? (
+        <div className="quick-actions">
+          <button onClick={() => startSession(
+            `Add a new action to the ${integrationKey} integration`
+          )}>
+            Add New Action
+          </button>
+          <button onClick={() => startSession(
+            `Build a new connector for a custom app`
+          )}>
+            Build Custom Connector
+          </button>
+        </div>
+      ) : (
+        <div className="session-view">
+          {/* Message list and input */}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## Workflow Execution Engine
+
+A robust execution engine ensures reliable workflow runs.
+
+### Workflow Run Model
+
+```typescript
+// lib/workflow/models/workflow-run.ts
+
+interface WorkflowRun {
+  id: string;
+  workflowId: string;
+  userId: string;
+  status: "running" | "completed" | "failed";
+  
+  input: unknown;                    // Trigger input data
+  nodesSnapshot: WorkflowNode[];     // Nodes at execution time
+  
+  results: NodeExecutionResult[];    // Per-node results
+  
+  summary: {
+    totalNodes: number;
+    successfulNodes: number;
+    failedNodes: number;
+    successRate: number;
+  };
+  
+  startedAt: Date;
+  completedAt?: Date;
+  executionTime?: number;            // milliseconds
+  
+  error?: string;
+}
+
+interface NodeExecutionResult {
+  nodeId: string;
+  nodeName?: string;
+  success: boolean;
+  message: string;
+  input?: unknown;
+  output?: unknown;
+  error?: {
+    message: string;
+    code?: string;
+    details?: unknown;
+  };
+}
+```
+
+<details>
+<summary><strong>Agent Spec: Workflow Run Model</strong></summary>
+
+```json
+{
+  "WorkflowRun": {
+    "id": "string - unique run identifier",
+    "workflowId": "string - reference to workflow",
+    "userId": "string - who triggered the run",
+    "status": "enum: running | completed | failed",
+    "input": "any - trigger input data",
+    "nodesSnapshot": "WorkflowNode[] - frozen workflow state",
+    "results": "NodeExecutionResult[] - per-node outcomes",
+    "summary": {
+      "totalNodes": "number",
+      "successfulNodes": "number", 
+      "failedNodes": "number",
+      "successRate": "number (0-100)"
+    },
+    "startedAt": "Date",
+    "completedAt": "Date | null",
+    "executionTime": "number (ms) | null",
+    "error": "string | null"
+  },
+  "indexes": [
+    "(workflowId, startedAt)",
+    "(userId, startedAt)",
+    "(status)"
+  ]
+}
+```
+
+</details>
+
+### Execution Pipeline
+
+```typescript
+// lib/workflow/executor.ts
+
+export async function executeWorkflow(
+  workflowId: string,
+  runId: string,
+  triggerInput: unknown,
+  membraneToken: string
+): Promise<void> {
+  const workflow = await Workflow.findById(workflowId);
+  const run = await WorkflowRun.findById(runId);
+  
+  const results: Record<string, unknown> = {};
+  const nodeResults: NodeExecutionResult[] = [];
+  
+  try {
+    for (const node of run.nodesSnapshot) {
+      // Execute node with context from previous nodes
+      const result = await executeNode(node, results, membraneToken);
+      
+      // Store result for variable resolution in subsequent nodes
+      results[node.name] = result.output;
+      nodeResults.push(result);
+      
+      // Update run with intermediate results
+      await run.updateOne({
+        results: nodeResults,
+        "summary.successfulNodes": nodeResults.filter((r) => r.success).length,
+      });
+      
+      // Stop on failure (unless it's a gate that just didn't match)
+      if (!result.success && node.nodeType !== "gate") {
+        throw new Error(`Node ${node.name} failed: ${result.message}`);
+      }
+      
+      // Gate nodes stop workflow when condition not met
+      if (node.nodeType === "gate" && !result.success) {
+        break;
+      }
+    }
+    
+    // Mark completed
+    await run.updateOne({
+      status: "completed",
+      completedAt: new Date(),
+      executionTime: Date.now() - run.startedAt.getTime(),
+      summary: calculateSummary(nodeResults),
+    });
+    
+  } catch (error) {
+    await run.updateOne({
+      status: "failed",
+      completedAt: new Date(),
+      error: error.message,
+    });
+  }
+}
+
+async function executeNode(
+  node: WorkflowNode,
+  previousResults: Record<string, unknown>,
+  membraneToken: string
+): Promise<NodeExecutionResult> {
+  switch (node.nodeType) {
+    case "manual":
+    case "event":
+      return executeTriggerNode(node, previousResults);
+    case "http":
+      return executeHttpNode(node, previousResults);
+    case "action":
+      return executeMembraneAction(node, previousResults, membraneToken);
+    case "ai":
+      return executeAINode(node, previousResults);
+    case "gate":
+      return executeGateNode(node, previousResults);
+    default:
+      throw new Error(`Unknown node type: ${node.nodeType}`);
+  }
+}
+```
+
+### Durable Execution with Inngest
+
+For production reliability, use a durable execution engine:
+
+```typescript
+// lib/inngest/functions/execute-workflow.ts
+
+import { inngest } from "../client";
+
+export const executeWorkflowFunction = inngest.createFunction(
+  { id: "execute-workflow" },
+  { event: "workflow/execute" },
+  async ({ event, step }) => {
+    const { workflowId, runId, triggerInput, membraneToken } = event.data;
+
+    // Load workflow and run as a durable step
+    const { workflow, run } = await step.run("load-workflow", async () => {
+      const workflow = await Workflow.findById(workflowId);
+      const run = await WorkflowRun.findById(runId);
+      return { workflow, run };
+    });
+
+    const results: Record<string, unknown> = {};
+
+    // Execute each node as a separate durable step
+    for (const node of run.nodesSnapshot) {
+      const result = await step.run(`execute-${node.id}`, async () => {
+        return executeNode(node, results, membraneToken);
+      });
+
+      results[node.name] = result.output;
+
+      // Persist result
+      await step.run(`save-result-${node.id}`, async () => {
+        await WorkflowRun.findByIdAndUpdate(runId, {
+          $push: { results: result },
+        });
+      });
+
+      if (!result.success) {
+        if (node.nodeType === "gate") break;
+        throw new Error(`Node failed: ${node.name}`);
+      }
+    }
+
+    // Mark complete
+    await step.run("complete-run", async () => {
+      await WorkflowRun.findByIdAndUpdate(runId, {
+        status: "completed",
+        completedAt: new Date(),
+      });
+    });
+  }
+);
+```
+
+<details>
+<summary><strong>Agent Spec: Durable Execution</strong></summary>
+
+```json
+{
+  "recommended_engine": "Inngest (or similar: Temporal, AWS Step Functions)",
+  "benefits": [
+    "Automatic retries on failure",
+    "Durable state across restarts",
+    "Step-level checkpointing",
+    "Observability and debugging"
+  ],
+  "event_schema": {
+    "name": "workflow/execute",
+    "data": {
+      "workflowId": "string",
+      "runId": "string",
+      "triggerInput": "any",
+      "membraneToken": "string"
+    }
+  },
+  "step_pattern": {
+    "load-workflow": "Fetch workflow and run from DB",
+    "execute-{nodeId}": "Execute individual node",
+    "save-result-{nodeId}": "Persist node result",
+    "complete-run": "Mark run as completed"
+  }
+}
+```
+
+</details>
+
+---
+
+## UI Architecture
+
+Understanding what's Membrane UI vs. your custom UI is critical for a smooth integration.
+
+### Membrane UI Components (Don't Rebuild)
+
+These are provided by Membrane and should be used as-is:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MEMBRANE UI (USE AS-IS)                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  OAuth Connection Flow                                       │   │
+│  │  ───────────────────────                                     │   │
+│  │  integrationApp.integration(key).openNewConnection()         │   │
+│  │                                                              │   │
+│  │  • App authorization screens                                 │   │
+│  │  • OAuth redirects                                          │   │
+│  │  • API key input forms                                      │   │
+│  │  • Connection success/error states                          │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Flow Builder (Advanced)                                     │   │
+│  │  ─────────────────────────                                   │   │
+│  │  <FlowBuilder flowKey="..." connectionId="..." />            │   │
+│  │                                                              │   │
+│  │  • Visual flow editor for complex integrations              │   │
+│  │  • Pre-built by Membrane                                    │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+```tsx
+// Triggering Membrane UI
+
+const integrationApp = useIntegrationApp();
+
+// Open OAuth/connection flow (Membrane handles entirely)
+await integrationApp.integration("slack").openNewConnection();
+
+// Open integration settings
+await integrationApp.integration("hubspot").open();
+
+// Open specific connection settings
+await integrationApp.connection(connectionId).open();
+```
+
+### Your Custom UI (Must Build)
+
+These components are your responsibility:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    YOUR CUSTOM UI (BUILD THIS)                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Workflow Canvas                                             │   │
+│  │  ───────────────                                             │   │
+│  │  • Node graph visualization (use @xyflow/react or similar)  │   │
+│  │  • Drag-and-drop node placement                             │   │
+│  │  • Edge connections between nodes                           │   │
+│  │  • Zoom, pan, selection                                     │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Node Configuration Panels                                   │   │
+│  │  ─────────────────────────                                   │   │
+│  │  • Trigger configuration (manual, event)                    │   │
+│  │  • Action configuration (app, HTTP, AI, gate)               │   │
+│  │  • Input mapping UI with variable picker                    │   │
+│  │  • Output schema display                                    │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Workflow Execution UI                                       │   │
+│  │  ─────────────────────                                       │   │
+│  │  • Run button and status                                    │   │
+│  │  • Run history list                                         │   │
+│  │  • Per-node execution results                               │   │
+│  │  • Error display                                            │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Integration List                                            │   │
+│  │  ────────────────                                            │   │
+│  │  • Display available integrations (data from useIntegrations)│   │
+│  │  • Show connection status                                   │   │
+│  │  • "Connect Any App" button for self-integration            │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Customization Boundaries
+
+| Feature | Membrane UI | Your UI | Customizable? |
+|---------|-------------|---------|---------------|
+| OAuth flows | ✓ | | Styling only |
+| App logos/names | ✓ (data) | ✓ (display) | Full control |
+| Action list | ✓ (data) | ✓ (display) | Full control |
+| Connection status | ✓ (data) | ✓ (display) | Full control |
+| Workflow canvas | | ✓ | Full control |
+| Node configuration | | ✓ | Full control |
+| Variable mapping | | ✓ | Full control |
+| Run history | | ✓ | Full control |
+
+<details>
+<summary><strong>Agent Spec: UI Component Mapping</strong></summary>
+
+```json
+{
+  "membrane_provided": {
+    "connection_flow": {
+      "trigger": "integrationApp.integration(key).openNewConnection()",
+      "customization": "None (Membrane modal)"
+    },
+    "integration_settings": {
+      "trigger": "integrationApp.integration(key).open()",
+      "customization": "None"
+    }
+  },
+  "your_implementation": {
+    "workflow_canvas": {
+      "recommended_library": "@xyflow/react",
+      "components": ["WorkflowEditor", "TriggerNode", "ActionNode", "PlusNode"]
+    },
+    "config_panels": {
+      "components": [
+        "ManualTriggerConfig",
+        "EventTriggerConfig", 
+        "MembraneActionConfig",
+        "HttpRequestConfig",
+        "AIConfig",
+        "GateConfig"
+      ]
+    },
+    "execution_ui": {
+      "components": ["WorkflowRuns", "NodeResultDisplay", "RunStatusBadge"]
+    },
+    "integration_list": {
+      "data_source": "useIntegrations(), useConnections()",
+      "components": ["IntegrationsList", "ConnectionCard", "ConnectAnyApp"]
+    }
+  }
+}
+```
+
+</details>
+
+---
+
+## Quick Reference
+
+### File Structure Checklist
+
+```
+your-app/
+├── app/
+│   ├── api/
+│   │   ├── membrane-token/
+│   │   │   └── route.ts              # JWT token generation
+│   │   ├── workflows/
+│   │   │   ├── route.ts              # List/create workflows
+│   │   │   └── [id]/
+│   │   │       ├── route.ts          # Get/update/delete workflow
+│   │   │       ├── run/
+│   │   │       │   └── route.ts      # Execute workflow
+│   │   │       └── ingest-event/
+│   │   │           └── route.ts      # Webhook endpoint
+│   │   └── agent/
+│   │       └── sessions/
+│   │           ├── route.ts          # Create session
+│   │           └── [id]/
+│   │               └── messages/
+│   │                   └── route.ts  # Session messages
+│   └── workflows/
+│       └── [id]/
+│           └── page.tsx              # Workflow editor page
+├── components/
+│   └── workflow/
+│       ├── workflow-editor.tsx       # Main canvas
+│       ├── config-panel.tsx          # Node configuration
+│       ├── nodes/
+│       │   ├── trigger-node.tsx
+│       │   └── action-node.tsx
+│       ├── config/
+│       │   ├── manual-trigger-config.tsx
+│       │   ├── event-trigger-config.tsx
+│       │   ├── membrane-action-config.tsx
+│       │   ├── http-request-config.tsx
+│       │   ├── ai-config.tsx
+│       │   └── gate-config.tsx
+│       └── input-mapping.tsx         # Variable picker
+├── lib/
+│   ├── workflow/
+│   │   ├── models/
+│   │   │   ├── workflow.ts
+│   │   │   └── workflow-run.ts
+│   │   ├── executor.ts               # Execution engine
+│   │   ├── node-execution.ts         # Per-node executors
+│   │   ├── output-schema-calculator.ts
+│   │   └── variable-resolver.ts
+│   └── membrane/
+│       └── token.ts                  # Token generation
+├── providers/
+│   └── membrane-provider.tsx         # IntegrationAppProvider wrapper
+└── types/
+    └── workflow.ts                   # TypeScript interfaces
+```
+
+### API Endpoints Summary
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/membrane-token` | GET | Get Membrane JWT token |
+| `/api/workflows` | GET, POST | List/create workflows |
+| `/api/workflows/[id]` | GET, PATCH, DELETE | CRUD single workflow |
+| `/api/workflows/[id]/run` | POST | Execute workflow manually |
+| `/api/workflows/[id]/ingest-event` | POST | Webhook for event triggers |
+| `/api/workflows/runs` | GET | List workflow runs |
+| `/api/agent/sessions` | POST | Create AI agent session |
+| `/api/agent/sessions/[id]/messages` | GET, POST | Session messages |
+
+### Hooks & Components Cheat Sheet
+
+```tsx
+// From @membranehq/react
+
+// List all available integrations (in your workspace)
+const { items, loading } = useIntegrations();
+
+// List user's connections
+const { items, loading } = useConnections();
+
+// List actions for an integration
+const { items, loading } = useActions({ integrationKey: "slack" });
+
+// Get single action details
+const { data } = useAction({ id: "send-message", integrationKey: "slack" });
+
+// Get single integration details
+const { data } = useIntegration({ key: "hubspot" });
+
+// Access UI triggers and API methods
+const integrationApp = useIntegrationApp();
+
+// Open connection UI
+await integrationApp.integration("slack").openNewConnection();
+await integrationApp.connection(connId).open();
+
+// Search app catalog (external apps)
+const response = await integrationApp.get("external-apps", {
+  search: "slack",
+  limit: 50,
+});
+const apps = response.items; // App[]
+
+// Create integration from external app
+const newIntegration = await integrationApp.integrations.create({
+  name: app.name,
+  logoUri: app.logoUri,
+  appUuid: app.uuid,
+  connectorId: app.defaultConnectorId,
+  key: app.key,
+});
+```
+
+### Node Type Specifications
+
+| Type | nodeType | Required Config | Output Schema |
+|------|----------|-----------------|---------------|
+| Manual Trigger | `manual` | `hasInput`, `inputSchema` | Matches inputSchema |
+| Event Trigger | `event` | `integrationKey`, `eventType`, `dataCollection` OR `connectorEventKey` | Event data |
+| App Action | `action` | `integrationKey`, `actionId` | From Membrane action |
+| HTTP Request | `http` | `inputMapping.uri`, `inputMapping.method` | `{statusCode, headers, body}` |
+| AI Processing | `ai` | `prompt` | `outputSchema` or `{text}` |
+| Gate | `gate` | `condition.field`, `condition.operator`, `condition.value` | `{conditionMet, fieldValue, ...}` |
+
+---
+
+## Appendix: Complete Code Patterns
+
+### Token Generation (Full)
+
+```typescript
+// lib/membrane/token.ts
+
+import jwt from "jsonwebtoken";
+
+interface TokenConfig {
+  customerId: string;
+  customerName: string;
+  isAdmin?: boolean;
+  expiresInSeconds?: number;
+}
+
+export function generateMembraneToken(config: TokenConfig): string {
+  const {
+    customerId,
+    customerName,
+    isAdmin = false,
+    expiresInSeconds = 7200,
+  } = config;
+
+  return jwt.sign(
+    {
+      iss: process.env.MEMBRANE_WORKSPACE_KEY,
+      sub: customerId,
+      id: customerId,
+      name: customerName,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+      isAdmin,
+    },
+    process.env.MEMBRANE_WORKSPACE_SECRET!,
+    { algorithm: "HS512" }
+  );
+}
+
+// With caching
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+export function getOrCreateToken(config: TokenConfig): string {
+  const cacheKey = `${config.customerId}:${config.isAdmin}`;
+  const cached = tokenCache.get(cacheKey);
+  
+  // Return cached if valid for at least 5 more minutes
+  if (cached && cached.expiresAt > Date.now() + 5 * 60 * 1000) {
+    return cached.token;
+  }
+
+  const token = generateMembraneToken(config);
+  const expiresInSeconds = config.expiresInSeconds || 7200;
+  
+  tokenCache.set(cacheKey, {
+    token,
+    expiresAt: Date.now() + expiresInSeconds * 1000,
+  });
+
+  return token;
+}
+```
+
+### Variable Resolution (Full)
+
+```typescript
+// lib/workflow/variable-resolver.ts
+
+type VariableRef = { $var: string };
+
+export function isVariableRef(value: unknown): value is VariableRef {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "$var" in value &&
+    typeof (value as VariableRef).$var === "string"
+  );
+}
+
+export function resolveVariables<T>(
+  input: T,
+  context: Record<string, unknown>
+): T {
+  if (isVariableRef(input)) {
+    return resolvePath(input.$var, context) as T;
+  }
+
+  if (Array.isArray(input)) {
+    return input.map((item) => resolveVariables(item, context)) as T;
+  }
+
+  if (typeof input === "object" && input !== null) {
+    const resolved: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(input)) {
+      resolved[key] = resolveVariables(value, context);
+    }
+    return resolved as T;
+  }
+
+  return input;
+}
+
+export function resolvePath(
+  path: string,
+  context: Record<string, unknown>
+): unknown {
+  // Remove leading "$." if present
+  const normalizedPath = path.replace(/^\$\.?/, "");
+  const parts = normalizedPath.split(".");
+
+  let current: unknown = context;
+
+  for (const part of parts) {
+    if (current === null || current === undefined) {
+      return null;
+    }
+
+    if (typeof current !== "object") {
+      return null;
+    }
+
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return current;
+}
+
+// For resolving variables in prompt strings (e.g., "Hello {{name}}")
+export function resolvePromptVariables(
+  prompt: string,
+  context: Record<string, unknown>
+): string {
+  return prompt.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
+    const value = resolvePath(path.trim(), { "Previous Steps": context });
+    return value !== null && value !== undefined ? String(value) : "";
+  });
+}
+```
+
+### Node Validation (Full)
+
+```typescript
+// lib/workflow/node-validation.ts
+
+export function isNodeConfigured(node: WorkflowNode): boolean {
+  switch (node.nodeType) {
+    case "manual":
+      return true; // Always valid
+      
+    case "event":
+      return isEventTriggerConfigured(node.config);
+      
+    case "action":
+      return isActionNodeConfigured(node.config);
+      
+    case "http":
+      return isHttpNodeConfigured(node.config);
+      
+    case "ai":
+      return isAINodeConfigured(node.config);
+      
+    case "gate":
+      return isGateNodeConfigured(node.config);
+      
+    default:
+      return false;
+  }
+}
+
+function isEventTriggerConfigured(config: EventTriggerConfig): boolean {
+  if (!config.integrationKey || !config.eventType) return false;
+  
+  if (config.eventSource === "data-record") {
+    return !!config.dataCollection;
+  }
+  
+  if (config.eventSource === "connector") {
+    return !!config.connectorEventKey;
+  }
+  
+  return false;
+}
+
+function isActionNodeConfigured(config: ActionNodeConfig): boolean {
+  return !!config.integrationKey && !!config.actionId;
+}
+
+function isHttpNodeConfigured(config: HttpNodeConfig): boolean {
+  const mapping = config.inputMapping;
+  return !!mapping?.uri && !!mapping?.method;
+}
+
+function isAINodeConfigured(config: AINodeConfig): boolean {
+  return !!config.prompt && config.prompt.trim().length > 0;
+}
+
+function isGateNodeConfigured(config: GateNodeConfig): boolean {
+  const condition = config.condition;
+  return (
+    !!condition?.field &&
+    !!condition?.operator &&
+    condition?.value !== undefined
+  );
+}
+```
+
+### Workflow Context (Full)
+
+```typescript
+// context/workflow-context.tsx
+
+"use client";
+
+import { createContext, useContext, useState, useCallback } from "react";
+
+interface WorkflowContextValue {
+  workflow: Workflow | null;
+  selectedNodeId: string | null;
+  setSelectedNodeId: (id: string | null) => void;
+  saveNodes: (nodes: WorkflowNode[]) => Promise<void>;
+  saveWorkflowName: (name: string) => Promise<void>;
+  activateWorkflow: () => Promise<void>;
+  deactivateWorkflow: () => Promise<void>;
+  refresh: () => Promise<void>;
+  deleteNode: (nodeId: string) => Promise<void>;
+}
+
+const WorkflowContext = createContext<WorkflowContextValue | null>(null);
+
+export function WorkflowProvider({
+  workflowId,
+  children,
+}: {
+  workflowId: string;
+  children: React.ReactNode;
+}) {
+  const [workflow, setWorkflow] = useState<Workflow | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    const res = await fetch(`/api/workflows/${workflowId}`);
+    const data = await res.json();
+    setWorkflow(data);
+  }, [workflowId]);
+
+  const saveNodes = useCallback(
+    async (nodes: WorkflowNode[]) => {
+      await fetch(`/api/workflows/${workflowId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodes }),
+      });
+      await refresh();
+    },
+    [workflowId, refresh]
+  );
+
+  const saveWorkflowName = useCallback(
+    async (name: string) => {
+      await fetch(`/api/workflows/${workflowId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      await refresh();
+    },
+    [workflowId, refresh]
+  );
+
+  const activateWorkflow = useCallback(async () => {
+    await fetch(`/api/workflows/${workflowId}/activate`, { method: "POST" });
+    await refresh();
+  }, [workflowId, refresh]);
+
+  const deactivateWorkflow = useCallback(async () => {
+    await fetch(`/api/workflows/${workflowId}/deactivate`, { method: "POST" });
+    await refresh();
+  }, [workflowId, refresh]);
+
+  const deleteNode = useCallback(
+    async (nodeId: string) => {
+      if (!workflow) return;
+      const updatedNodes = workflow.nodes.filter((n) => n.id !== nodeId);
+      await saveNodes(updatedNodes);
+    },
+    [workflow, saveNodes]
+  );
+
+  return (
+    <WorkflowContext.Provider
+      value={{
+        workflow,
+        selectedNodeId,
+        setSelectedNodeId,
+        saveNodes,
+        saveWorkflowName,
+        activateWorkflow,
+        deactivateWorkflow,
+        refresh,
+        deleteNode,
+      }}
+    >
+      {children}
+    </WorkflowContext.Provider>
+  );
+}
+
+export function useWorkflow() {
+  const context = useContext(WorkflowContext);
+  if (!context) {
+    throw new Error("useWorkflow must be used within WorkflowProvider");
+  }
+  return context;
+}
+```
+
+---
+
+## Common Pitfalls
+
+Common issues to watch out for when integrating Membrane:
+## Best Practices
+
+### 1. API/UI URLs
+Essential patterns for a correct Membrane integration:
+
+Membrane uses specific URLs for API and UI endpoints:
+### 1. Environment Variables
+
+```env
+MEMBRANE_API_URI=https://api.getmembrane.com
+MEMBRANE_UI_URI=https://ui.getmembrane.com
+# Required for SDK (IntegrationAppClient)
+MEMBRANE_API_URI=https://api.integration.app
+
+# Required for UI (IntegrationAppProvider)
+MEMBRANE_UI_URI=https://app.integration.app
+
+# Workspace credentials
+MEMBRANE_WORKSPACE_KEY=your-workspace-key
+MEMBRANE_WORKSPACE_SECRET=your-workspace-secret
+```
+
+**Symptom**: 404 errors on API calls indicate incorrect URLs.
+### 2. JWT Token Generation
+
+The JWT must include the `id` claim with the **actual user ID** who owns the connection:
+
+```typescript
+import { SignJWT } from "jose";
+
+async function generateMembraneToken(userId: string): Promise<string> {
+  const secret = new TextEncoder().encode(process.env.MEMBRANE_WORKSPACE_SECRET);
+  
+  return await new SignJWT({
+    iss: process.env.MEMBRANE_WORKSPACE_KEY,
+    id: userId,  // The actual user ID who owns the connection
+    name: "Workflow Execution",
+  })
+    .setProtectedHeader({ alg: "HS512" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(secret);
+}
+```
+
+### 2. JWT Customer ID Claim
+### 3. Server-Side Action Execution
+
+Membrane expects the customer ID in the `id` claim:
+Always use the `@membranehq/sdk` for executing actions:
+
+```typescript
+jwt.sign({
+  iss: process.env.MEMBRANE_WORKSPACE_KEY,
+  id: customerId,
+  name: customerName,
+  ...
+import { IntegrationAppClient } from "@membranehq/sdk";
+
+const client = new IntegrationAppClient({
+  token,
+  apiUri: process.env.MEMBRANE_API_URI,
+});
+
+const result = await client
+  .action(actionId)
+  .run(actionInput, { connectionId });
+```
+
+**Symptom**: OAuth errors mentioning "customer id should be provided in access token".
+### 4. Passing User ID Through Workflow Execution
+
+### 3. Action Identifier Field
+The user ID must flow from your API route through to the step execution:
+
+Actions returned from `useActions()` use the `id` field for identification:
+```typescript
+// 1. API route - extract user ID
+const session = await auth();
+executeWorkflow({
+  nodes, edges, executionId, workflowId,
+  userId: session.user.id,
+});
+
+```tsx
+{actions?.map((action) => (
+  <option key={action.id} value={action.id}>
+    {action.name}
+  </option>
+))}
+```
+// 2. Workflow executor - include in step context
+const stepContext = { executionId, nodeId, userId };
+
+**Symptom**: Empty action dropdown despite actions being loaded.
+// 3. Step function - use for token generation
+const token = await generateMembraneToken(context.userId);
+```
+
+### 4. Filtering Connections by Integration
+### 5. Action Selection UI
+
+Connections should be filtered by the selected integration:
+Use `action.id` for selection and filter connections by integration:
+
+```tsx
+const { items: connections } = useConnections();
+const filteredConnections = connections?.filter(
+  (conn) => conn.integration?.key === selectedIntegrationKey
+);
+```
+
+**Symptom**: Connections for other apps appearing in the dropdown.
+// Action selection
+{actions?.map((action) => (
+  <option key={action.id} value={action.id}>{action.name}</option>
+))}
+```
+
+### 5. Config Update Race Conditions
+### 6. Config Updates in React
+
+When updating multiple config fields, batch them or handle sequentially:
+Use a single `onUpdateConfig` call per handler, and `useEffect` for dependent field updates:
+
+```tsx
+const handleIntegrationChange = (key: string) => {
+  // Option 1: Update one field at a time
+  onUpdateConfig("membraneIntegrationKey", key);
+  
+  // Option 2: Use a batch update function if available
+  onBatchUpdate({
+    membraneIntegrationKey: key,
+    membraneConnectionId: "",
+    membraneActionId: "",
+  });
+const handleActionChange = (actionId: string) => {
+  onUpdateConfig("membraneActionId", actionId);
+};
+```
+
+**Symptom**: Config values not persisting or being overwritten.
+useEffect(() => {
+  if (selectedAction?.key && config?.membraneActionKey !== selectedAction.key) {
+    onUpdateConfig("membraneActionKey", selectedAction.key);
+  }
+}, [selectedAction, config?.membraneActionKey, onUpdateConfig]);
+```
+
+<details>
+<summary><strong>Agent Spec: Common Pitfalls</strong></summary>
+<summary><strong>Agent Spec: Best Practices</strong></summary>
+
+```json
+{
+  "pitfalls": [
+  "best_practices": [
+    {
+      "topic": "Environment URLs",
+      "rule": "Use api.integration.app for SDK, app.integration.app for UI"
+    },
+    {
+      "topic": "JWT Generation",
+      "rule": "Use jose library with HS512 algorithm, include actual user ID in 'id' claim"
+    },
+    {
+      "issue": "Incorrect URLs",
+      "symptom": "404 errors on API calls",
+      "solution": "Use api.getmembrane.com and ui.getmembrane.com"
+      "topic": "Action Execution",
+      "rule": "Always use @membranehq/sdk IntegrationAppClient"
+    },
+    {
+      "issue": "JWT claim",
+      "symptom": "OAuth error about customer id",
+      "solution": "Use 'id' claim for customer identifier"
+      "topic": "User ID Flow",
+      "rule": "Pass session.user.id from API route → executor → step context → JWT"
+    },
+    {
+      "issue": "Action field",
+      "symptom": "Action dropdown empty despite actions loading",
+      "solution": "Use action.id for identification"
+      "topic": "Connection Filtering",
+      "rule": "Filter by conn.integration?.key === selectedIntegrationKey"
+    },
+    {
+      "issue": "Unfiltered connections",
+      "symptom": "Wrong connections shown for selected app",
+      "solution": "Filter by conn.integration?.key === selectedIntegrationKey"
+      "topic": "React Config Updates",
+      "rule": "Single onUpdateConfig per handler, useEffect for dependent updates"
+    }
+  ]
+}
+```
+
+</details>
+
+---
+
+## Summary
+
+Integrating Membrane into your workflow builder involves:
+
+1. **Quick Start** (~30 min): Token endpoint + provider setup
+2. **Core Integration**: App actions with connection UI, action selection, and input mapping
+3. **Event-Driven**: Webhook ingestion for event-triggered workflows
+4. **Advanced Nodes**: HTTP, AI, and Gate nodes for flexible workflows
+5. **Self-Integration**: AI-powered custom connector building
+6. **Execution Engine**: Reliable workflow runs with durable execution
+
+The key insight: Membrane handles the hard parts (OAuth, API connections, action catalog), while you build the workflow UX your users need.
+
+For questions or support, see the [Membrane documentation](https://docs.membrane.io) or reach out to the Membrane team.
