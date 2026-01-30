@@ -106,82 +106,29 @@ MEMBRANE_WORKSPACE_SECRET=your_workspace_secret
 
 You'll need to generate JWT tokens for Membrane API authentication. See the [Membrane Authentication Documentation](https://docs.getmembrane.com/docs/authentication) for detailed instructions on token generation and best practices.
 
-### Step 4: Add IntegrationAppProvider
+### Step 4: Add MembraneProvider
 
 Wrap your application (or workflow builder section) with Membrane's provider.
 
 ```tsx
-// /providers/membrane-provider.tsx
+import { MembraneProvider } from '@membranehq/react'
 
-"use client";
-
-import { IntegrationAppProvider } from "@membranehq/react";
-import { useEffect, useState } from "react";
-
-export function MembraneProvider({ children }: { children: React.ReactNode }) {
-  const [config, setConfig] = useState<{
-    apiUri: string;
-    uiUri: string;
-    token: string;
-  } | null>(null);
-
-  useEffect(() => {
-    fetch("/api/membrane-token")
-      .then((res) => res.json())
-      .then(setConfig);
-  }, []);
-
-  if (!config) return <LoadingSpinner />;
-
-  return (
-    <IntegrationAppProvider
-      apiUri={config.apiUri}
-      uiUri={config.uiUri}
-      token={config.token}
-    >
-      {children}
-    </IntegrationAppProvider>
-  );
+async function fetchToken() {
+  const response = await fetch('/api/membrane-token')
+  const { token } = await response.json()
+  return token
 }
-```
 
-```tsx
-// In your layout or app wrapper
-import { MembraneProvider } from "./providers/membrane-provider";
-
-export default function WorkflowBuilderLayout({ children }) {
+export function MyApp() {
   return (
-    <MembraneProvider>
-      {children}
+    <MembraneProvider fetchToken={fetchToken}>
+      <YourApp />
     </MembraneProvider>
-  );
+  )
 }
 ```
 
-<details>
-<summary><strong>Agent Spec: Provider Setup</strong></summary>
-
-```json
-{
-  "component": "IntegrationAppProvider",
-  "package": "@membranehq/react",
-  "required_props": {
-    "apiUri": "string - from token endpoint",
-    "uiUri": "string - from token endpoint", 
-    "token": "string - JWT from token endpoint"
-  },
-  "placement": "Wrap workflow builder or entire app",
-  "async_loading": "Token fetch is async; show loading state until ready",
-  "context_provided": [
-    "useIntegrations() - list available integrations",
-    "useConnections() - list user's connected accounts",
-    "useActions() - list actions for an integration",
-    "useIntegrationApp() - access to UI triggers (open connection dialogs, etc.)"
-  ]
-}
-```
-
-</details>
+For more details, see the [React SDK Documentation](https://docs.getmembrane.com/docs/react-sdk).
 
 ### Step 5: Your First Trigger → Action Workflow
 
