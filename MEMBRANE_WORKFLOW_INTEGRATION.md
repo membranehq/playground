@@ -102,68 +102,9 @@ MEMBRANE_WORKSPACE_SECRET=your_workspace_secret
 
 </details>
 
-### Step 3: Token Generation Endpoint
+### Step 3: Token Generation
 
-Create a server-side endpoint that generates JWT tokens for Membrane API authentication.
-
-```typescript
-// /api/membrane-token/route.ts
-
-import jwt from "jsonwebtoken";
-
-export async function GET(request: Request) {
-  // Extract customer/user info from your auth system
-  const customerId = getCustomerIdFromRequest(request);
-  const customerName = getCustomerNameFromRequest(request);
-  
-  const token = jwt.sign(
-    {
-      iss: process.env.MEMBRANE_WORKSPACE_KEY,
-      id: customerId,            // Your customer's unique ID
-      name: customerName,        // Display name
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 7200, // 2 hours
-      isAdmin: false,
-    },
-    process.env.MEMBRANE_WORKSPACE_SECRET!,
-    { algorithm: "HS512" }
-  );
-
-  return Response.json({
-    apiUri: process.env.MEMBRANE_API_URI,
-    uiUri: process.env.MEMBRANE_UI_URI,
-    token,
-  });
-}
-```
-
-<details>
-<summary><strong>Agent Spec: Token Endpoint</strong></summary>
-
-```json
-{
-  "endpoint": "/api/membrane-token",
-  "method": "GET",
-  "auth": "Your application's authentication",
-  "response": {
-    "apiUri": "string - Membrane API URL",
-    "uiUri": "string - Membrane UI URL", 
-    "token": "string - JWT token for Membrane SDK"
-  },
-  "jwt_claims": {
-    "iss": "MEMBRANE_WORKSPACE_KEY",
-    "id": "customer_id (your user/tenant identifier)",
-    "name": "customer display name",
-    "iat": "issued at timestamp",
-    "exp": "expiration (recommended: 2 hours)",
-    "isAdmin": "boolean (usually false for end users)"
-  },
-  "algorithm": "HS512",
-  "caching": "Recommended: cache tokens for (exp - 5 minutes) to reduce generation overhead"
-}
-```
-
-</details>
+You'll need to generate JWT tokens for Membrane API authentication. See the [Membrane Authentication Documentation](https://docs.getmembrane.com/docs/authentication) for detailed instructions on token generation and best practices.
 
 ### Step 4: Add IntegrationAppProvider
 
