@@ -49,7 +49,7 @@ npm install @membranehq/sdk @membranehq/react jsonwebtoken
 
 ```env
 MEMBRANE_API_URI=https://api.getmembrane.com
-MEMBRANE_UI_URI=https://app.getmembrane.com
+MEMBRANE_UI_URI=https://ui.getmembrane.com
 MEMBRANE_WORKSPACE_KEY=your_workspace_key
 MEMBRANE_WORKSPACE_SECRET=your_workspace_secret
 ```
@@ -68,7 +68,7 @@ MEMBRANE_WORKSPACE_SECRET=your_workspace_secret
     {
       "name": "MEMBRANE_UI_URI", 
       "description": "Membrane UI base URL for embedded components",
-      "default": "https://app.getmembrane.com"
+      "default": "https://ui.getmembrane.com"
     },
     {
       "name": "MEMBRANE_WORKSPACE_KEY",
@@ -1799,11 +1799,6 @@ Membrane uses specific URLs for API and UI endpoints:
 ```env
 MEMBRANE_API_URI=https://api.getmembrane.com
 MEMBRANE_UI_URI=https://ui.getmembrane.com
-# Required for SDK (IntegrationAppClient)
-MEMBRANE_API_URI=https://api.integration.app
-
-# Required for UI (IntegrationAppProvider)
-MEMBRANE_UI_URI=https://app.integration.app
 
 # Workspace credentials
 MEMBRANE_WORKSPACE_KEY=your-workspace-key
