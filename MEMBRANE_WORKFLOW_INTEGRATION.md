@@ -1,6 +1,6 @@
 # Integrating Membrane into Your Workflow Builder
 
-This guide walks you through integrating Membrane into a workflow builder application. By the end, your users will be able to connect 200+ apps, use pre-built actions in workflows, and even create custom integrations for any app on-demand.
+This guide walks you through integrating Membrane into a workflow builder application. By the end, your users will be able to connect any external app and take any actions in them supported by their API.
 
 **Prerequisites**: Membrane account ([documentation](https://docs.getmembrane.com/docs/Overview)), familiarity with React/TypeScript, understanding of workflow builder concepts (nodes, edges, triggers, actions).
 
