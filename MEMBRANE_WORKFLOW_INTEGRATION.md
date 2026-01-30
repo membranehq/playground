@@ -66,10 +66,8 @@ npm install @membranehq/sdk @membranehq/react jsonwebtoken
 ### Step 2: Environment Variables
 
 ```env
-MEMBRANE_API_URI=https://api.membrane.io
-MEMBRANE_UI_URI=https://app.membrane.io
 MEMBRANE_API_URI=https://api.getmembrane.com
-MEMBRANE_UI_URI=https://ui.getmembrane.com
+MEMBRANE_UI_URI=https://app.getmembrane.com
 MEMBRANE_WORKSPACE_KEY=your_workspace_key
 MEMBRANE_WORKSPACE_SECRET=your_workspace_secret
 ```
@@ -83,14 +81,12 @@ MEMBRANE_WORKSPACE_SECRET=your_workspace_secret
     {
       "name": "MEMBRANE_API_URI",
       "description": "Membrane API base URL",
-      "default": "https://api.membrane.io"
       "default": "https://api.getmembrane.com"
     },
     {
       "name": "MEMBRANE_UI_URI", 
       "description": "Membrane UI base URL for embedded components",
-      "default": "https://app.membrane.io"
-      "default": "https://ui.getmembrane.com"
+      "default": "https://app.getmembrane.com"
     },
     {
       "name": "MEMBRANE_WORKSPACE_KEY",
@@ -2139,4 +2135,4 @@ Integrating Membrane into your workflow builder involves:
 
 The key insight: Membrane handles the hard parts (OAuth, API connections, action catalog), while you build the workflow UX your users need.
 
-For questions or support, see the [Membrane documentation](https://docs.membrane.io) or reach out to the Membrane team.
+For questions or support, see the [Membrane documentation](https://docs.getmembrane.com) or reach out to the Membrane team.
