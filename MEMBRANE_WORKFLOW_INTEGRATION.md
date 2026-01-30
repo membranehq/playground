@@ -119,7 +119,6 @@ export async function GET(request: Request) {
   const token = jwt.sign(
     {
       iss: process.env.MEMBRANE_WORKSPACE_KEY,
-      sub: customerId,           // Your customer's unique ID
       id: customerId,            // Your customer's unique ID
       name: customerName,        // Display name
       iat: Math.floor(Date.now() / 1000),
@@ -153,7 +152,6 @@ export async function GET(request: Request) {
   },
   "jwt_claims": {
     "iss": "MEMBRANE_WORKSPACE_KEY",
-    "sub": "customer_id (your user/tenant identifier)",
     "id": "customer_id (your user/tenant identifier)",
     "name": "customer display name",
     "iat": "issued at timestamp",
@@ -1627,7 +1625,6 @@ export function generateMembraneToken(config: TokenConfig): string {
   return jwt.sign(
     {
       iss: process.env.MEMBRANE_WORKSPACE_KEY,
-      sub: customerId,
       id: customerId,
       name: customerName,
       iat: Math.floor(Date.now() / 1000),
