@@ -21,24 +21,6 @@ This guide walks you through integrating Membrane into a workflow builder applic
 
 This section gets you from zero to a working "Trigger → App Action" workflow in ~30 minutes.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     MINIMAL INTEGRATION                         │
-│                                                                 │
-│   ┌──────────┐      ┌──────────────┐      ┌──────────────┐     │
-│   │ Trigger  │ ───► │ Membrane     │ ───► │ External     │     │
-│   │ (Manual) │      │ App Action   │      │ App (Slack,  │     │
-│   └──────────┘      └──────────────┘      │ HubSpot...)  │     │
-│                            │                                    │
-│                            ▼                                    │
-│                    ┌──────────────┐                             │
-│                    │ Membrane SDK │                             │
-│                    │ handles auth │                             │
-│                    │ & API calls  │                             │
-│                    └──────────────┘                             │
-└─────────────────────────────────────────────────────────────────┘
-```
-
 ### Step 1: Install Dependencies
 
 ```bash
