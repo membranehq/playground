@@ -215,7 +215,7 @@ export function MembraneActionConfig({
     onUpdateConfig("membraneConnectionId", connectionId);
   };
 
-  // Open OAuth flow for new connection
+  // Open popup to create a new connection
   const handleConnectApp = async () => {
     if (!selectedIntegrationKey || !integrationApp) return;
 
