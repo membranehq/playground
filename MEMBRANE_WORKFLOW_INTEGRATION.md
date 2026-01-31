@@ -44,7 +44,7 @@ For detailed setup instructions, see:
 
 ## Integrations & External Apps
 
-When users add an action node to their workflow, they first need to select which app to use. **Integrations** are apps already available in your workspace. **External Apps** let users browse Membrane's full catalog to add new apps.
+When users create a new connection, they first select which app to connect. **Integrations** are apps already available in your workspace. **External Apps** let users browse Membrane's full catalog to add new apps to the workspace.
 
 ### Listing Integrations
 
@@ -77,9 +77,9 @@ const newIntegration = await membrane.integrations.create({
 
 A **Connection** represents a user's authenticated account with an external app. Before users can add actions to their workflows, they need to connect their accounts.
 
-Use `useConnections()` to list connections and `useMembrane()` to create, reconnect, or delete them. When configuring an action node, filter connections by integration to show only relevant ones.
+To create a new connection, use `integration.openNewConnection()` which launches Membrane's authentication UI. Use `useConnections()` to list existing connections and `useMembrane()` to reconnect or delete them. When configuring an action node, filter connections by integration to show only relevant ones.
 
-See [Connections](https://docs.getmembrane.com/docs/connections) and [React SDK](https://docs.getmembrane.com/docs/react-sdk).
+See [Connections](https://docs.getmembrane.com/docs/connections), [Connection UI](https://docs.getmembrane.com/docs/connection-ui), and [React SDK](https://docs.getmembrane.com/docs/react-sdk).
 
 ---
 
