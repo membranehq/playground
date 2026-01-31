@@ -116,9 +116,9 @@ const { data: action } = useAction({
 When a workflow runs, execute actions server-side using the SDK:
 
 ```typescript
-import { IntegrationAppClient } from "@membranehq/sdk";
+import { MembraneClient } from "@membranehq/sdk";
 
-const client = new IntegrationAppClient({ token: membraneToken });
+const client = new MembraneClient({ token: membraneToken });
 
 const result = await client
   .connection(connectionId)
@@ -235,9 +235,9 @@ See [AI Agents](https://docs.getmembrane.com/docs/ai-agents) in the Membrane doc
 Events are managed through **Flows** in Membrane. A Flow defines what event to listen for and where to send it:
 
 ```typescript
-import { IntegrationAppClient } from "@membranehq/sdk";
+import { MembraneClient } from "@membranehq/sdk";
 
-const client = new IntegrationAppClient({ token: membraneToken });
+const client = new MembraneClient({ token: membraneToken });
 
 // Create a flow that subscribes to an event
 const flow = await client.flows.create({
