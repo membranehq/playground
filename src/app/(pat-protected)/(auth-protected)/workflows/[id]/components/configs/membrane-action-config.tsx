@@ -46,6 +46,9 @@ export function MembraneActionConfig({
 }: MembraneActionConfigProps) {
   const selectedActionId = value.config?.actionId;
   const selectedIntegrationKey = value.config?.integrationKey as string;
+  const selectedConnectorId = value.config?.connectorId as string;
+  const selectedConnectorName = value.config?.connectorName as string;
+  const selectedConnectorLogoUri = value.config?.connectorLogoUri as string;
 
   // State for connection status from AppConnectionSelector
   const [isConnected, setIsConnected] = useState(false);
@@ -82,9 +85,18 @@ export function MembraneActionConfig({
   const { loading: isLoadingSelectedAction, action: selectedActionData } = useAction(selectedActionId as string);
   const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey);
 
-  const actionsForSelectedIntegration = useActions({
-    integrationKey: selectedIntegrationKey,
-  });
+  // Determine if we're in connector mode (no integrationKey)
+  const isConnectorMode = !selectedIntegrationKey && !!selectedConnectorId;
+
+  // Get connectionId from config for connector mode
+  const configConnectionId = value.config?.connectionId as string | undefined;
+
+  // Fetch actions based on mode - use connectionId in connector mode
+  const actionsForSelectedIntegration = useActions(
+    isConnectorMode && configConnectionId
+      ? { connectionId: configConnectionId }
+      : { integrationKey: selectedIntegrationKey },
+  );
 
   // Refresh actions when refreshKey changes (e.g., after Membrane agent session completes)
   useEffect(() => {
@@ -98,12 +110,33 @@ export function MembraneActionConfig({
       {/* App Selection and Connection Section */}
       <SelectAppAndConnect
         selectedIntegrationKey={selectedIntegrationKey}
+        selectedConnectorId={selectedConnectorId}
+        selectedConnectorName={selectedConnectorName}
+        selectedConnectorLogoUri={selectedConnectorLogoUri}
         onIntegrationChange={(integrationKey) => {
           onChange({
             ...value,
             config: {
               ...value.config,
               integrationKey,
+              connectorId: undefined,
+              connectorName: undefined,
+              connectorLogoUri: undefined,
+              connectionId: undefined,
+              actionId: undefined,
+              inputMapping: undefined,
+            },
+          });
+        }}
+        onConnectorChange={(connectorId, connectorName, connectorLogoUri) => {
+          onChange({
+            ...value,
+            config: {
+              ...value.config,
+              connectorId,
+              connectorName,
+              connectorLogoUri,
+              integrationKey: undefined,
               connectionId: undefined,
               actionId: undefined,
               inputMapping: undefined,
@@ -178,10 +211,21 @@ export function MembraneActionConfig({
                             value={action.name}
                             onSelect={() => {
                               const actionName = action?.name || 'Action';
+                              // For connection-level actions, we need the key or uuid
+                              // action.key is the preferred identifier, fallback to uuid, then id
+                              const actionKey = action.key || action.uuid || action.id;
+                              console.log('[ActionSelect] Full action object:', action);
+                              console.log('[ActionSelect] Selected action:', {
+                                id: action.id,
+                                key: action.key,
+                                uuid: action.uuid,
+                                name: action.name,
+                                actionKey,
+                              });
                               onChange({
                                 ...value,
                                 name: actionName,
-                                config: { ...value.config, actionId: action.id, actionKey: action.key },
+                                config: { ...value.config, actionId: action.id, actionKey },
                               });
                               setActionSelectOpen(false);
                             }}

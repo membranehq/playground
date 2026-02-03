@@ -19,7 +19,7 @@ export class IntegrationTokenError extends Error {
   }
 }
 
-export async function generateIntegrationToken(details: Authentication): Promise<string> {
+export async function generateIntegrationToken(details: Authentication, asAdmin: boolean = false): Promise<string> {
   if (!details.workspaceCredentials.workspaceKey || !details.workspaceCredentials.workspaceSecret) {
     throw new IntegrationTokenError('Integration.app credentials not configured');
   }
@@ -34,8 +34,8 @@ export async function generateIntegrationToken(details: Authentication): Promise
       id: details.customerId,
       // Required: Human-readable customer name
       name: details.customerName || details.customerId,
-      // Admin mode for full access
-      isAdmin: 1,
+      // Admin mode only for management operations, tenant-level for normal usage
+      isAdmin: asAdmin ? 1 : 0,
     };
 
     const options = {

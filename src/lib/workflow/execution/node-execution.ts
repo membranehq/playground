@@ -201,16 +201,17 @@ export async function executeMembraneActionNode(
 ): Promise<NodeExecutionResult> {
   try {
     const actionId = node.config?.actionId;
-    const actionKey = node.config?.actionKey;
     const connectionId = node.config?.connectionId;
 
-    if (!actionId && !actionKey) {
-      throw new Error('Action node requires actionId or actionKey in config');
+    if (!actionId) {
+      throw new Error('Action node requires actionId in config');
     }
+
+    const apiUri = process.env.MEMBRANE_API_URI || 'https://api.integration.app';
 
     const membraneClient = new IntegrationAppClient({
       token: membraneToken,
-      apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app',
+      apiUri,
     });
 
     try {
@@ -218,7 +219,19 @@ export async function executeMembraneActionNode(
       // SDK signature: run(input?: RunInput, options?: { integrationKey?: string; connectionId?: string })
       const runOptions = connectionId ? { connectionId: connectionId as string } : undefined;
 
+      // Log the request details
+      console.log('[executeMembraneActionNode] Request:', {
+        url: `${apiUri}/actions/${actionId}/run`,
+        actionId,
+        connectionId,
+        runOptions,
+        input: resolvedInputs,
+      });
+
       const result = await membraneClient.action(actionId as string).run(resolvedInputs, runOptions);
+
+      // Log the response
+      console.log('[executeMembraneActionNode] Response:', result);
 
       return {
         id: `${node.id}-${Date.now()}`,
@@ -228,6 +241,9 @@ export async function executeMembraneActionNode(
         output: result,
       };
     } catch (error) {
+      // Log the error response
+      console.log('[executeMembraneActionNode] Error:', error);
+
       return {
         id: `${node.id}-${Date.now()}`,
         nodeId: node.id,

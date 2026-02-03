@@ -113,6 +113,7 @@ export interface WorkflowNode {
     inputSchema?: Record<string, unknown>;
     outputSchema?: Record<string, unknown>;
     integrationKey?: string;
+    connectorId?: string;
     connectionId?: string;
     actionId?: string;
     actionKey?: string;
