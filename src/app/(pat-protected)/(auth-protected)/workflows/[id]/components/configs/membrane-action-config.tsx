@@ -214,14 +214,6 @@ export function MembraneActionConfig({
                               // For connection-level actions, we need the key or uuid
                               // action.key is the preferred identifier, fallback to uuid, then id
                               const actionKey = action.key || action.uuid || action.id;
-                              console.log('[ActionSelect] Full action object:', action);
-                              console.log('[ActionSelect] Selected action:', {
-                                id: action.id,
-                                key: action.key,
-                                uuid: action.uuid,
-                                name: action.name,
-                                actionKey,
-                              });
                               onChange({
                                 ...value,
                                 name: actionName,

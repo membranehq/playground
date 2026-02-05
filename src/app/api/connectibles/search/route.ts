@@ -90,25 +90,6 @@ export async function GET(request: NextRequest) {
     const apiUri = process.env.NEXT_PUBLIC_INTEGRATION_APP_API_URL || 'https://api.integration.app';
     const token = await generateIntegrationToken(auth);
 
-    // Decode token for debugging
-    const tokenParts = token.split('.');
-    let tokenPayload: Record<string, unknown> = {};
-    if (tokenParts.length === 3) {
-      try {
-        tokenPayload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-      } catch (e) {
-        console.error('[Connectibles Search] Failed to decode token');
-      }
-    }
-
-    console.log('[Connectibles Search] Request details:', {
-      customerId: auth.customerId,
-      customerName: auth.customerName,
-      workspaceKey: auth.workspaceCredentials.workspaceKey,
-      query: query || '(empty)',
-      tokenPayload,
-    });
-
     let integrationElements: Record<string, unknown>[] = [];
     let appElements: Record<string, unknown>[] = [];
     let connectorElements: Record<string, unknown>[] = [];
@@ -133,25 +114,6 @@ export async function GET(request: NextRequest) {
       appElements = apps;
       // Don't fetch all connectors when browsing - too many
     }
-
-    console.log('[Connectibles Search] Results:', {
-      integrations: integrationElements.length,
-      apps: appElements.length,
-      connectors: connectorElements.length,
-    });
-
-    // Log detailed app info for debugging tenant filtering
-    console.log(
-      '[Connectibles Search] Apps received:',
-      appElements.map((app) => ({
-        id: app.id || app.uuid,
-        name: app.name,
-        key: app.key,
-        isPublic: app.isPublic,
-        tenantId: app.tenantId,
-        workspaceId: app.workspaceId,
-      })),
-    );
 
     const connectibles: Connectible[] = [];
     const seenKeys = new Set<string>();

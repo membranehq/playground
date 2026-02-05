@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticationFromRequest } from '@/lib/auth';
-import { generateIntegrationToken, decodeTokenForDebug } from '@/lib/integration-token';
+import { generateIntegrationToken } from '@/lib/integration-token';
 
 /**
  * POST /api/membrane-sessions
  * Create a new Membrane Agent session
  */
 export async function POST(request: NextRequest) {
-  console.log('[Membrane Sessions API] POST /api/membrane-sessions - creating Membrane agent session');
-
   try {
     const auth = getAuthenticationFromRequest(request);
 
@@ -24,15 +22,6 @@ export async function POST(request: NextRequest) {
     const apiUri = process.env.NEXT_PUBLIC_INTEGRATION_APP_API_URL || 'https://api.integration.app';
     const token = await generateIntegrationToken(auth);
 
-    // DEBUG: Log token details
-    const tokenDebug = decodeTokenForDebug(token);
-    console.log('[Membrane Sessions API] DEBUG - Auth details:', {
-      customerId: auth.customerId,
-      customerName: auth.customerName,
-      workspaceKey: auth.workspaceCredentials.workspaceKey,
-    });
-    console.log('[Membrane Sessions API] DEBUG - Token payload:', tokenDebug);
-
     // Create Membrane agent session
     const url = new URL(`${apiUri}/agent/sessions`);
 
@@ -40,8 +29,6 @@ export async function POST(request: NextRequest) {
     if (initialMessage) {
       requestBody.prompt = initialMessage;
     }
-
-    console.log('[Membrane Sessions API] Creating session with initial message:', initialMessage ? 'yes' : 'no');
 
     const response = await fetch(url.toString(), {
       method: 'POST',
@@ -60,8 +47,6 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     const sessionId = data.id || data.sessionId;
-
-    console.log('[Membrane Sessions API] Created session:', sessionId);
 
     return NextResponse.json({ sessionId });
   } catch (error) {

@@ -152,24 +152,7 @@ export async function fetchMembraneAgentStatus(
 export async function fetchMembraneAgentMessages(sessionId: string): Promise<MembraneAgentMessagesResponse> {
   const { token, apiUri } = await getMembraneConfig();
 
-  // DEBUG: Log token info for message fetch
-  try {
-    const tokenParts = token.split('.');
-    if (tokenParts.length === 3) {
-      const payload = JSON.parse(atob(tokenParts[1]));
-      console.log('[fetchMembraneAgentMessages] DEBUG - Token payload for fetching messages:', {
-        id: payload.id,
-        name: payload.name,
-        isAdmin: payload.isAdmin,
-        iss: payload.iss,
-      });
-    }
-  } catch (e) {
-    console.log('[fetchMembraneAgentMessages] DEBUG - Could not decode token');
-  }
-
   const url = new URL(`${apiUri}/agent/sessions/${sessionId}/messages`);
-  console.log('[fetchMembraneAgentMessages] DEBUG - Fetching messages from:', url.toString());
 
   const response = await fetch(url.toString(), {
     headers: {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/workflow/database';
 import { WorkflowSession } from '@/lib/workflow/models/workflow-session';
 import { getAuthenticationFromRequest } from '@/lib/auth';
-import { generateIntegrationToken, decodeTokenForDebug } from '@/lib/integration-token';
+import { generateIntegrationToken } from '@/lib/integration-token';
 
 /**
  * GET /api/workflows/[id]/sessions
@@ -46,19 +46,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const apiUri = process.env.NEXT_PUBLIC_INTEGRATION_APP_API_URL || 'https://api.integration.app';
     const token = await generateIntegrationToken(auth);
 
-    // DEBUG: Log token details for session creation
-    const tokenDebug = decodeTokenForDebug(token);
-    console.log('[Workflow Sessions API] DEBUG - Auth details:', {
-      customerId: auth.customerId,
-      customerName: auth.customerName,
-      workspaceKey: auth.workspaceCredentials.workspaceKey,
-    });
-    console.log('[Workflow Sessions API] DEBUG - Token payload for session creation:', tokenDebug);
-    console.log('[Workflow Sessions API] DEBUG - Request headers:', {
-      'x-auth-id': req.headers.get('x-auth-id'),
-      'x-customer-name': req.headers.get('x-customer-name'),
-    });
-
     const url = new URL(`${apiUri}/agent/sessions`);
     const requestBody: Record<string, unknown> = {};
     if (initialMessage) {
@@ -82,7 +69,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const data = await response.json();
     const sessionId = data.id || data.sessionId;
-    console.log('[Workflow Sessions API] DEBUG - Created session:', sessionId);
 
     // Create label from initial message (truncated)
     const label = initialMessage
