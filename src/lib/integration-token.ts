@@ -1,4 +1,4 @@
-import jwt, { Algorithm } from 'jsonwebtoken';
+import jwt, { Algorithm, JwtPayload } from 'jsonwebtoken';
 import { Authentication } from './auth';
 
 interface TokenData {
@@ -48,5 +48,20 @@ export async function generateIntegrationToken(details: Authentication, asAdmin:
   } catch (error) {
     console.error('Error generating integration token:', error);
     throw new IntegrationTokenError('Failed to generate integration token');
+  }
+}
+
+/**
+ * Decode a JWT token for debugging purposes (without verification)
+ */
+export function decodeTokenForDebug(token: string): JwtPayload | null {
+  try {
+    const decoded = jwt.decode(token, { complete: true });
+    if (decoded && typeof decoded.payload === 'object') {
+      return decoded.payload as JwtPayload;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

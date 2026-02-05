@@ -24,9 +24,15 @@ interface ActionNodeProps {
 }
 
 export function ActionNode({ data, selected }: ActionNodeProps) {
-  // Get integration key and action ID from node config for membrane actions
+  // Get integration key, connector info, and action ID from node config for membrane actions
   const integrationKey = data.node.config?.integrationKey as string | undefined;
+  const connectorId = data.node.config?.connectorId as string | undefined;
+  const connectorName = data.node.config?.connectorName as string | undefined;
+  const connectorLogoUri = data.node.config?.connectorLogoUri as string | undefined;
   const actionId = data.node.config?.actionId as string | undefined;
+
+  // Determine if we're in connector mode (tenant-level) vs integration mode (workspace-level)
+  const isConnectorMode = !integrationKey && !!connectorId;
 
   // Fetch integration and action data
   const { integration: fetchedIntegration } = useIntegration(integrationKey || '');
@@ -37,6 +43,15 @@ export function ActionNode({ data, selected }: ActionNodeProps) {
 
   // Get node type metadata for icon and styling
   const getNodeTypeInfo = () => {
+    // For connector mode (tenant-level), use connector info
+    if (isConnectorMode && connectorName) {
+      return {
+        title: action?.name || 'Select action',
+        logoTitle: connectorName,
+        color: 'blue',
+      };
+    }
+
     // For membrane actions with integration, show action name as title if available
     if (integrationKey && integration) {
       return {
@@ -66,6 +81,28 @@ export function ActionNode({ data, selected }: ActionNodeProps) {
 
   // Determine which icon to show
   const getIcon = () => {
+    // For connector mode, show connector logo
+    if (isConnectorMode && connectorName) {
+      if (connectorLogoUri) {
+        return (
+          <Image
+            width={16}
+            height={16}
+            src={connectorLogoUri}
+            alt={`${connectorName} logo`}
+            className="w-4 h-4 rounded"
+          />
+        );
+      } else {
+        // Fallback to first letter of connector name
+        return (
+          <div className="w-4 h-4 rounded bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+            {connectorName[0]}
+          </div>
+        );
+      }
+    }
+
     // For membrane actions with integration, show integration logo
     if (integrationKey && integration) {
       if (integration.logoUri) {

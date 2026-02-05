@@ -359,8 +359,25 @@ export function MembraneActionConfig({
             </Button>
             <Button
               onClick={() => {
-                // Enrich the user's message with integration metadata
-                const enrichedMessage = `I need to create a new action for the ${selectedIntegrationKey} integration.
+                let enrichedMessage: string;
+
+                if (isConnectorMode) {
+                  // Connector mode: create connection-specific action
+                  enrichedMessage = `I need to create a new action for a tenant-level connector.
+
+Connector ID: ${selectedConnectorId}
+Connector Name: ${selectedConnectorName || 'Not available'}
+Connection ID: ${configConnectionId || 'Not available'}
+
+User's description of what the action should do:
+${actionDescription}
+
+Please help me create this action.
+
+IMPORTANT: This is a tenant-level connector, not a workspace-level integration. Create a connection-specific action using the provided Connection ID. Do not create an integration-level action.`;
+                } else {
+                  // Integration mode: create integration-level action
+                  enrichedMessage = `I need to create a new action for the ${selectedIntegrationKey} integration.
 
 Integration Key: ${selectedIntegrationKey}
 Integration ID: ${selectedIntegration?.id || 'Not available'}
@@ -371,6 +388,7 @@ ${actionDescription}
 Please help me create this action.
 
 IMPORTANT: Do not ask user to create/test a connection. Connection must be created at this point. Find and use an existing one.`;
+                }
 
                 // Call the callback to open Membrane agent panel
                 onOpenMembraneAgent?.(enrichedMessage);

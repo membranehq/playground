@@ -7,6 +7,7 @@ import { useIntegration, useIntegrations, useConnections } from '@membranehq/rea
 import Image from 'next/image';
 import { useIntegrationConnection } from '@/hooks/use-integration-connection';
 import { useConnectorConnection } from '@/hooks/use-connector-connection';
+import { useConnectors } from '@/hooks/use-connectors';
 import { Plus } from 'lucide-react';
 import { NodeCreateDialog } from '@/app/(pat-protected)/(auth-protected)/workflows/[id]/components/dialogs/node-create-dialog';
 
@@ -47,14 +48,16 @@ export function SelectAppAndConnect({
   const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey as string);
   const { integrations, refresh: refreshIntegrations } = useIntegrations();
   const { items: connections, refresh: refreshConnections } = useConnections();
+  const { connectors: tenantConnectors, refetch: refetchConnectors } = useConnectors({ tenantOnly: true });
 
-  // Refresh integrations and connections when refreshKey changes
+  // Refresh integrations, connections, and connectors when refreshKey changes
   React.useEffect(() => {
     if (refreshKey) {
       refreshIntegrations?.();
       refreshConnections?.();
+      refetchConnectors?.();
     }
-  }, [refreshKey, refreshIntegrations, refreshConnections]);
+  }, [refreshKey, refreshIntegrations, refreshConnections, refetchConnectors]);
   const [addAppDialogOpen, setAddAppDialogOpen] = useState(false);
 
   // Get connector-based connections (connections without an integration)
@@ -62,6 +65,13 @@ export function SelectAppAndConnect({
   const connectorConnections = React.useMemo(() => {
     return connections.filter((conn) => !conn.integrationId && conn.connectorId);
   }, [connections]);
+
+  // Get tenant-level connectors that don't have a connection yet
+  // These are connectors created by the agent that the user hasn't connected to
+  const unconnectedTenantConnectors = React.useMemo(() => {
+    const connectedConnectorIds = new Set(connectorConnections.map((conn) => conn.connectorId));
+    return tenantConnectors.filter((connector) => !connectedConnectorIds.has(connector.id));
+  }, [tenantConnectors, connectorConnections]);
 
   // Integration connection hook (for integrationKey mode)
   const {
@@ -200,17 +210,58 @@ export function SelectAppAndConnect({
                   </div>
                 </SelectItem>
               ))}
-              {/* Tenant-level connector connections */}
-              {connectorConnections.map((conn) => (
+              {/* Tenant-level connections (connections without integration) */}
+              {connectorConnections.map((connection) => {
+                // Find the connector info from tenantConnectors if available
+                const connectorInfo = tenantConnectors.find((c) => c.id === connection.connectorId);
+                const connectorName = connection.name || connectorInfo?.name || 'Connected App';
+                const connectorLogoUri = connectorInfo?.logoUri || '';
+
+                return (
+                  <SelectItem
+                    key={`connector:${connection.connectorId}`}
+                    value={`connector:${connection.connectorId}:${connectorName}:${connectorLogoUri}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {connectorLogoUri ? (
+                        <Image
+                          width={20}
+                          height={20}
+                          src={connectorLogoUri}
+                          alt={`${connectorName} logo`}
+                          className="w-5 h-5 rounded"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center text-xs font-medium text-muted-foreground">
+                          {connectorName[0]}
+                        </div>
+                      )}
+                      <span className="text-sm">{connectorName}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+              {/* Tenant-level connectors without connections (created by agent but not yet connected) */}
+              {unconnectedTenantConnectors.map((connector) => (
                 <SelectItem
-                  key={`connector:${conn.connectorId}`}
-                  value={`connector:${conn.connectorId}:${conn.name || conn.connectorId}:`}
+                  key={`connector:${connector.id}`}
+                  value={`connector:${connector.id}:${connector.name}:${connector.logoUri || ''}`}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center text-xs font-medium text-muted-foreground">
-                      {(conn.name || 'C')[0]}
-                    </div>
-                    <span className="text-sm">{conn.name || 'Connected App'}</span>
+                    {connector.logoUri ? (
+                      <Image
+                        width={20}
+                        height={20}
+                        src={connector.logoUri}
+                        alt={`${connector.name} logo`}
+                        className="w-5 h-5 rounded"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center text-xs font-medium text-muted-foreground">
+                        {connector.name[0]}
+                      </div>
+                    )}
+                    <span className="text-sm">{connector.name}</span>
                   </div>
                 </SelectItem>
               ))}

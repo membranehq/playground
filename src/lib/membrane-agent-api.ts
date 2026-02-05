@@ -30,15 +30,20 @@ interface LongPollOptions {
 function getCustomerHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
 
-  const userEmail = localStorage.getItem('userEmail');
-  if (!userEmail) return {};
+  // Use activeCustomerId as primary source (matches CustomerProvider logic)
+  const activeCustomerIdRaw = localStorage.getItem('activeCustomerId');
+  const activeCustomerId = activeCustomerIdRaw ? (JSON.parse(activeCustomerIdRaw) as string | undefined) : undefined;
 
-  const email = JSON.parse(userEmail) as string | undefined;
-  if (!email) return {};
+  // Fall back to userEmail for backwards compatibility
+  const userEmailRaw = localStorage.getItem('userEmail');
+  const userEmail = userEmailRaw ? (JSON.parse(userEmailRaw) as string | undefined) : undefined;
+
+  const customerId = activeCustomerId || userEmail;
+  if (!customerId) return {};
 
   return {
-    'x-auth-id': email,
-    'x-customer-name': email,
+    'x-auth-id': customerId,
+    'x-customer-name': customerId,
   };
 }
 
@@ -52,11 +57,27 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 // Cache the token to avoid fetching it on every poll
-let cachedToken: { token: string; apiUri: string; expiresAt: number } | null = null;
+// Include customerId to invalidate cache when customer changes
+let cachedToken: { token: string; apiUri: string; expiresAt: number; customerId: string } | null = null;
+
+function getCurrentCustomerId(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const activeCustomerIdRaw = localStorage.getItem('activeCustomerId');
+  const activeCustomerId = activeCustomerIdRaw ? (JSON.parse(activeCustomerIdRaw) as string | undefined) : undefined;
+  const userEmailRaw = localStorage.getItem('userEmail');
+  const userEmail = userEmailRaw ? (JSON.parse(userEmailRaw) as string | undefined) : undefined;
+  return activeCustomerId || userEmail;
+}
 
 async function getMembraneConfig(): Promise<{ token: string; apiUri: string }> {
-  // Return cached token if still valid (with 5 minute buffer)
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 5 * 60 * 1000) {
+  const currentCustomerId = getCurrentCustomerId();
+
+  // Return cached token if still valid (with 5 minute buffer) AND customer hasn't changed
+  if (
+    cachedToken &&
+    cachedToken.expiresAt > Date.now() + 5 * 60 * 1000 &&
+    cachedToken.customerId === currentCustomerId
+  ) {
     return { token: cachedToken.token, apiUri: cachedToken.apiUri };
   }
 
@@ -74,6 +95,7 @@ async function getMembraneConfig(): Promise<{ token: string; apiUri: string }> {
     token: config.token,
     apiUri: config.apiUri,
     expiresAt: Date.now() + 23 * 60 * 60 * 1000,
+    customerId: currentCustomerId || '',
   };
 
   return { token: config.token, apiUri: config.apiUri };
@@ -130,7 +152,24 @@ export async function fetchMembraneAgentStatus(
 export async function fetchMembraneAgentMessages(sessionId: string): Promise<MembraneAgentMessagesResponse> {
   const { token, apiUri } = await getMembraneConfig();
 
+  // DEBUG: Log token info for message fetch
+  try {
+    const tokenParts = token.split('.');
+    if (tokenParts.length === 3) {
+      const payload = JSON.parse(atob(tokenParts[1]));
+      console.log('[fetchMembraneAgentMessages] DEBUG - Token payload for fetching messages:', {
+        id: payload.id,
+        name: payload.name,
+        isAdmin: payload.isAdmin,
+        iss: payload.iss,
+      });
+    }
+  } catch (e) {
+    console.log('[fetchMembraneAgentMessages] DEBUG - Could not decode token');
+  }
+
   const url = new URL(`${apiUri}/agent/sessions/${sessionId}/messages`);
+  console.log('[fetchMembraneAgentMessages] DEBUG - Fetching messages from:', url.toString());
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -140,7 +179,12 @@ export async function fetchMembraneAgentMessages(sessionId: string): Promise<Mem
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch Membrane Agent messages: ${response.status}`);
+    const errorText = await response.text();
+    console.error('[fetchMembraneAgentMessages] DEBUG - Error response:', {
+      status: response.status,
+      body: errorText,
+    });
+    throw new Error(`Failed to fetch Membrane Agent messages: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();

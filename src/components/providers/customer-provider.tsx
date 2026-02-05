@@ -75,8 +75,8 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
         if (prev.includes(id)) return prev;
         return [...prev, id];
       });
-      // Refresh the page to update all SDK contexts
-      window.location.reload();
+      // Navigate to workflows list to avoid showing another user's data
+      window.location.href = '/workflows';
     },
     [setActiveCustomerId, setCustomerIds],
   );

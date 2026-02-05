@@ -150,7 +150,9 @@ Please help me build this integration so I can use it in my workflow.
 
 IMPORTANT: Do NOT create any actions for this integration. Only create the integration itself with the connection setup. I will create the actions myself later.
 
-IMPORTANT: Do not ask user to enter authentication details, figure them out on your own using provided app url or search the app on the web if the url was not provided.`;
+IMPORTANT: Do not ask user to enter authentication details, figure them out on your own using provided app url or search the app on the web if the url was not provided.
+
+IMPORTANT: Do not create integration entity and do not create connection. Only create external app and connector. Create all entities on the tenant level.`;
 
     onOpenMembraneAgent(enrichedMessage);
     handleClose();
@@ -342,10 +344,6 @@ IMPORTANT: Do not ask user to enter authentication details, figure them out on y
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <p className="text-sm text-destructive">Failed to load apps</p>
                       <p className="text-xs text-muted-foreground mt-1">Please try again</p>
-                    </div>
-                  ) : connectibles.length === 0 && !searchQuery.trim() ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <p className="text-sm text-muted-foreground">Start typing to search apps</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-6 gap-3">

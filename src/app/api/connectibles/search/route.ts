@@ -12,6 +12,11 @@ interface SearchResponse {
   items?: SearchResult[];
 }
 
+interface ListResponse {
+  items?: Record<string, unknown>[];
+}
+
+// Search by type using the /search endpoint (requires query)
 async function searchByType(
   apiUri: string,
   token: string,
@@ -19,7 +24,8 @@ async function searchByType(
   query: string,
 ): Promise<SearchResult[]> {
   try {
-    const path = `/search?q=${encodeURIComponent(query)}&elementType=${elementType}`;
+    const params = new URLSearchParams({ elementType, q: query });
+    const path = `/search?${params.toString()}`;
     const response = await fetch(`${apiUri}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -40,6 +46,36 @@ async function searchByType(
   }
 }
 
+// List items using direct endpoint (no query required)
+async function listByEndpoint(
+  apiUri: string,
+  token: string,
+  endpoint: string,
+  limit: number = 50,
+): Promise<Record<string, unknown>[]> {
+  try {
+    const params = new URLSearchParams({ limit: String(limit) });
+    const path = `/${endpoint}?${params.toString()}`;
+    const response = await fetch(`${apiUri}${path}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`Error listing ${endpoint}:`, response.status, response.statusText);
+      return [];
+    }
+
+    const data: ListResponse = await response.json();
+    return data.items || [];
+  } catch (error) {
+    console.error(`Error listing ${endpoint}:`, error);
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = getAuthenticationFromRequest(request);
@@ -49,21 +85,73 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q') || '';
-
-    if (!query.trim()) {
-      return NextResponse.json({ connectibles: [] });
-    }
+    const query = searchParams.get('q')?.trim() || undefined;
 
     const apiUri = process.env.NEXT_PUBLIC_INTEGRATION_APP_API_URL || 'https://api.integration.app';
     const token = await generateIntegrationToken(auth);
 
-    // Search for integrations, apps, and connectors in parallel
-    const [integrations, apps, connectors] = await Promise.all([
-      searchByType(apiUri, token, 'integration', query),
-      searchByType(apiUri, token, 'app', query),
-      searchByType(apiUri, token, 'connector', query),
-    ]);
+    // Decode token for debugging
+    const tokenParts = token.split('.');
+    let tokenPayload: Record<string, unknown> = {};
+    if (tokenParts.length === 3) {
+      try {
+        tokenPayload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+      } catch (e) {
+        console.error('[Connectibles Search] Failed to decode token');
+      }
+    }
+
+    console.log('[Connectibles Search] Request details:', {
+      customerId: auth.customerId,
+      customerName: auth.customerName,
+      workspaceKey: auth.workspaceCredentials.workspaceKey,
+      query: query || '(empty)',
+      tokenPayload,
+    });
+
+    let integrationElements: Record<string, unknown>[] = [];
+    let appElements: Record<string, unknown>[] = [];
+    let connectorElements: Record<string, unknown>[] = [];
+
+    if (query) {
+      // Use search endpoint when query is provided
+      const [integrations, apps, connectors] = await Promise.all([
+        searchByType(apiUri, token, 'integration', query),
+        searchByType(apiUri, token, 'app', query),
+        searchByType(apiUri, token, 'connector', query),
+      ]);
+      integrationElements = integrations.map((r) => r.element);
+      appElements = apps.map((r) => r.element);
+      connectorElements = connectors.map((r) => r.element);
+    } else {
+      // Use list endpoints when no query - fetch external-apps for browsing
+      const [integrations, apps] = await Promise.all([
+        listByEndpoint(apiUri, token, 'integrations', 50),
+        listByEndpoint(apiUri, token, 'external-apps', 50),
+      ]);
+      integrationElements = integrations;
+      appElements = apps;
+      // Don't fetch all connectors when browsing - too many
+    }
+
+    console.log('[Connectibles Search] Results:', {
+      integrations: integrationElements.length,
+      apps: appElements.length,
+      connectors: connectorElements.length,
+    });
+
+    // Log detailed app info for debugging tenant filtering
+    console.log(
+      '[Connectibles Search] Apps received:',
+      appElements.map((app) => ({
+        id: app.id || app.uuid,
+        name: app.name,
+        key: app.key,
+        isPublic: app.isPublic,
+        tenantId: app.tenantId,
+        workspaceId: app.workspaceId,
+      })),
+    );
 
     const connectibles: Connectible[] = [];
     const seenKeys = new Set<string>();
@@ -72,20 +160,17 @@ export async function GET(request: NextRequest) {
     const appById = new Map<string, Record<string, unknown>>();
     const connectorById = new Map<string, Record<string, unknown>>();
 
-    for (const item of apps) {
-      const el = item.element;
+    for (const el of appElements) {
       const id = (el.uuid as string) || (el.id as string);
       if (id) appById.set(id, el);
     }
 
-    for (const item of connectors) {
-      const el = item.element;
+    for (const el of connectorElements) {
       if (el.id) connectorById.set(el.id as string, el);
     }
 
     // Process integrations first (highest priority - already set up)
-    for (const item of integrations) {
-      const el = item.element;
+    for (const el of integrationElements) {
       const key = `integration:${el.id}`;
       if (seenKeys.has(key)) continue;
       seenKeys.add(key);
@@ -127,8 +212,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Process apps (can be used to create integrations)
-    for (const item of apps) {
-      const el = item.element;
+    for (const el of appElements) {
       const appId = (el.uuid as string) || (el.id as string);
 
       // Skip apps without a connector (can't connect)
@@ -169,8 +253,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Process connectors (fallback if no app or integration)
-    for (const item of connectors) {
-      const el = item.element;
+    for (const el of connectorElements) {
       const connectorId = el.id as string;
 
       // Skip if we already have something with this connector

@@ -25,8 +25,8 @@ export function useConnectibles(options: UseConnectiblesOptions = {}): UseConnec
   const customer = useCustomer();
 
   const fetchConnectibles = useCallback(async () => {
-    // Don't fetch if disabled or no search query
-    if (!enabled || !search.trim()) {
+    // Don't fetch if disabled
+    if (!enabled) {
       setConnectibles([]);
       return;
     }
@@ -36,7 +36,9 @@ export function useConnectibles(options: UseConnectiblesOptions = {}): UseConnec
 
     try {
       const params = new URLSearchParams();
-      params.set('q', search);
+      if (search.trim()) {
+        params.set('q', search);
+      }
 
       const workspaceHeaders = getWorkspaceHeaders();
       const response = await fetch(`/api/connectibles/search?${params.toString()}`, {
