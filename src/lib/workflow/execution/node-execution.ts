@@ -201,16 +201,17 @@ export async function executeMembraneActionNode(
 ): Promise<NodeExecutionResult> {
   try {
     const actionId = node.config?.actionId;
-    const actionKey = node.config?.actionKey;
     const connectionId = node.config?.connectionId;
 
-    if (!actionId && !actionKey) {
-      throw new Error('Action node requires actionId or actionKey in config');
+    if (!actionId) {
+      throw new Error('Action node requires actionId in config');
     }
+
+    const apiUri = process.env.MEMBRANE_API_URI || 'https://api.integration.app';
 
     const membraneClient = new IntegrationAppClient({
       token: membraneToken,
-      apiUri: process.env.MEMBRANE_API_URI || 'https://api.integration.app',
+      apiUri,
     });
 
     try {

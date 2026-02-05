@@ -19,10 +19,10 @@ export function isNodeConfigured(node: WorkflowNode): boolean {
     const config = node.config || {};
     const eventSource = config.eventSource as 'connector' | 'data-record' | undefined;
     const eventType = config.eventType as string;
-    
+
     // Check if it's a connector event (either by eventSource or eventType)
     const isConnectorEvent = eventSource === 'connector' || eventType === 'connector-event-trigger';
-    
+
     if (isConnectorEvent) {
       // Connector events require: integrationKey, connectorEventKey, and eventType
       return !!(config.integrationKey && config.connectorEventKey && config.eventType);
@@ -32,10 +32,11 @@ export function isNodeConfigured(node: WorkflowNode): boolean {
     }
   }
 
-  // Membrane action - requires integrationKey and actionId
+  // Membrane action - requires (integrationKey OR connectorId) and actionId
   if (node.nodeType === 'action' && node.type === 'action') {
     const config = node.config || {};
-    return !!(config.integrationKey && config.actionId);
+    const hasAppSelection = !!(config.integrationKey || config.connectorId);
+    return !!(hasAppSelection && config.actionId);
   }
 
   // HTTP request - requires uri and method
@@ -55,11 +56,13 @@ export function isNodeConfigured(node: WorkflowNode): boolean {
   // Gate node - requires field, operator, and value
   if (node.nodeType === 'gate') {
     const config = node.config || {};
-    const condition = config.condition as {
-      field?: { $var: string } | string;
-      operator?: 'equals' | 'not_equals';
-      value?: string;
-    } | undefined;
+    const condition = config.condition as
+      | {
+          field?: { $var: string } | string;
+          operator?: 'equals' | 'not_equals';
+          value?: string;
+        }
+      | undefined;
 
     if (!condition) return false;
 

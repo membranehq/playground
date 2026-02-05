@@ -1,4 +1,4 @@
-import jwt, { Algorithm } from 'jsonwebtoken';
+import jwt, { Algorithm, JwtPayload } from 'jsonwebtoken';
 import { Authentication } from './auth';
 
 interface TokenData {
@@ -19,7 +19,7 @@ export class IntegrationTokenError extends Error {
   }
 }
 
-export async function generateIntegrationToken(details: Authentication): Promise<string> {
+export async function generateIntegrationToken(details: Authentication, asAdmin: boolean = false): Promise<string> {
   if (!details.workspaceCredentials.workspaceKey || !details.workspaceCredentials.workspaceSecret) {
     throw new IntegrationTokenError('Integration.app credentials not configured');
   }
@@ -34,8 +34,8 @@ export async function generateIntegrationToken(details: Authentication): Promise
       id: details.customerId,
       // Required: Human-readable customer name
       name: details.customerName || details.customerId,
-      // Admin mode for full access
-      isAdmin: 1,
+      // Admin mode only for management operations, tenant-level for normal usage
+      isAdmin: asAdmin ? 1 : 0,
     };
 
     const options = {
@@ -48,5 +48,20 @@ export async function generateIntegrationToken(details: Authentication): Promise
   } catch (error) {
     console.error('Error generating integration token:', error);
     throw new IntegrationTokenError('Failed to generate integration token');
+  }
+}
+
+/**
+ * Decode a JWT token for debugging purposes (without verification)
+ */
+export function decodeTokenForDebug(token: string): JwtPayload | null {
+  try {
+    const decoded = jwt.decode(token, { complete: true });
+    if (decoded && typeof decoded.payload === 'object') {
+      return decoded.payload as JwtPayload;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

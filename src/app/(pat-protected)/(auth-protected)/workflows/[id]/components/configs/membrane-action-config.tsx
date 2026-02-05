@@ -46,6 +46,9 @@ export function MembraneActionConfig({
 }: MembraneActionConfigProps) {
   const selectedActionId = value.config?.actionId;
   const selectedIntegrationKey = value.config?.integrationKey as string;
+  const selectedConnectorId = value.config?.connectorId as string;
+  const selectedConnectorName = value.config?.connectorName as string;
+  const selectedConnectorLogoUri = value.config?.connectorLogoUri as string;
 
   // State for connection status from AppConnectionSelector
   const [isConnected, setIsConnected] = useState(false);
@@ -82,9 +85,18 @@ export function MembraneActionConfig({
   const { loading: isLoadingSelectedAction, action: selectedActionData } = useAction(selectedActionId as string);
   const { integration: selectedIntegration } = useIntegration(selectedIntegrationKey);
 
-  const actionsForSelectedIntegration = useActions({
-    integrationKey: selectedIntegrationKey,
-  });
+  // Determine if we're in connector mode (no integrationKey)
+  const isConnectorMode = !selectedIntegrationKey && !!selectedConnectorId;
+
+  // Get connectionId from config for connector mode
+  const configConnectionId = value.config?.connectionId as string | undefined;
+
+  // Fetch actions based on mode - use connectionId in connector mode
+  const actionsForSelectedIntegration = useActions(
+    isConnectorMode && configConnectionId
+      ? { connectionId: configConnectionId }
+      : { integrationKey: selectedIntegrationKey },
+  );
 
   // Refresh actions when refreshKey changes (e.g., after Membrane agent session completes)
   useEffect(() => {
@@ -98,12 +110,33 @@ export function MembraneActionConfig({
       {/* App Selection and Connection Section */}
       <SelectAppAndConnect
         selectedIntegrationKey={selectedIntegrationKey}
+        selectedConnectorId={selectedConnectorId}
+        selectedConnectorName={selectedConnectorName}
+        selectedConnectorLogoUri={selectedConnectorLogoUri}
         onIntegrationChange={(integrationKey) => {
           onChange({
             ...value,
             config: {
               ...value.config,
               integrationKey,
+              connectorId: undefined,
+              connectorName: undefined,
+              connectorLogoUri: undefined,
+              connectionId: undefined,
+              actionId: undefined,
+              inputMapping: undefined,
+            },
+          });
+        }}
+        onConnectorChange={(connectorId, connectorName, connectorLogoUri) => {
+          onChange({
+            ...value,
+            config: {
+              ...value.config,
+              connectorId,
+              connectorName,
+              connectorLogoUri,
+              integrationKey: undefined,
               connectionId: undefined,
               actionId: undefined,
               inputMapping: undefined,
@@ -178,10 +211,13 @@ export function MembraneActionConfig({
                             value={action.name}
                             onSelect={() => {
                               const actionName = action?.name || 'Action';
+                              // For connection-level actions, we need the key or uuid
+                              // action.key is the preferred identifier, fallback to uuid, then id
+                              const actionKey = action.key || action.uuid || action.id;
                               onChange({
                                 ...value,
                                 name: actionName,
-                                config: { ...value.config, actionId: action.id, actionKey: action.key },
+                                config: { ...value.config, actionId: action.id, actionKey },
                               });
                               setActionSelectOpen(false);
                             }}
@@ -315,8 +351,25 @@ export function MembraneActionConfig({
             </Button>
             <Button
               onClick={() => {
-                // Enrich the user's message with integration metadata
-                const enrichedMessage = `I need to create a new action for the ${selectedIntegrationKey} integration.
+                let enrichedMessage: string;
+
+                if (isConnectorMode) {
+                  // Connector mode: create connection-specific action
+                  enrichedMessage = `I need to create a new action for a tenant-level connector.
+
+Connector ID: ${selectedConnectorId}
+Connector Name: ${selectedConnectorName || 'Not available'}
+Connection ID: ${configConnectionId || 'Not available'}
+
+User's description of what the action should do:
+${actionDescription}
+
+Please help me create this action.
+
+IMPORTANT: This is a tenant-level connector, not a workspace-level integration. Create a connection-specific action using the provided Connection ID. Do not create an integration-level action.`;
+                } else {
+                  // Integration mode: create integration-level action
+                  enrichedMessage = `I need to create a new action for the ${selectedIntegrationKey} integration.
 
 Integration Key: ${selectedIntegrationKey}
 Integration ID: ${selectedIntegration?.id || 'Not available'}
@@ -327,6 +380,7 @@ ${actionDescription}
 Please help me create this action.
 
 IMPORTANT: Do not ask user to create/test a connection. Connection must be created at this point. Find and use an existing one.`;
+                }
 
                 // Call the callback to open Membrane agent panel
                 onOpenMembraneAgent?.(enrichedMessage);

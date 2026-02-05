@@ -6,9 +6,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { GlobeIcon, Sparkles, Plug, GitBranch, ArrowLeft, Plus, Search, Loader2, WandSparkles } from 'lucide-react';
 import { useIntegrations, useIntegrationApp } from '@membranehq/react';
-import type { Integration, App } from '@membranehq/sdk';
-import { useExternalApps } from '@/hooks/use-external-apps';
+import type { Integration } from '@membranehq/sdk';
+import { useConnectibles } from '@/hooks/use-connectibles';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Connectible } from '@/types/connectible';
 
 export type ViewMode = 'actions' | 'apps' | 'search' | 'build';
 
@@ -44,12 +45,11 @@ export function NodeCreateDialog({
   const integrationApp = useIntegrationApp();
 
   const {
-    apps: externalApps,
-    isLoading: isLoadingExternalApps,
-    error: externalAppsError,
-  } = useExternalApps({
+    connectibles,
+    isLoading: isLoadingConnectibles,
+    error: connectiblesError,
+  } = useConnectibles({
     search: debouncedSearch,
-    limit: 50,
     enabled: viewMode === 'search',
   });
 
@@ -102,27 +102,28 @@ export function NodeCreateDialog({
     setViewMode('apps');
   };
 
-  const handleExternalAppSelect = async (app: App) => {
+  const handleConnectibleSelect = async (connectible: Connectible) => {
     setIsCreatingIntegration(true);
 
     try {
-      // Create integration from external app
-      const newIntegration = await integrationApp.integrations.create({
-        name: app.name,
-        logoUri: app.logoUri,
-        appUuid: app.uuid,
-        connectorId: app.defaultConnectorId,
-        key: app.key,
-      });
-
-      // Refresh integrations list
-      await refreshIntegrations();
-
-      // Create the node with the new integration
-      onCreate('action', { integrationKey: newIntegration.key });
-      handleClose();
+      if (connectible.integration?.key) {
+        // Already has integration at workspace level - use it directly
+        // Tenants can use existing workspace integrations
+        onCreate('action', { integrationKey: connectible.integration.key });
+        handleClose();
+      } else if (connectible.connectParameters.connectorId) {
+        // Has connector but no integration - pass connectorId directly
+        // Tenants create connections directly to connectors (tenant-scoped)
+        // The action config UI will handle the connection flow using connectorId
+        onCreate('action', {
+          connectorId: connectible.connectParameters.connectorId,
+          connectorName: connectible.name,
+          connectorLogoUri: connectible.logoUri,
+        });
+        handleClose();
+      }
     } catch (error) {
-      console.error('Failed to create integration:', error);
+      console.error('Failed to select connectible:', error);
       setIsCreatingIntegration(false);
     }
   };
@@ -149,7 +150,9 @@ Please help me build this integration so I can use it in my workflow.
 
 IMPORTANT: Do NOT create any actions for this integration. Only create the integration itself with the connection setup. I will create the actions myself later.
 
-IMPORTANT: Do not ask user to enter authentication details, figure them out on your own using provided app url or search the app on the web if the url was not provided.`;
+IMPORTANT: Do not ask user to enter authentication details, figure them out on your own using provided app url or search the app on the web if the url was not provided.
+
+IMPORTANT: Do not create integration entity and do not create connection. Only create external app and connector. Create all entities on the tenant level.`;
 
     onOpenMembraneAgent(enrichedMessage);
     handleClose();
@@ -165,12 +168,12 @@ IMPORTANT: Do not ask user to enter authentication details, figure them out on y
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl h-[600px] p-0 overflow-hidden" hideClose>
-        {/* Loading overlay when creating integration */}
+        {/* Loading overlay when creating external app */}
         {isCreatingIntegration && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-50">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Creating integration...</p>
+              <p className="text-sm text-muted-foreground">Setting up app...</p>
             </div>
           </div>
         )}
@@ -333,42 +336,44 @@ IMPORTANT: Do not ask user to enter authentication details, figure them out on y
               ) : viewMode === 'search' ? (
                 /* Search View */
                 <div className="space-y-4">
-                  {isLoadingExternalApps ? (
+                  {isLoadingConnectibles ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ) : externalAppsError ? (
+                  ) : connectiblesError ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <p className="text-sm text-destructive">Failed to load apps</p>
                       <p className="text-xs text-muted-foreground mt-1">Please try again</p>
                     </div>
-                  ) : externalApps.length === 0 && !searchQuery.trim() ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <p className="text-sm text-muted-foreground">Start typing to search apps</p>
-                    </div>
                   ) : (
                     <div className="grid grid-cols-6 gap-3">
-                      {externalApps.map((app) => (
+                      {connectibles.map((connectible) => (
                         <button
-                          key={app.key}
-                          onClick={() => handleExternalAppSelect(app)}
+                          key={connectible.integration?.id || connectible.externalApp?.id || connectible.connector?.id}
+                          onClick={() => handleConnectibleSelect(connectible)}
                           className="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           <div className="w-12 h-12 mb-2 relative">
-                            {app.logoUri ? (
+                            {connectible.logoUri ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
-                                src={app.logoUri}
-                                alt={`${app.name} logo`}
+                                src={connectible.logoUri}
+                                alt={`${connectible.name} logo`}
                                 className="w-full h-full object-contain rounded"
                               />
                             ) : (
                               <div className="w-full h-full bg-gray-100 rounded flex items-center justify-center text-lg font-medium text-gray-600">
-                                {app.name[0]}
+                                {connectible.name[0]}
+                              </div>
+                            )}
+                            {/* Badge for existing integrations - indicates ready to use */}
+                            {connectible.integration && (
+                              <div className="absolute -top-0.5 -left-0.5 bg-green-500 rounded-full p-1">
+                                <Plug className="w-2.5 h-2.5 text-white" />
                               </div>
                             )}
                           </div>
-                          <span className="text-xs text-center text-gray-700 truncate w-full">{app.name}</span>
+                          <span className="text-xs text-center text-gray-700 truncate w-full">{connectible.name}</span>
                         </button>
                       ))}
 

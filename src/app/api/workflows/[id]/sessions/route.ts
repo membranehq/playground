@@ -71,7 +71,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const sessionId = data.id || data.sessionId;
 
     // Create label from initial message (truncated)
-    const label = initialMessage ? initialMessage.slice(0, 100) + (initialMessage.length > 100 ? '...' : '') : 'New session';
+    const label = initialMessage
+      ? initialMessage.slice(0, 100) + (initialMessage.length > 100 ? '...' : '')
+      : 'New session';
 
     // Save session reference to MongoDB
     await connectToDatabase();

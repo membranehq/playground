@@ -7,8 +7,6 @@ import { generateIntegrationToken } from '@/lib/integration-token';
  * Create a new Membrane Agent session
  */
 export async function POST(request: NextRequest) {
-  console.log('[Membrane Sessions API] POST /api/membrane-sessions - creating Membrane agent session');
-
   try {
     const auth = getAuthenticationFromRequest(request);
 
@@ -32,8 +30,6 @@ export async function POST(request: NextRequest) {
       requestBody.prompt = initialMessage;
     }
 
-    console.log('[Membrane Sessions API] Creating session with initial message:', initialMessage ? 'yes' : 'no');
-
     const response = await fetch(url.toString(), {
       method: 'POST',
       headers: {
@@ -52,8 +48,6 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const sessionId = data.id || data.sessionId;
 
-    console.log('[Membrane Sessions API] Created session:', sessionId);
-
     return NextResponse.json({ sessionId });
   } catch (error) {
     console.error('[Membrane Sessions API] Error creating session:', error);
@@ -65,4 +59,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
