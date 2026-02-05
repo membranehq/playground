@@ -89,10 +89,12 @@ See [Connections](https://docs.getmembrane.com/docs/connections), [Connection UI
 
 ### Listing Actions
 
-Use `useActions()` to fetch available actions for an integration or connection:
+Use `useActions()` to fetch available actions for an integration, connector, or connection:
 
 ```typescript
 const { items: actions } = useActions({ integrationKey: "slack" });
+// or for tenant-level connectors
+const { items: actions } = useActions({ connectorId: "connector_123" });
 // or
 const { items: actions } = useActions({ connectionId: "conn_123" });
 ```
@@ -126,7 +128,7 @@ const result = await client
   .run(actionInput);
 ```
 
-**Important:** The JWT token must include the user ID of the connection owner in the `id` claim. See [Authentication](https://docs.getmembrane.com/docs/authentication).
+**Important:** The JWT token must include the user ID of the connection owner in the `id` claim. This must be the same customer ID used when creating the connection. See [Authentication](https://docs.getmembrane.com/docs/authentication).
 
 For actions that read/write data, you may also need [Data Sources](https://docs.getmembrane.com/docs/data-sources) and [Field Mappings](https://docs.getmembrane.com/docs/field-mappings).
 
