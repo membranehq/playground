@@ -17,6 +17,7 @@ import {
 import { useIntegrationApp, useIntegrations, useConnections } from '@membranehq/react';
 import type { Integration as IntegrationAppIntegration } from '@membranehq/sdk';
 import { Loader2, Plug, Search, Cable, ExternalLink, Blocks, X, Sparkles } from 'lucide-react';
+import { IntegrationAppClient } from '@membranehq/sdk';
 import { useCurrentWorkspace } from '@/components/providers/workspace-provider';
 import { useSettings } from '@/components/providers/settings-provider';
 import { CustomConnectionDialog } from '@/components/custom-connection-dialog';
@@ -34,6 +35,10 @@ export function IntegrationList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<IntegrationAppIntegration | null>(null);
+
+  const client = new IntegrationAppClient({
+    token: "PUT TOKEN HERE"
+  })
 
   // Connect Any App dialog state
   const [connectAnyAppOpen, setConnectAnyAppOpen] = useState(false);
@@ -88,7 +93,11 @@ export function IntegrationList() {
     }
 
     try {
-      await integrationApp.integration(integration.key).openNewConnection();
+      console.log("1")
+      await client.integration("todoist").openNewConnection({
+        allowMultipleConnections: true,
+        name: "New"
+      });
       refreshIntegrations();
       refreshConnections();
     } catch (error) {
