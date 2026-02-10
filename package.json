@@ -24,7 +24,7 @@
     "@ai-sdk/mcp": "^1.0.5",
     "@ai-sdk/react": "^3.0.26",
     "@auth0/auth0-spa-js": "^2.11.0",
-    "@membranehq/react": "^0.15.4",
+    "@membranehq/react": "^0.15.2",
     "@membranehq/sdk": "^0.16.0",
     "@opencode-ai/plugin": "^1.0.64",
     "@opencode-ai/sdk": "^1.0.61",
