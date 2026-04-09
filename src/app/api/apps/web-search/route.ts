@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
       tools: {
         web_search: anthropic.tools.webSearch_20250305(),
       },
-      maxSteps: 3,
       prompt: `Search the web for SaaS applications matching "${query}". Find the top 5 most relevant SaaS/software applications.
 
 Return ONLY a JSON array of objects with these fields:
