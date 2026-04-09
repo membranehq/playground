@@ -1,13 +1,13 @@
 'use client';
 
 import { createContext, useCallback, useContext, useState, useEffect } from 'react';
-import { ConsoleEntry } from '@/types/console-entry';
+import { Workspace } from '@/types/console-entry';
 import { getStoredWorkspace, storeWorkspace, clearWorkspaceStorage } from '@/lib/workspace-storage';
 
 interface WorkspaceContextType {
-  workspace: ConsoleEntry['workspace'] | null;
+  workspace: Workspace | null;
   isLoading: boolean;
-  saveWorkspace: (id: ConsoleEntry['workspace']) => void;
+  saveWorkspace: (id: Workspace) => void;
   clearWorkspace: () => void;
 }
 

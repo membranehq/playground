@@ -1,8 +1,8 @@
-import { ConsoleEntry } from '@/types/console-entry';
+import { Workspace } from '@/types/console-entry';
 
 const WORKSPACE_STORAGE_KEY = 'selected_workspace';
 
-export function getStoredWorkspace(): ConsoleEntry['workspace'] | null {
+export function getStoredWorkspace(): Workspace | null {
   if (typeof window === 'undefined') return null;
 
   try {
@@ -10,14 +10,14 @@ export function getStoredWorkspace(): ConsoleEntry['workspace'] | null {
 
     if (!workspace) return null;
 
-    return JSON.parse(workspace) as ConsoleEntry['workspace'];
+    return JSON.parse(workspace) as Workspace;
   } catch {
     clearWorkspaceStorage();
     return null;
   }
 }
 
-export function storeWorkspace(workspace: ConsoleEntry['workspace']): void {
+export function storeWorkspace(workspace: Workspace): void {
   if (typeof window === 'undefined') return;
 
   localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));

@@ -1,11 +1,10 @@
-export interface ConsoleEntry {
-  workspace: Workspace;
-  workspaces: Workspace[];
-  workspaceUser: WorkspaceUser;
-  orgs: Organization[];
+export interface AccountResponse {
+  orgs?: Organization[];
+  workspace?: Workspace;
+  workspaceUser?: WorkspaceUser;
 }
 
-interface Workspace {
+export interface Workspace {
   id: string;
   key: string;
   name: string;
@@ -13,6 +12,11 @@ interface Workspace {
   secret: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OrgWorkspacesResponse {
+  items: Workspace[];
+  cursor?: string;
 }
 
 interface WorkspaceUser {

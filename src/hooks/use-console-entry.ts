@@ -1,15 +1,16 @@
 import useSWR from 'swr';
 
 import { jwtAuthFetcher } from '@/lib/fetch-utils';
-import { ConsoleEntry, Organization } from '@/types/console-entry';
+import { AccountResponse, Organization, OrgWorkspacesResponse, Workspace } from '@/types/console-entry';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useMemo } from 'react';
 
-type WorkspaceMap = Record<string, ConsoleEntry['workspace']>;
+type WorkspaceMap = Record<string, Workspace>;
 type OrganizationMap = Record<string, Organization>;
 
-export function useConsoleEntry(): Partial<ConsoleEntry> & {
-  workspaces?: Array<ConsoleEntry['workspaces'][number] & { org?: Organization }>;
+export function useConsoleEntry(): {
+  workspaces: Array<Workspace & { org?: Organization }>;
+  orgs?: Organization[];
 
   workspacesMap: WorkspaceMap;
   orgsMap: OrganizationMap;
@@ -19,49 +20,69 @@ export function useConsoleEntry(): Partial<ConsoleEntry> & {
 } {
   const { token } = useAuth();
 
-  const { data, error, isLoading } = useSWR<ConsoleEntry>(
-    token ? ['/console-self', token] : null,
-    ([url]) => jwtAuthFetcher<ConsoleEntry>(url),
+  const {
+    data: accountData,
+    error: accountError,
+    isLoading: accountLoading,
+  } = useSWR<AccountResponse>(
+    token ? ['/account', token] : null,
+    ([url]) => jwtAuthFetcher<AccountResponse>(url),
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
     },
   );
 
+  const {
+    data: workspacesData,
+    error: workspacesError,
+    isLoading: workspacesLoading,
+  } = useSWR<OrgWorkspacesResponse>(
+    token ? ['/org-workspaces', token] : null,
+    ([url]) => jwtAuthFetcher<OrgWorkspacesResponse>(url),
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    },
+  );
+
+  const workspaces = workspacesData?.items;
+  const orgs = accountData?.orgs;
+
   const workspacesMap = useMemo(() => {
     return (
-      data?.workspaces.reduce<Record<string, ConsoleEntry['workspace']>>((acc, workspace) => {
+      workspaces?.reduce<WorkspaceMap>((acc, workspace) => {
         acc[workspace.id] = workspace;
         return acc;
       }, {}) || {}
     );
-  }, [data?.workspaces]);
+  }, [workspaces]);
 
   const orgsMap = useMemo(() => {
     return (
-      data?.orgs.reduce<Record<string, Organization>>((acc, org) => {
+      orgs?.reduce<OrganizationMap>((acc, org) => {
         acc[org.id] = org;
         return acc;
       }, {}) || {}
     );
-  }, [data?.orgs]);
+  }, [orgs]);
 
   const workspacesWithOrgs = useMemo(() => {
     return (
-      data?.workspaces.map<ConsoleEntry['workspaces'][number] & { org?: Organization }>((workspace) => {
+      workspaces?.map<Workspace & { org?: Organization }>((workspace) => {
         return { ...workspace, org: orgsMap[workspace.orgId] };
       }) || []
     );
-  }, [data?.workspaces, orgsMap]);
+  }, [workspaces, orgsMap]);
 
   return {
     workspaces: workspacesWithOrgs,
-    orgs: data?.orgs,
+    orgs,
 
     workspacesMap,
     orgsMap,
 
-    isLoading,
-    isError: !!error,
+    isLoading: accountLoading || workspacesLoading,
+    isError: !!accountError || !!workspacesError,
   };
 }
