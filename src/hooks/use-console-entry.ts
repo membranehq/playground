@@ -39,7 +39,17 @@ export function useConsoleEntry(): {
     isLoading: workspacesLoading,
   } = useSWR<OrgWorkspacesResponse>(
     token ? ['/org-workspaces', token] : null,
-    ([url]) => jwtAuthFetcher<OrgWorkspacesResponse>(url),
+    async ([url]) => {
+      let allItems: Workspace[] = [];
+      let cursor: string | undefined;
+      do {
+        const pageUrl = cursor ? `${url}?cursor=${cursor}` : url;
+        const data = await jwtAuthFetcher<OrgWorkspacesResponse>(pageUrl);
+        allItems = allItems.concat(data.items);
+        cursor = data.cursor;
+      } while (cursor);
+      return { items: allItems };
+    },
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
