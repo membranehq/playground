@@ -187,6 +187,12 @@ function WorkflowDetailInner({ id }: { id: string }) {
 
       <PageHeaderActions>
         <div className="flex items-center gap-3">
+          {/* AI Workflow Builder */}
+          <Button size="sm" variant="outline" onClick={() => router.push(`/workflows/${id}/builder`)} className="gap-1.5">
+            <Bot className="w-4 h-4" />
+            AI Builder
+          </Button>
+
           {/* Agent sessions dropdown */}
           <Popover open={sessionsPopoverOpen} onOpenChange={setSessionsPopoverOpen}>
             <PopoverTrigger asChild>
