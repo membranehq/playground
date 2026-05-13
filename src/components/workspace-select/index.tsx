@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useConsoleEntry } from '@/hooks/use-console-entry';
 import { useCurrentWorkspace } from '../providers/workspace-provider';
 
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,9 +55,13 @@ export const WorkspaceSelect = ({ span }: VariantProps<typeof selectVariants>) =
         >
           <span className="truncate">
             <span className="text-muted-foreground">Workspace:</span>{' '}
-            {workspaceId ? workspacesMap[workspaceId]?.name : 'Select...'}
+            {workspaceLoading ? 'Loading...' : workspaceId ? workspacesMap[workspaceId]?.name : 'Select...'}
           </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {workspaceLoading ? (
+            <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin" />
+          ) : (
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className={cn('p-0', selectVariants({ span }))} align="start">
